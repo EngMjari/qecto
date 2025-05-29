@@ -6,8 +6,8 @@ router = DefaultRouter()
 router.register(r'admin-users', AdminUserViewSet, basename='admin-user')
 
 urlpatterns = [
-    path('api/send-otp/', SendOTPView.as_view(), name='send-otp'),
-    path('api/verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
-    path('api/', include(router.urls)),
-    path('api/user-info/', UserInfoView.as_view(), name='user-info'),
+    path('send-otp/', SendOTPView.as_view(), name='send-otp'),
+    path('verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
+    path('', include(router.urls)),
+    path('user-info/', UserInfoView.as_view(), name='user-info'),
 ]

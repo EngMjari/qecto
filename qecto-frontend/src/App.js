@@ -9,8 +9,9 @@ import Home from "./Pages/Home";
 import Navbar from "./Components/Navbar";
 import About from "./Pages/About";
 import Contact from "./Pages/Contact";
-import SuperAdminPanel from "./Pages/SuperAdminPanel"; // اضافه شده
+import SuperAdminPanel from "./Pages/SuperAdminPanel"; 
 import "./App.css";
+import AdminPanel from "./Pages/AdminPanel";
 
 function App() {
   const [userRole, setUserRole] = useState(null);
@@ -55,21 +56,25 @@ function App() {
           <Route path="/contact" element={<Contact />} />
 
           {userRole === "superadmin" && (
-            <Route path="/admin-panel" element={<SuperAdminPanel />} />
+            <Route path="/super-admin-panel" element={<SuperAdminPanel />} />
           )}
           {userRole === "admin" && (
+            <Route path="/admin-panel" element={<AdminPanel />} />
+          )}
+          {userRole !== "admin" && userRole !== "superadmin" && (
             <Route path="/dashboard" element={<Dashboard />} />
           )}
+          
 
           <Route
             path="*"
             element={
               userRole === "superadmin" ? (
-                <Navigate to="/admin-panel" />
+                <Navigate to="/super-admin-panel" />
               ) : userRole === "admin" ? (
-                <Navigate to="/dashboard" />
+                <Navigate to="/admin-panel" />
               ) : (
-                <Navigate to="/login" />
+                <Navigate to="/dashboard" />
               )
             }
           />
