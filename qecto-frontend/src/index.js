@@ -4,7 +4,7 @@ import reportWebVitals from './reportWebVitals';
 import 'bootstrap/dist/css/bootstrap.rtl.min.css';
 import App from './App';
 import './index.css';
-import './Style/custom.scss';
+import './Styles/custom.scss';
 import 'vazirmatn/Vazirmatn-font-face.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 const root = ReactDOM.createRoot(document.getElementById('root'));
