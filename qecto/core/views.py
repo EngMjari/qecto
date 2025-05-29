@@ -66,3 +66,14 @@ class AdminUserViewSet(ModelViewSet):
 
     def get_queryset(self):
         return User.objects.filter(is_staff=True, is_superuser=False)
+    
+class UserInfoView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        return Response({
+            "full_name": user.full_name,
+            "is_superuser": user.is_superuser,
+            "phone": user.phone,
+        })
