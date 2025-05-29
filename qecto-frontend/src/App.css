@@ -1,0 +1,13 @@
+body {
+  direction: rtl;
+  text-align: right; /* برای متن راست‌چین */
+}
+.loginBtn {
+  color: #f1f2f6!important;
+}
+.loginBtn:hover {
+  color: #ffffff!important;
+}
+.dropdown-toggle::after {
+  display: none !important;
+}

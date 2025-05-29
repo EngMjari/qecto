@@ -1,0 +1,29 @@
+label.floating-label {
+  position: absolute;
+  top: 50%!important;
+  right: 15px!important; /* بیشترش کن تا از آیکون فاصله بگیره */
+  transform: translateY(-50%);
+  color: #999!important;
+  font-weight: 500;
+  cursor: text;
+  display: flex;
+  align-items: center;
+  transition: all 1s ease!important;
+  user-select: none;
+  pointer-events: none;
+  font-size: 1rem;
+  padding: 0 0.25rem;
+}
+
+input.form-control:focus + label.floating-label,
+label.floating-label.filled {
+  top: -15px!important;
+  right: 0px!important;
+  font-size: 13px!important;
+  pointer-events: auto;
+}
+input.form-control {
+  border-radius: 10px!important;
+  padding: 1rem 3.5rem 1rem 1rem!important;
+  font-size: 1.1rem;
+}

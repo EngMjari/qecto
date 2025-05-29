@@ -1,0 +1,12 @@
+$theme-colors: (
+  "primary": #22a6b3,
+  "secondary": #6c757d,
+  "success": #6ab04c, // سبز دلخواه
+  "info": #0dcaf0,
+  "warning": #ffc107,
+  "danger": #ff5700, // نارنجی دلخواه
+  "light": #f8f9fa,
+  "dark": #002a3a // آبی تیره دلخواه
+);
+
+@import "bootstrap/scss/bootstrap"; 
