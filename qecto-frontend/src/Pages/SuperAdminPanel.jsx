@@ -1,7 +1,6 @@
 // src/components/SuperAdminPanel.jsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { jwtDecode } from "jwt-decode";
 
 export default function SuperAdminPanel() {
   const [admins, setAdmins] = useState([]);

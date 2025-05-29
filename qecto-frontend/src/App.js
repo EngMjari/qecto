@@ -9,7 +9,7 @@ import Home from "./Pages/Home";
 import Navbar from "./Components/Navbar";
 import About from "./Pages/About";
 import Contact from "./Pages/Contact";
-import SuperAdminPanel from "./Pages/SuperAdminPanel"; 
+import SuperAdminPanel from "./Pages/SuperAdminPanel";
 import "./App.css";
 import AdminPanel from "./Pages/AdminPanel";
 
@@ -21,12 +21,13 @@ function App() {
     const token = localStorage.getItem("access_token");
     if (token) {
       axios
-        .get("http://localhost:8000/api/user-info/", {
+        .get("http://192.168.1.101:8000/api/user-info/", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         })
         .then((res) => {
+          console.log("USER INFO:", res.data); // 👈 این رو اضافه کن
           const isSuperAdmin = res.data.is_superuser;
           setUserRole(isSuperAdmin ? "superadmin" : "admin");
         })
@@ -55,16 +56,9 @@ function App() {
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
 
-          {userRole === "superadmin" && (
-            <Route path="/super-admin-panel" element={<SuperAdminPanel />} />
-          )}
-          {userRole === "admin" && (
-            <Route path="/admin-panel" element={<AdminPanel />} />
-          )}
-          {userRole !== "admin" && userRole !== "superadmin" && (
-            <Route path="/dashboard" element={<Dashboard />} />
-          )}
-          
+          {userRole === "superadmin" && <Route path="/super-admin-panel" element={<SuperAdminPanel />} />}
+          {userRole === "admin" && <Route path="/admin-panel" element={<AdminPanel />} />}
+          {userRole !== "admin" && userRole !== "superadmin" && <Route path="/dashboard" element={<Dashboard />} />}
 
           <Route
             path="*"

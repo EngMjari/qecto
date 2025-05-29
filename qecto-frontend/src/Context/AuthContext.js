@@ -29,7 +29,6 @@ export function AuthProvider({ children }) {
         name: user.full_name,
       });
     } catch (error) {
-      console.error('خطا در دریافت پروفایل کاربر', error);
     }
   };
 
