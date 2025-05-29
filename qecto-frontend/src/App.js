@@ -12,6 +12,7 @@ import Contact from "./Pages/Contact";
 import SuperAdminPanel from "./Pages/SuperAdminPanel";
 import "./App.css";
 import AdminPanel from "./Pages/AdminPanel";
+import ProtectedRoute from "./Components/ProtectedRoute";
 
 function App() {
   const [userRole, setUserRole] = useState(null);
@@ -19,6 +20,8 @@ function App() {
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
+    console.log("TOKEN:", token); // ← ببین اصلاً توکن هست یا نه
+
     if (token) {
       axios
         .get("http://192.168.1.101:8000/api/user-info/", {
@@ -27,7 +30,7 @@ function App() {
           },
         })
         .then((res) => {
-          console.log("USER INFO:", res.data); // 👈 این رو اضافه کن
+          console.log("USER INFO:", res.data); // ← ببین چی برمی‌گردونه
           const isSuperAdmin = res.data.is_superuser;
           setUserRole(isSuperAdmin ? "superadmin" : "admin");
         })
@@ -39,6 +42,7 @@ function App() {
           setLoading(false);
         });
     } else {
+      console.log("توکن پیدا نشد!");
       setUserRole(null);
       setLoading(false);
     }
@@ -61,15 +65,29 @@ function App() {
           {userRole !== "admin" && userRole !== "superadmin" && <Route path="/dashboard" element={<Dashboard />} />}
 
           <Route
-            path="*"
+            path="/dashboard"
             element={
-              userRole === "superadmin" ? (
-                <Navigate to="/super-admin-panel" />
-              ) : userRole === "admin" ? (
-                <Navigate to="/admin-panel" />
-              ) : (
-                <Navigate to="/dashboard" />
-              )
+              <ProtectedRoute allowedRoles={["admin"]} userRole={userRole}>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin-panel"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]} userRole={userRole}>
+                <AdminPanel />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/super-admin-panel"
+            element={
+              <ProtectedRoute allowedRoles={["superadmin"]} userRole={userRole}>
+                <SuperAdminPanel />
+              </ProtectedRoute>
             }
           />
         </Routes>
