@@ -7,6 +7,7 @@ export const AuthContext = createContext();
 export function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
+  const [userRole, setUserRole] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem("access");
@@ -15,36 +16,42 @@ export function AuthProvider({ children }) {
       fetchUserProfile(token);
     }
   }, []);
-
-  const fetchUserProfile = async (token) => {
-    try {
-      const response = await axios.get(`${BASE_URL}/api/user-profile/`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const user = response.data;
-      setUserProfile({
-        image: user.image ? `${BASE_URL}/${user.image}` : "/default-profile.jpg",
-        name: user.full_name,
-      });
-    } catch (error) {}
-  };
+  
+ const fetchUserProfile = async (token) => {
+  try {
+    const response = await axios.get(`${BASE_URL}/api/user-profile/`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const user = response.data;
+    setUserProfile({
+      image: user.image ? `${BASE_URL}/${user.image}` : '/default-profile.jpg',
+      name: user.full_name,
+    });
+    if (user.is_superuser) setUserRole('superadmin');
+    else if (user.is_staff) setUserRole('admin');
+    else setUserRole('user');
+  } catch (error) {
+    console.log("خطا در گرفتن اطلاعات کاربر:", error);
+  }
+};
 
   const login = (access, refresh) => {
-    localStorage.setItem("access_token", access);
-    localStorage.setItem("refresh_token", refresh);
+    localStorage.setItem("access", access);
+    localStorage.setItem("refresh", refresh);
     setIsAuthenticated(true);
     fetchUserProfile(access);
   };
 
   const logout = () => {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
+    localStorage.removeItem("access");
+    localStorage.removeItem("refresh");
 
     setIsAuthenticated(false);
     setUserProfile(null);
   };
 
-  return <AuthContext.Provider value={{ isAuthenticated, login, logout, userProfile }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ isAuthenticated, login, logout, userProfile, userRole }}>
+{children}</AuthContext.Provider>;
 }

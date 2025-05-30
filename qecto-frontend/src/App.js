@@ -10,17 +10,17 @@ import Navbar from "./Components/Navbar";
 import About from "./Pages/About";
 import Contact from "./Pages/Contact";
 import SuperAdminPanel from "./Pages/SuperAdminPanel";
-import "./App.css";
 import AdminPanel from "./Pages/AdminPanel";
 import ProtectedRoute from "./Components/ProtectedRoute";
+import NotFound from "./Pages/NotFound"; // برای هندل کردن صفحات ناموجود
+import Forbidden from "./Pages/Forbidden";
 
 function App() {
   const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
-    console.log("TOKEN:", token); // ← ببین اصلاً توکن هست یا نه
+    const token = localStorage.getItem("access");
 
     if (token) {
       axios
@@ -30,49 +30,46 @@ function App() {
           },
         })
         .then((res) => {
-          console.log("USER INFO:", res.data); // ← ببین چی برمی‌گردونه
-          const isSuperAdmin = res.data.is_superuser;
-          setUserRole(isSuperAdmin ? "superadmin" : "admin");
+          if (res.data.is_superuser) {
+            setUserRole("superadmin");
+          } else if (res.data.is_staff) {
+            setUserRole("admin");
+          } else {
+            setUserRole("user");
+          }
         })
-        .catch((err) => {
-          console.error("خطا در دریافت اطلاعات کاربر:", err);
-          setUserRole(null);
-        })
-        .finally(() => {
-          setLoading(false);
-        });
+        .catch(() => setUserRole(null))
+        .finally(() => setLoading(false));
     } else {
-      console.log("توکن پیدا نشد!");
       setUserRole(null);
       setLoading(false);
     }
   }, []);
 
-  if (loading) return <p>در حال بارگذاری...</p>;
+  if (loading) return <p className="text-center mt-5">در حال بارگذاری...</p>;
 
   return (
     <AuthProvider>
       <BrowserRouter>
         <Navbar />
         <Routes>
+          {/* صفحات عمومی */}
           <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/login" element={<Login />} />
 
-          {userRole === "superadmin" && <Route path="/super-admin-panel" element={<SuperAdminPanel />} />}
-          {userRole === "admin" && <Route path="/admin-panel" element={<AdminPanel />} />}
-          {userRole !== "admin" && userRole !== "superadmin" && <Route path="/dashboard" element={<Dashboard />} />}
-
+          {/* فقط کاربران عادی */}
           <Route
             path="/dashboard"
             element={
-              <ProtectedRoute allowedRoles={["admin"]} userRole={userRole}>
+              <ProtectedRoute allowedRoles={["user"]} userRole={userRole}>
                 <Dashboard />
               </ProtectedRoute>
             }
           />
 
+          {/* فقط ادمین */}
           <Route
             path="/admin-panel"
             element={
@@ -82,6 +79,7 @@ function App() {
             }
           />
 
+          {/* فقط سوپر ادمین */}
           <Route
             path="/super-admin-panel"
             element={
@@ -90,6 +88,10 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          {/* هندل صفحات ناموجود */}
+          <Route path="/forbidden" element={<Forbidden />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
