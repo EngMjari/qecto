@@ -4,7 +4,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
 import "../Styles/Login.css";
-const BASE_URL = "http://192.168.1.101:8000";
+const BASE_URL = "http://localhost:8000";
 
 export default function Login() {
   const [phone, setPhone] = useState("");

@@ -29,10 +29,8 @@ DEBUG = True
 ALLOWED_HOSTS = [
     "http://127.0.0.1:3000",
     "http://localhost:3000",
-    "http://192.168.1.101:3000",
-    "192.168.1.101",
     "localhost",
-    "192.168.1.*",
+    "http://127.0.0.1"
 ]
 
 

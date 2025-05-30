@@ -5,12 +5,13 @@ import { Navbar as BSNavbar, Nav, Container, Dropdown } from "react-bootstrap";
 import logo from "../assets/logo.png";
 
 export default function Navbar() {
-  const BASE_URL = "http://192.168.1.101:8000";
+  const BASE_URL = "http://localhost:8000";
   const { isAuthenticated, logout, userProfile, userRole } = useContext(AuthContext);
 
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
-
+  const imagePath = userProfile?.image ? userProfile.image.replace(/^\/+/, "") : "media/profile_images/default.png";
+  const imageUrl = `${BASE_URL}/${imagePath}`;
   const handleLogout = () => {
     logout();
     navigate("/");
@@ -80,12 +81,7 @@ export default function Navbar() {
           ) : (
             <Dropdown align="start" className="no-hover">
               <Dropdown.Toggle as="div" style={{ cursor: "pointer" }}>
-                <img
-                  src={userProfile?.image ? `${BASE_URL}/${userProfile.image}` : `${BASE_URL}/media/profile_images/default.png`}
-                  alt="User"
-                  className="rounded-circle"
-                  style={{ width: "40px", height: "40px", objectFit: "cover" }}
-                />
+                <img src={imageUrl} alt="User" className="rounded-circle" style={{ width: "40px", height: "40px", objectFit: "cover" }} />
               </Dropdown.Toggle>
 
               <Dropdown.Menu className="dropdown-menu-start text-center">

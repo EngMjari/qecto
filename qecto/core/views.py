@@ -15,6 +15,7 @@ from rest_framework.decorators import api_view, permission_classes
 # یه دیکشنری ساده برای ذخیره OTP موقتی (فقط برای تست)
 User = get_user_model()
 
+
 class SendOTPView(APIView):
     def post(self, request):
         phone = request.data.get("phone")
@@ -34,6 +35,8 @@ class SendOTPView(APIView):
         print(f"کد تایید برای {phone}: {code}")  # برای تست
 
         return Response({"detail": "کد تایید ارسال شد."}, status=status.HTTP_200_OK)
+
+
 class VerifyOTPView(APIView):
     def post(self, request):
         phone = request.data.get("phone")
@@ -61,31 +64,31 @@ class VerifyOTPView(APIView):
             "refresh": str(refresh),
         })
 
+
 class AdminUserViewSet(ModelViewSet):
     serializer_class = AdminUserSerializer
     permission_classes = [IsAuthenticated, IsSuperAdmin]
 
     def get_queryset(self):
         return User.objects.filter(is_staff=True, is_superuser=False)
-    
+
+
 class UserInfoView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user
+        image_url = None
+        try:
+            if hasattr(user, 'profile') and user.profile.image:
+                image_url = user.profile.image.url
+        except Exception:
+            image_url = None
+
         return Response({
-            "full_name": user.full_name,
+            "full_name": user.full_name if hasattr(user, 'full_name') else user.get_full_name(),
             "is_superuser": user.is_superuser,
-            "phone": user.phone,
+            "is_staff": user.is_staff,
+            "phone": getattr(user, "phone", None),
+            "image": image_url,
         })
-        
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def user_profile(request):
-    user = request.user
-    return Response({
-        "full_name": user.get_full_name(),
-        "image": user.profile.image.url if hasattr(user, 'profile') else None,
-        "is_superuser": user.is_superuser,
-        "is_staff": user.is_staff,
-    })
