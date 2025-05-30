@@ -10,6 +10,7 @@ from rest_framework.permissions import IsAuthenticated
 from .permissions import IsSuperAdmin
 from .serializers import AdminUserSerializer
 from rest_framework.viewsets import ModelViewSet
+from rest_framework.decorators import api_view, permission_classes
 
 # یه دیکشنری ساده برای ذخیره OTP موقتی (فقط برای تست)
 User = get_user_model()
@@ -77,3 +78,14 @@ class UserInfoView(APIView):
             "is_superuser": user.is_superuser,
             "phone": user.phone,
         })
+        
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_profile(request):
+    user = request.user
+    return Response({
+        "full_name": user.get_full_name(),
+        "image": user.profile.image.url if hasattr(user, 'profile') else None,
+        "is_superuser": user.is_superuser,
+        "is_staff": user.is_staff,
+    })

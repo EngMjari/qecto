@@ -16,26 +16,26 @@ export function AuthProvider({ children }) {
       fetchUserProfile(token);
     }
   }, []);
-  
- const fetchUserProfile = async (token) => {
-  try {
-    const response = await axios.get(`${BASE_URL}/api/user-profile/`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    const user = response.data;
-    setUserProfile({
-      image: user.image ? `${BASE_URL}/${user.image}` : '/default-profile.jpg',
-      name: user.full_name,
-    });
-    if (user.is_superuser) setUserRole('superadmin');
-    else if (user.is_staff) setUserRole('admin');
-    else setUserRole('user');
-  } catch (error) {
-    console.log("خطا در گرفتن اطلاعات کاربر:", error);
-  }
-};
+
+  const fetchUserProfile = async (token) => {
+    try {
+      const response = await axios.get(`${BASE_URL}/api/user-profile/`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const user = response.data;
+      setUserProfile({
+        image: user.image ? `${BASE_URL}/${user.image}` : "/default-profile.jpg",
+        name: user.full_name,
+      });
+      if (user.is_superuser) setUserRole("superadmin");
+      else if (user.is_staff) setUserRole("admin");
+      else setUserRole("user");
+    } catch (error) {
+      console.log("خطا در دریافت اطلاعات کاربر:", error);
+    }
+  };
 
   const login = (access, refresh) => {
     localStorage.setItem("access", access);
@@ -52,6 +52,5 @@ export function AuthProvider({ children }) {
     setUserProfile(null);
   };
 
-  return <AuthContext.Provider value={{ isAuthenticated, login, logout, userProfile, userRole }}>
-{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ isAuthenticated, login, logout, userProfile, userRole }}>{children}</AuthContext.Provider>;
 }

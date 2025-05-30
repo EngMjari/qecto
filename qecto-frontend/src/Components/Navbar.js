@@ -74,7 +74,7 @@ export default function Navbar() {
 
         <div className="mx-1 me-auto d-flex align-items-center order-4">
           {!isAuthenticated ? (
-            <Nav.Link as={Link} to="/login" className="px-3 loginBtn" onClick={handleNavClick}>
+            <Nav.Link as={Link} to="/login" className="px-3 loginBtn " onClick={handleNavClick}>
               ورود
             </Nav.Link>
           ) : (
