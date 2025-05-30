@@ -81,7 +81,12 @@ export default function Navbar() {
           ) : (
             <Dropdown align="start" className="no-hover">
               <Dropdown.Toggle as="div" style={{ cursor: "pointer" }}>
-                <img src={imageUrl} alt="User" className="rounded-circle" style={{ width: "40px", height: "40px", objectFit: "cover" }} />
+                <img
+                  src={userProfile?.image || `${BASE_URL}/media/profile_images/default.png`}
+                  alt="User"
+                  className="rounded-circle"
+                  style={{ width: "40px", height: "40px", objectFit: "cover" }}
+                />
               </Dropdown.Toggle>
 
               <Dropdown.Menu className="dropdown-menu-start text-center">

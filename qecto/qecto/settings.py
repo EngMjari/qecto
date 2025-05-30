@@ -45,6 +45,12 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'core.apps.CoreConfig',
+    'projects.apps.ProjectsConfig',
+    'survey.apps.SurveyConfig',
+    'supervision.apps.SupervisionConfig',
+    'execution.apps.ExecutionConfig',
+    'document.apps.DocumentConfig',
+    
     
 ]
 

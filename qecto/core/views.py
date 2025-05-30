@@ -80,8 +80,8 @@ class UserInfoView(APIView):
         user = request.user
         image_url = None
         try:
-            if hasattr(user, 'profile') and user.profile.image:
-                image_url = user.profile.image.url
+            if user.profile_image:
+                image_url = user.profile_image.url
         except Exception:
             image_url = None
 

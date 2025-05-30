@@ -8,12 +8,38 @@ const BASE_URL = "http://localhost:8000";
 
 export default function Login() {
   const [phone, setPhone] = useState("");
+  const [error, setError] = useState(false);
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState(1);
   const [message, setMessage] = useState("");
   const [timer, setTimer] = useState(0);
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
+  const { isAuthenticated, userRole } = useContext(AuthContext);
+
+  const validatePhone = (value) => {
+    // شماره موبایل باید 11 رقم و با 09 شروع بشه
+    return /^09\d{9}$/.test(value);
+  };
+
+  const handleChange = (e) => {
+    setPhone(e.target.value); // آزاد بذار تایپ کنه
+    setError(false); // وقتی تایپ میکنه خطا رو پاک کن
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!validatePhone(phone)) {
+      setError(true);
+    } else {
+      setError(false);
+      if (step === 1) {
+        sendOTP();
+      } else {
+        verifyOTP();
+      }
+    }
+  };
 
   useEffect(() => {
     if (step === 2 && timer > 0) {
@@ -22,7 +48,12 @@ export default function Login() {
       }, 1000);
       return () => clearInterval(countdown);
     }
-  }, [step, timer]);
+    if (isAuthenticated) {
+      if (userRole === "superadmin") navigate("/super-admin-panel");
+      else if (userRole === "admin") navigate("/admin-panel");
+      else navigate("/dashboard");
+    }
+  }, [step, timer, isAuthenticated, userRole, navigate]);
 
   const sendOTP = async () => {
     try {
@@ -44,14 +75,19 @@ export default function Login() {
       const { access, refresh } = response.data;
       login(access, refresh);
       setMessage("ورود موفق!");
-      navigate("/dashboard");
+      if (userRole === "superadmin") navigate("/super-admin-panel");
+      else if (userRole === "admin") navigate("/admin-panel");
+      else navigate("/dashboard");
     } catch (error) {
       setMessage("کد نادرست یا منقضی شده است.");
     }
   };
 
   return (
-    <div className="d-flex justify-content-center align-items-center mt-5" style={{ fontFamily: "Vazirmatn, sans-serif" }}>
+    <div
+      className="d-flex justify-content-center align-items-center mt-5"
+      style={{ fontFamily: "Vazirmatn, sans-serif" }}
+    >
       <div
         className="shadow p-4 text-center"
         style={{
@@ -65,28 +101,26 @@ export default function Login() {
         <img src={logo} alt="لوگو" style={{ width: 60, marginBottom: 15 }} />
         <h4 className="mb-4 fw-bold">ورود به حساب کاربری</h4>
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (step === 1) {
-              sendOTP();
-            } else {
-              verifyOTP();
-            }
-          }}
-        >
+        <form onSubmit={handleSubmit} noValidate>
           {step === 1 ? (
             <>
-              <div className="form-group mb-3 text-end" style={{ position: "relative" }}>
+              <div
+                className="form-group mb-3 text-end"
+                style={{ position: "relative" }}
+              >
                 <input
                   type="tel"
                   id="phone"
-                  className="form-control"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={handleChange}
+                  maxLength={11}
+                  className={`form-control ${error ? "is-invalid" : ""}`}
                   required
                 />
-                <label htmlFor="phone" className={`floating-label ${phone ? "filled" : ""}`}>
+                <label
+                  htmlFor="phone"
+                  className={`floating-label ${phone ? "filled" : ""}`}
+                >
                   <i
                     className="bi bi-phone"
                     style={{
@@ -99,14 +133,29 @@ export default function Login() {
                   ></i>
                   شماره موبایل
                 </label>
+                {error && (
+                  <div
+                    className="invalid-feedback"
+                    style={{ textAlign: "right" }}
+                  >
+                    شماره موبایل صحیح نیست
+                  </div>
+                )}
               </div>
-              <button type="submit" className="btn btn-outline-danger w-100 mt-2" disabled={!phone.trim()}>
+              <button
+                type="submit"
+                className="btn btn-outline-danger w-100 mt-2"
+                disabled={!phone.trim()}
+              >
                 ارسال کد تأیید
               </button>
             </>
           ) : (
             <>
-              <div className="form-group mb-3 text-end" style={{ position: "relative" }}>
+              <div
+                className="form-group mb-3 text-end"
+                style={{ position: "relative" }}
+              >
                 <input
                   type="tel"
                   inputMode="numeric"
@@ -118,7 +167,10 @@ export default function Login() {
                   style={{ direction: "rtl" }}
                   required
                 />
-                <label htmlFor="otp" className={`floating-label ${otp ? "filled" : ""}`}>
+                <label
+                  htmlFor="otp"
+                  className={`floating-label ${otp ? "filled" : ""}`}
+                >
                   <i
                     className="bi bi-shield-lock"
                     style={{
@@ -132,16 +184,31 @@ export default function Login() {
                   کد تأیید
                 </label>
               </div>
-              <button type="submit" className="btn btn-outline-success col-11 mx-auto mb-2" disabled={!otp.trim()}>
+              <button
+                type="submit"
+                className="btn btn-outline-success col-11 mx-auto mb-2"
+                disabled={!otp.trim()}
+              >
                 تأیید و ورود
               </button>
-              <button className="btn btn-outline-secondary col-11 mx-auto mb-2" onClick={sendOTP} disabled={timer > 0} type="button">
-                {timer > 0 ? `ارسال مجدد تا ${timer} ثانیه` : "ارسال مجدد کد"}
+              <button
+                className="btn btn-outline-secondary col-11 mx-auto mb-2"
+                onClick={sendOTP}
+                disabled={timer > 0}
+                type="button"
+              >
+                {timer > 0
+                  ? `ارسال مجدد تا ${timer} ثانیه`
+                  : "ارسال مجدد کد"}
               </button>
               {message && (
                 <p className="mt-3 text-primary fw-bold text-center">{message}</p>
               )}
-              <button className="btn btn-outline-info col-11 mx-auto mb-2" type="button" onClick={() => setStep(1)}>
+              <button
+                className="btn btn-outline-info col-11 mx-auto mb-2"
+                type="button"
+                onClick={() => setStep(1)}
+              >
                 تغییر شماره موبایل
               </button>
             </>
@@ -184,6 +251,14 @@ export default function Login() {
           label.floating-label.filled i {
             color: #f39c12;
             transform: translateY(-3px);
+          }
+          .is-invalid {
+            border-color: #dc3545;
+            padding-right: calc(1.5em + 0.75rem);
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23dc3545' viewBox='0 0 12 12'%3e%3cpath d='M4.646 4.646a.5.5 0 0 1 .708 0L6 5.293l.646-.647a.5.5 0 0 1 .708.708L6.707 6l.647.646a.5.5 0 0 1-.708.708L6 6.707l-.646.647a.5.5 0 0 1-.708-.708L5.293 6 4.646 5.354a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right calc(0.375em + 0.1875rem) center;
+            background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
           }
         `}</style>
       </div>

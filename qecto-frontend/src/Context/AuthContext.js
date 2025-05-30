@@ -25,11 +25,15 @@ export function AuthProvider({ children }) {
         },
       });
       const user = response.data;
-      console.log("user.image from API:", user.image);
       setUserProfile({
-        image: user.image ? user.image : "/media/profile_images/default.png",
+        image: user.image
+          ? user.image.startsWith("http")
+            ? user.image
+            : `${BASE_URL}${user.image}`
+          : `${BASE_URL}/media/profile_images/default.png`,
         name: user.full_name,
       });
+
       if (user.is_superuser) setUserRole("superadmin");
       else if (user.is_staff) setUserRole("admin");
       else setUserRole("user");
