@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'supervision.apps.SupervisionConfig',
     'execution.apps.ExecutionConfig',
     'document.apps.DocumentConfig',
+    'tickets.apps.TicketsConfig',
     
     
 ]

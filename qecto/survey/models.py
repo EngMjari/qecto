@@ -15,6 +15,9 @@ class SurveyProject(models.Model):
     status = models.CharField(max_length=32, choices=SurveyStatus.choices, default=SurveyStatus.INITIAL_REQUEST)
     assigned_admin = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='assigned_survey_projects')
     description = models.TextField(blank=True, null=True)
+    area = models.FloatField(null=True, blank=True)
+    location_lat = models.FloatField(null=True, blank=True)
+    location_lng = models.FloatField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -14,6 +14,7 @@ import AdminPanel from "./Pages/AdminPanel";
 import ProtectedRoute from "./Components/ProtectedRoute";
 import NotFound from "./Pages/NotFound";
 import Forbidden from "./Pages/Forbidden";
+import CreateRequest from "./Components/CreateRequest";
 
 function Router() {
   const { userRole, isAuthenticated } = useContext(AuthContext);
@@ -30,6 +31,7 @@ function Router() {
         <Route path="/login" element={<Login />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/request" element={<CreateRequest />} />
 
         <Route
           path="/dashboard"
@@ -39,6 +41,11 @@ function Router() {
             </ProtectedRoute>
           }
         />
+        {/* <Route path="/create-request" element={
+            <ProtectedRoute allowedRoles={["user"]} userRole={userRole}>
+              <CreateRequest  />
+            </ProtectedRoute>
+          } /> */}
 
         <Route
           path="/admin-panel"

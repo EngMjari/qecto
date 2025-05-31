@@ -7,6 +7,7 @@ import './index.css';
 import './Styles/custom.scss';
 import 'vazirmatn/Vazirmatn-font-face.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
+import "leaflet/dist/leaflet.css";
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
