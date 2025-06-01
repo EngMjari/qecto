@@ -6,7 +6,7 @@ export const createProjectRequest = async (data) => {
   try {
     const response = await axios.post(`${API_BASE_URL}/create-request/`, data, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`, // یا هر جایی که توکن ذخیره شده
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
       },
     });
     return response.data;

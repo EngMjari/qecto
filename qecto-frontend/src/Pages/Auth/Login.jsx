@@ -1,9 +1,9 @@
 import React, { useState, useContext, useEffect } from "react";
-import { AuthContext } from "../Context/AuthContext";
+import { AuthContext } from "../../Context/AuthContext";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import logo from "../assets/logo.png";
-import "../Styles/Login.css";
+import logo from "../../assets/images/logo.png";
+import "../../Styles/Login.css";
 const BASE_URL = "http://localhost:8000";
 
 export default function Login() {

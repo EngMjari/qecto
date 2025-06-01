@@ -1,0 +1,8 @@
+/* src/styles/global.css */
+@import 'bootstrap/dist/css/bootstrap.rtl.min.css';
+@import 'vazirmatn/Vazirmatn-font-face.css';
+@import 'bootstrap-icons/font/bootstrap-icons.css';
+@import "leaflet/dist/leaflet.css";
+
+/* استایل‌های سفارشی */
+@import './index.css';

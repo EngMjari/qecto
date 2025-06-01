@@ -2,7 +2,7 @@ import React, { useContext, useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../Context/AuthContext";
 import { Navbar as BSNavbar, Nav, Container, Dropdown } from "react-bootstrap";
-import logo from "../assets/logo.png";
+import logo from "../assets/images/logo.png";
 
 export default function Navbar() {
   const BASE_URL = "http://localhost:8000";

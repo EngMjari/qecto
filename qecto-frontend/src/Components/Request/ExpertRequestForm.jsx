@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import FileUploadTable from "./FileUploadTable";
+import FileUploadTable from "../FileUpload/FileUploadTable";
 import { Form, Button, Alert } from "react-bootstrap";
-import authFetch from "../utils/authFetch";
+import authFetch from "../../utils/authFetch";
 
 function ExpertRequestForm({ onSubmit, user, location }) {
   const [formData, setFormData] = useState({
