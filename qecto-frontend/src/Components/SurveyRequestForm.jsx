@@ -27,6 +27,7 @@ function estimateBaseCost(area) {
 
 function SurveyRequestForm({ onSubmit, user, location }) {
   const [formData, setFormData] = useState({
+    title: "", // ✅ اضافه شده
     propertyType: "",
     area: "",
     description: "",
@@ -79,26 +80,33 @@ function SurveyRequestForm({ onSubmit, user, location }) {
       setError("لطفاً مساحت معتبر وارد کنید.");
       return;
     }
+    if (!formData.title.trim()) {
+      setError("لطفاً عنوان پروژه را وارد کنید.");
+      return;
+    }
+
     setError(null);
 
     try {
       const token = localStorage.getItem("access");
 
       const formPayload = new FormData();
+      formPayload.append("title", formData.title);
       formPayload.append("propertyType", formData.propertyType);
       formPayload.append("area", formData.area);
       formPayload.append("description", formData.description || "");
       formPayload.append("location", JSON.stringify(formData.location));
-      formPayload.append("title", formData.title);
       if (user && user.id) {
         formPayload.append("user", user.id);
       }
 
-      formData.attachments.forEach((file) => {
-        formPayload.append("attachments", file);
-      });
+      if (Array.isArray(formData.attachments)) {
+        formData.attachments.forEach(({ file, title }) => {
+          formPayload.append("attachments", file);
+          formPayload.append("titles", title);
+        });
+      }
 
-      // ✅ لاگ کردن تمام داده‌ها
       console.log("🔍 داده‌های ارسالی:");
       for (let pair of formPayload.entries()) {
         if (pair[0] === "attachments") {
@@ -133,6 +141,7 @@ function SurveyRequestForm({ onSubmit, user, location }) {
       alert("درخواست با موفقیت ارسال شد!");
 
       setFormData({
+        title: "",
         propertyType: "",
         area: "",
         description: "",
@@ -148,7 +157,6 @@ function SurveyRequestForm({ onSubmit, user, location }) {
   };
 
   const officeCoords = { lat: 36.726217, lng: 51.104315 };
-
   const areaNum = Number(formData.area);
   const distanceKm = formData.location ? haversineDistance(officeCoords.lat, officeCoords.lng, formData.location.lat, formData.location.lng) : null;
 
@@ -159,6 +167,7 @@ function SurveyRequestForm({ onSubmit, user, location }) {
   return (
     <Form onSubmit={handleSubmit} className="p-3 border rounded shadow-sm bg-white">
       <h5 className="mb-3 text-primary">درخواست نقشه‌برداری</h5>
+
       <Form.Group className="mb-3">
         <Form.Label>عنوان پروژه</Form.Label>
         <Form.Control

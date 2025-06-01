@@ -6,23 +6,29 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+
 class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
-        fields = ['id', 'title', 'description', 'project_type', 'status', 'created_at']
+        fields = ['id', 'title', 'description',
+                  'project_type', 'status', 'created_at']
+
 
 class SurveyAttachmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = SurveyAttachment
-        fields = ['id', 'file', 'uploaded_at']
+        fields = ['id', 'file', 'title', 'uploaded_at']
+
 
 class SurveyProjectSerializer(serializers.ModelSerializer):
     attachments = SurveyAttachmentSerializer(many=True, read_only=True)
 
     class Meta:
         model = SurveyProject
-        fields = ['id', 'project', 'status', 'description', 'area', 'location_lat', 'location_lng', 'attachments']
+        fields = ['id', 'project', 'status', 'description',
+                  'area', 'location_lat', 'location_lng', 'attachments']
         read_only_fields = ['status', 'project']
+
 
 class SurveyProjectCreateSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=200)
@@ -69,6 +75,7 @@ class SurveyProjectCreateSerializer(serializers.Serializer):
         for file in attachments:
             SurveyAttachment.objects.create(
                 survey_project=survey,
+                title=title,
                 file=file,
                 uploaded_by=user
             )
