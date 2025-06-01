@@ -14,6 +14,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='surveyattachment',
             name='file',
-            field=models.FileField(upload_to=survey.models.survey_attachment_upload_path),
+            field=models.FileField(upload_to=survey.models.survey_attachment_upload_to),
         ),
     ]

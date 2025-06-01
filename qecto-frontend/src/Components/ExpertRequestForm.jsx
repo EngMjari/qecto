@@ -1,15 +1,13 @@
 import React, { useEffect, useState } from "react";
 import FileUploadTable from "./FileUploadTable";
 import { Form, Button, Alert } from "react-bootstrap";
+import authFetch from "../utils/authFetch";
 
 function ExpertRequestForm({ onSubmit, user, location }) {
   const [formData, setFormData] = useState({
     title: "",
-    propertyType: "",
-    mainParcelNumber: "",
-    subParcelNumber: "",
-    location: null,
     description: "",
+    location: null,
     attachments: [],
   });
 
@@ -25,6 +23,17 @@ function ExpertRequestForm({ onSubmit, user, location }) {
     }
   }, [location]);
 
+  const handleFileChange = (update) => {
+    setFormData((prev) => {
+      const newAttachments =
+        typeof update === "function" ? update(prev.attachments) : update;
+      return {
+        ...prev,
+        attachments: newAttachments,
+      };
+    });
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -33,58 +42,38 @@ function ExpertRequestForm({ onSubmit, user, location }) {
     }));
   };
 
-  const handleFileChange = (update) => {
-    setFormData((prev) => {
-      const newAttachments = typeof update === "function" ? update(prev.attachments) : update;
-      return {
-        ...prev,
-        attachments: newAttachments,
-      };
-    });
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!formData.location) {
+      setError("لطفاً موقعیت ملک را از روی نقشه انتخاب کنید.");
+      return;
+    }
     if (!formData.title.trim()) {
-      setError("لطفاً موضوع کارشناسی را وارد کنید.");
-      return;
-    }
-    if (!formData.propertyType) {
-      setError("لطفاً نوع ملک را انتخاب کنید.");
-      return;
-    }
-    if (!formData.mainParcelNumber || !formData.subParcelNumber) {
-      setError("لطفاً شماره پلاک اصلی و فرعی را وارد کنید.");
+      setError("لطفاً عنوان پروژه را وارد کنید.");
       return;
     }
 
     setError(null);
 
     try {
-      const token = localStorage.getItem("access");
       const formPayload = new FormData();
-
       formPayload.append("title", formData.title);
-      formPayload.append("propertyType", formData.propertyType);
-      formPayload.append("mainParcelNumber", formData.mainParcelNumber);
-      formPayload.append("subParcelNumber", formData.subParcelNumber);
       formPayload.append("description", formData.description || "");
-      if (formData.location) {
-        formPayload.append("location", JSON.stringify(formData.location));
-      }
+      formPayload.append("location", JSON.stringify(formData.location));
       if (user && user.id) {
         formPayload.append("user", user.id);
       }
-      formData.attachments.forEach((file) => {
-        formPayload.append("attachments", file);
-      });
 
-      const response = await fetch("http://localhost:8000/api/expert/request/", {
+      if (Array.isArray(formData.attachments)) {
+        formData.attachments.forEach(({ file, title }) => {
+          formPayload.append("attachments", file);
+          formPayload.append("titles", title);
+        });
+      }
+
+      const response = await authFetch("http://localhost:8000/api/expert/request/", {
         method: "POST",
-        headers: {
-          Authorization: token ? `Bearer ${token}` : "",
-        },
         body: formPayload,
       });
 
@@ -104,11 +93,8 @@ function ExpertRequestForm({ onSubmit, user, location }) {
 
       setFormData({
         title: "",
-        propertyType: "",
-        mainParcelNumber: "",
-        subParcelNumber: "",
-        location: null,
         description: "",
+        location: null,
         attachments: [],
       });
 
@@ -121,62 +107,18 @@ function ExpertRequestForm({ onSubmit, user, location }) {
 
   return (
     <Form onSubmit={handleSubmit} className="p-3 border rounded shadow-sm bg-white">
-      <h5 className="mb-3 text-primary">درخواست کارشناسی ملک</h5>
+      <h5 className="mb-3 text-primary">درخواست کارشناسی</h5>
 
       <Form.Group className="mb-3">
-        <Form.Label>موضوع کارشناسی</Form.Label>
+        <Form.Label>عنوان پروژه</Form.Label>
         <Form.Control
           type="text"
           name="title"
           value={formData.title}
           onChange={handleInputChange}
-          placeholder="مثلاً بررسی وضعیت ثبتی پلاک 45 اصلی از 12 فرعی"
+          placeholder="عنوان پروژه کارشناسی"
           required
         />
-      </Form.Group>
-
-      <Form.Group className="mb-3">
-        <Form.Label>نوع ملک</Form.Label>
-        <Form.Select name="propertyType" value={formData.propertyType} onChange={handleInputChange} required>
-          <option value="">انتخاب کنید</option>
-          <option value="زمین">زمین</option>
-          <option value="ساختمان">ساختمان</option>
-          <option value="سایر">سایر</option>
-        </Form.Select>
-      </Form.Group>
-
-      <Form.Group className="mb-3">
-        <Form.Label>شماره پلاک</Form.Label>
-        <div className="d-flex gap-2">
-          <Form.Control
-            type="text"
-            name="mainParcelNumber"
-            value={formData.mainParcelNumber}
-            onChange={handleInputChange}
-            placeholder="پلاک اصلی (مثلاً 45)"
-          />
-          <Form.Control
-            type="text"
-            name="subParcelNumber"
-            value={formData.subParcelNumber}
-            onChange={handleInputChange}
-            placeholder="پلاک فرعی (مثلاً 12)"
-          />
-        </div>
-      </Form.Group>
-
-      <Form.Group className="mb-3">
-        <Form.Label>موقعیت ملک (اختیاری)</Form.Label>
-        {formData.location ? (
-          <div className="p-2 border rounded bg-light text-success">
-            نقطه‌ای با مختصات Φ: {formData.location.lat.toFixed(6)}، λ: {formData.location.lng.toFixed(6)} انتخاب شده است.
-          </div>
-        ) : (
-          <div className="p-2 border rounded bg-light text-muted">
-            مختصات اختیاری است، در صورت تمایل روی نقشه نقطه‌ای انتخاب کنید.
-          </div>
-        )}
-        <input type="hidden" name="location" value={JSON.stringify(formData.location || {})} />
       </Form.Group>
 
       <Form.Group className="mb-3">
@@ -192,14 +134,31 @@ function ExpertRequestForm({ onSubmit, user, location }) {
       </Form.Group>
 
       <Form.Group className="mb-3">
+        <Form.Label>موقعیت ملک (عرض و طول جغرافیایی)</Form.Label>
+        {formData.location ? (
+          <div className="p-2 border rounded bg-light text-success">
+            نقطه به مختصات Φ: {formData.location.lat.toFixed(6)}، λ:{" "}
+            {formData.location.lng.toFixed(6)} انتخاب شده است.
+          </div>
+        ) : (
+          <div className="p-2 border rounded bg-light text-danger">
+            هنوز موقعیتی انتخاب نشده است.
+          </div>
+        )}
+      </Form.Group>
+
+      <Form.Group className="mb-3">
         <Form.Label>پیوست‌ها</Form.Label>
-        <FileUploadTable attachments={formData.attachments} onFileChange={handleFileChange} />
+        <FileUploadTable
+          attachments={formData.attachments}
+          onFileChange={handleFileChange}
+        />
       </Form.Group>
 
       {error && <Alert variant="danger">{error}</Alert>}
 
       <Button type="submit" className="btn btn-primary w-100">
-        ثبت درخواست
+        ارسال درخواست
       </Button>
     </Form>
   );

@@ -4,6 +4,10 @@ from django.conf import settings
 from projects.models import Project
 from django.utils.text import slugify
 import os
+import re
+import unicodedata
+import uuid
+import shutil
 
 
 class SurveyStatus(models.TextChoices):
@@ -14,9 +18,24 @@ class SurveyStatus(models.TextChoices):
     RETURNED_FOR_INFO = 'returned_for_info', 'بازگشت برای تکمیل اطلاعات'
 
 
-def survey_attachment_upload_path(instance, filename):
-    project_title = slugify(instance.survey_project.project.title)
-    return os.path.join('survey_attachments', project_title, filename)
+def slugify_fa(value):
+    value = str(value).strip()
+    value = unicodedata.normalize('NFKD', value)
+    value = re.sub(r'[^\w\s-]', '', value, flags=re.U)
+    value = re.sub(r'[-\s]+', '-', value, flags=re.U)
+    return value.lower()
+
+
+def survey_attachment_upload_to(instance, filename):
+    # دسترسی به پروژه از طریق survey_project
+    project = instance.survey_project.project if instance.survey_project else None
+
+    project_title = project.title if project else "untitled"
+    safe_title = slugify_fa(project_title)
+    folder_name = f'{safe_title}_{instance.survey_project.id if instance.survey_project else "unknown"}'
+
+    return f'survey_attachments/{folder_name}/{filename}'
+
 
 
 class SurveyProject(models.Model):
@@ -33,14 +52,27 @@ class SurveyProject(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def delete(self, *args, **kwargs):
+        # حذف تمام فایل‌های ضمیمه
+        for attachment in self.attachments.all():
+            attachment.delete()
+
+        # پیدا کردن پوشه‌ی اصلی پروژه از روی اولین فایل
+        first_attachment = self.attachments.first()
+        if first_attachment and first_attachment.file:
+            project_folder = os.path.dirname(os.path.dirname(first_attachment.file.path))
+            super().delete(*args, **kwargs)
+            # اگر پوشه پروژه خالی بود، حذفش کن
+            if os.path.isdir(project_folder) and not os.listdir(project_folder):
+                try:
+                    shutil.rmtree(project_folder)
+                except Exception as e:
+                    print(f"Error removing survey project folder {project_folder}: {e}")
+        else:
+            super().delete(*args, **kwargs)
+
     def get_project_name(self):
         return f"{self.project.title}"
-
-    def delete(self, *args, **kwargs):
-        project = self.project
-        super().delete(*args, **kwargs)
-        if project:
-            project.delete()
 
     def __str__(self):
         return f"Survey of {self.project.title} - {self.get_status_display()}"
@@ -50,14 +82,17 @@ class SurveyAttachment(models.Model):
     survey_project = models.ForeignKey(
         SurveyProject, on_delete=models.CASCADE, related_name='attachments')
     title = models.CharField(max_length=255, blank=True, default="بدون عنوان")
-    file = models.FileField(upload_to=survey_attachment_upload_path)
+    file = models.FileField(upload_to=survey_attachment_upload_to)
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def delete(self, *args, **kwargs):
         if self.file and os.path.isfile(self.file.path):
+            file_dir = os.path.dirname(self.file.path)
             os.remove(self.file.path)
+            if not os.listdir(file_dir):
+                shutil.rmtree(file_dir)
         super().delete(*args, **kwargs)
 
     def __str__(self):

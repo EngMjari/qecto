@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'execution.apps.ExecutionConfig',
     'document.apps.DocumentConfig',
     'tickets.apps.TicketsConfig',
+    'expert.apps.ExpertConfig',
     
     
 ]

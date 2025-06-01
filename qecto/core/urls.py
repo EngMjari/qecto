@@ -1,3 +1,4 @@
+# core/urls.py : 
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import SendOTPView, VerifyOTPView, AdminUserViewSet, UserInfoView
@@ -14,5 +15,6 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('survey/', include('survey.api.urls')),
-
+    path('expert/', include('expert.api.urls')),
+    
 ]

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import FileUploadTable from "./FileUploadTable";
 import { Form, Button, Alert } from "react-bootstrap";
+import authFetch from "../utils/authFetch";
 
 function toRad(deg) {
   return (deg * Math.PI) / 180;
@@ -10,7 +11,9 @@ function haversineDistance(lat1, lng1, lat2, lng2) {
   const R = 6371;
   const dLat = toRad(lat2 - lat1);
   const dLng = toRad(lng2 - lng1);
-  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
@@ -27,7 +30,7 @@ function estimateBaseCost(area) {
 
 function SurveyRequestForm({ onSubmit, user, location }) {
   const [formData, setFormData] = useState({
-    title: "", // ✅ اضافه شده
+    title: "",
     propertyType: "",
     area: "",
     description: "",
@@ -49,7 +52,8 @@ function SurveyRequestForm({ onSubmit, user, location }) {
 
   const handleFileChange = (update) => {
     setFormData((prev) => {
-      const newAttachments = typeof update === "function" ? update(prev.attachments) : update;
+      const newAttachments =
+        typeof update === "function" ? update(prev.attachments) : update;
       return {
         ...prev,
         attachments: newAttachments,
@@ -88,8 +92,6 @@ function SurveyRequestForm({ onSubmit, user, location }) {
     setError(null);
 
     try {
-      const token = localStorage.getItem("access");
-
       const formPayload = new FormData();
       formPayload.append("title", formData.title);
       formPayload.append("propertyType", formData.propertyType);
@@ -107,20 +109,8 @@ function SurveyRequestForm({ onSubmit, user, location }) {
         });
       }
 
-      console.log("🔍 داده‌های ارسالی:");
-      for (let pair of formPayload.entries()) {
-        if (pair[0] === "attachments") {
-          console.log(pair[0] + ":", pair[1].name);
-        } else {
-          console.log(pair[0] + ":", pair[1]);
-        }
-      }
-
-      const response = await fetch("http://localhost:8000/api/survey/request/", {
+      const response = await authFetch("http://localhost:8000/api/survey/request/", {
         method: "POST",
-        headers: {
-          Authorization: token ? `Bearer ${token}` : "",
-        },
         body: formPayload,
       });
 
@@ -158,7 +148,14 @@ function SurveyRequestForm({ onSubmit, user, location }) {
 
   const officeCoords = { lat: 36.726217, lng: 51.104315 };
   const areaNum = Number(formData.area);
-  const distanceKm = formData.location ? haversineDistance(officeCoords.lat, officeCoords.lng, formData.location.lat, formData.location.lng) : null;
+  const distanceKm = formData.location
+    ? haversineDistance(
+        officeCoords.lat,
+        officeCoords.lng,
+        formData.location.lat,
+        formData.location.lng
+      )
+    : null;
 
   const baseCost = areaNum ? estimateBaseCost(areaNum) : 0;
   const distanceCost = distanceKm ? Math.floor(distanceKm / 10) * 0.5 : 0;
@@ -182,7 +179,12 @@ function SurveyRequestForm({ onSubmit, user, location }) {
 
       <Form.Group className="mb-3">
         <Form.Label>نوع ملک</Form.Label>
-        <Form.Select name="propertyType" value={formData.propertyType} onChange={handleInputChange} required>
+        <Form.Select
+          name="propertyType"
+          value={formData.propertyType}
+          onChange={handleInputChange}
+          required
+        >
           <option value="">انتخاب کنید</option>
           <option value="مسکونی">مسکونی</option>
           <option value="تجاری">تجاری</option>
@@ -193,7 +195,15 @@ function SurveyRequestForm({ onSubmit, user, location }) {
 
       <Form.Group className="mb-3">
         <Form.Label>مساحت (متر مربع)</Form.Label>
-        <Form.Control type="number" name="area" value={formData.area} onChange={handleInputChange} placeholder="مثلاً 1000" required min={1} />
+        <Form.Control
+          type="number"
+          name="area"
+          value={formData.area}
+          onChange={handleInputChange}
+          placeholder="مثلاً 1000"
+          required
+          min={1}
+        />
       </Form.Group>
 
       <Form.Group className="mb-3">
@@ -212,10 +222,13 @@ function SurveyRequestForm({ onSubmit, user, location }) {
         <Form.Label>موقعیت ملک (عرض و طول جغرافیایی)</Form.Label>
         {formData.location ? (
           <div className="p-2 border rounded bg-light text-success">
-            نقطه به مختصات Φ: {formData.location.lat.toFixed(6)}، λ: {formData.location.lng.toFixed(6)} انتخاب شده است.
+            نقطه به مختصات Φ: {formData.location.lat.toFixed(6)}، λ:{" "}
+            {formData.location.lng.toFixed(6)} انتخاب شده است.
           </div>
         ) : (
-          <div className="p-2 border rounded bg-light text-danger">هنوز موقعیتی انتخاب نشده است.</div>
+          <div className="p-2 border rounded bg-light text-danger">
+            هنوز موقعیتی انتخاب نشده است.
+          </div>
         )}
       </Form.Group>
 
@@ -229,13 +242,16 @@ function SurveyRequestForm({ onSubmit, user, location }) {
 
       <Form.Group className="mb-3">
         <Form.Label>پیوست‌ها</Form.Label>
-        <FileUploadTable attachments={formData.attachments} onFileChange={handleFileChange} />
+        <FileUploadTable
+          attachments={formData.attachments}
+          onFileChange={handleFileChange}
+        />
       </Form.Group>
 
       {error && <Alert variant="danger">{error}</Alert>}
 
       <Button type="submit" className="btn btn-primary w-100">
-        ثبت درخواست
+        ارسال درخواست
       </Button>
     </Form>
   );

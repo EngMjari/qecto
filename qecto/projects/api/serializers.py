@@ -1,7 +1,7 @@
 # projects/api/serializers.py
 from rest_framework import serializers
 from projects.models import Project, ProjectType, ProjectStatus
-from survay.models import SurveyProject, SurveyAttachment
+from survey.models import SurveyProject, SurveyAttachment
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
