@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import {BASE_URL} from "../utils/config";
 
-const BASE_URL = "http://localhost:8000";
 
 export function useAuth() {
   const [user, setUser] = useState(null);

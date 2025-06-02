@@ -1,6 +1,7 @@
 import axios from 'axios';
+import {BASE_URL} from "./../utils/config";
 
-const API_BASE_URL = 'http://localhost:8000/api/projects';
+const API_BASE_URL = `"${BASE_URL}/api/projects`;
 
 export const createProjectRequest = async (data) => {
   try {

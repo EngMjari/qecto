@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import FileUploadTable from "../FileUpload/FileUploadTable";
 import { Form, Button, Alert } from "react-bootstrap";
 import authFetch from "../../utils/authFetch";
-
+import { BASE_URL } from "../../utils/config";
 function toRad(deg) {
   return (deg * Math.PI) / 180;
 }
@@ -109,7 +109,7 @@ function SurveyRequestForm({ onSubmit, user, location }) {
         });
       }
 
-      const response = await authFetch("http://localhost:8000/api/survey/request/", {
+      const response = await authFetch(`${BASE_URL}/api/survey/request/`, {
         method: "POST",
         body: formPayload,
       });

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Form, Row, Col, Button, Table, Alert } from "react-bootstrap";
+import { BASE_URL } from "../../utils/config";
 
 function TitleRegistrationRequestForm({ onCoordinateChange, userId }) {
   const [formData, setFormData] = useState({

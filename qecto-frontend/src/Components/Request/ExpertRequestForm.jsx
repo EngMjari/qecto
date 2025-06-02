@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import FileUploadTable from "../FileUpload/FileUploadTable";
 import { Form, Button, Alert } from "react-bootstrap";
 import authFetch from "../../utils/authFetch";
+import { BASE_URL } from "../../utils/config";
 
 function ExpertRequestForm({ onSubmit, user, location }) {
   const [formData, setFormData] = useState({
@@ -72,7 +73,7 @@ function ExpertRequestForm({ onSubmit, user, location }) {
         });
       }
 
-      const response = await authFetch("http://localhost:8000/api/expert/request/", {
+      const response = await authFetch(`${BASE_URL}/api/expert/request/`, {
         method: "POST",
         body: formPayload,
       });

@@ -1,9 +1,9 @@
-// src/Router.js
-import React, { useContext } from "react";
-import { Routes, Route } from "react-router-dom";
+import React, { useContext, useState } from "react";
+import { Routes, Route, useLocation } from "react-router-dom";
 import { AuthContext } from "./Context/AuthContext";
 
 import Navbar from "./Components/Navbar";
+
 import Login from "./Pages/Auth/Login";
 import Dashboard from "./Pages/Dashboard/Dashboard";
 import Home from "./Pages/Home";
@@ -18,12 +18,13 @@ import CreateRequest from "./Components/Request/CreateRequest";
 
 function Router() {
   const { userRole, isAuthenticated } = useContext(AuthContext);
+  const location = useLocation();
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   if (isAuthenticated && !userRole) {
     return <p className="text-center mt-5">در حال بارگذاری اطلاعات کاربر...</p>;
   }
 
-  // کامپوننت‌های واسط برای راحتی استفاده
   const UserRoute = ({ children }) => (
     <ProtectedRoute allowedRoles={["user"]} userRole={userRole} isAuthenticated={isAuthenticated}>
       {children}
@@ -42,7 +43,6 @@ function Router() {
     </ProtectedRoute>
   );
 
-  // آرایه روت‌ها
   const routes = [
     { path: "/", element: <Home />, protected: false },
     { path: "/login", element: <Login />, protected: false },
@@ -55,16 +55,33 @@ function Router() {
     { path: "/super-admin-panel", element: <SuperAdminPanel />, protected: true, roles: ["superadmin"] },
   ];
 
+  const isDashboardRoute = location.pathname.startsWith("/dashboard") ||
+    location.pathname.startsWith("/admin-panel") ||
+    location.pathname.startsWith("/super-admin-panel");
+
+  const getPageTitle = () => {
+    if (location.pathname.includes("dashboard")) return "داشبورد";
+    if (location.pathname.includes("admin-panel")) return "پنل ادمین";
+    if (location.pathname.includes("super-admin-panel")) return "پنل ابرادمین";
+    return "";
+  };
+
   return (
     <>
-      <Navbar />
+      <Navbar
+        role={userRole}
+        isDashboard={isDashboardRoute}
+        drawerOpen={drawerOpen}
+        setDrawerOpen={setDrawerOpen}
+        currentTitle={getPageTitle()}
+      />
+
       <Routes>
         {routes.map(({ path, element, protected: isProtected, roles }) => {
           if (!isProtected) {
             return <Route key={path} path={path} element={element} />;
           }
 
-          // نقش‌ها و کامپوننت واسط
           if (roles.includes("user")) {
             return <Route key={path} path={path} element={<UserRoute>{element}</UserRoute>} />;
           }
@@ -75,7 +92,7 @@ function Router() {
             return <Route key={path} path={path} element={<SuperAdminRoute>{element}</SuperAdminRoute>} />;
           }
 
-          return null; // اگر نقش نامشخص بود
+          return null;
         })}
 
         <Route path="/unauthorized" element={<Forbidden />} />

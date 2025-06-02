@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect } from "react";
 import axios from "axios";
-const BASE_URL = "http://localhost:8000";
+import { BASE_URL } from "../utils/config";
+import { useNavigate } from "react-router-dom";
 
 export const AuthContext = createContext();
 
@@ -8,6 +9,7 @@ export function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
   const [userRole, setUserRole] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const token = localStorage.getItem("access");
@@ -28,9 +30,13 @@ export function AuthProvider({ children }) {
       console.log("User info response:", response.data); // <=== این خط رو اضافه کن
 
       setUserProfile({
-  image: user.image ? (user.image.startsWith('http') ? user.image : `${BASE_URL}${user.image}`) : `${BASE_URL}/media/profile_images/default.png`,
-  name: user.full_name,
-});
+        image: user.image
+          ? user.image.startsWith("http")
+            ? user.image
+            : `${BASE_URL}${user.image}`
+          : `${BASE_URL}/media/profile_images/default.png`,
+        name: user.full_name,
+      });
 
       if (user.is_superuser) setUserRole("superadmin");
       else if (user.is_staff) setUserRole("admin");
@@ -57,11 +63,11 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const login = (access, refresh) => {
+  const login = async (access, refresh) => {
     localStorage.setItem("access", access);
     localStorage.setItem("refresh", refresh);
     setIsAuthenticated(true);
-    fetchUserProfile(access);
+    await fetchUserProfile(access);
   };
 
   const logout = () => {
@@ -70,6 +76,9 @@ export function AuthProvider({ children }) {
 
     setIsAuthenticated(false);
     setUserProfile(null);
+    setUserRole(null);
+
+    navigate("/login");
   };
 
   return <AuthContext.Provider value={{ isAuthenticated, login, logout, userProfile, userRole }}>{children}</AuthContext.Provider>;
