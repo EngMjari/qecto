@@ -15,10 +15,13 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'full_name', 'phone', 'profile_image']
+
+
 class AdminUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'phone', 'national_id', 'full_name', 'email', 'profile_image', 'is_active']
+        fields = ['id', 'phone', 'national_id', 'full_name',
+                  'email', 'profile_image', 'is_active']
         read_only_fields = ['id']
 
     def create(self, validated_data):

@@ -106,21 +106,8 @@ function SurveyRequestForm({ onSubmit, user, location }) {
       }
 
       const response = await axiosInstance.post(`/api/survey/request/`, formPayload);
+      const result = response.data;
 
-      if (!response.ok) {
-        let errorData;
-        try {
-          errorData = await response.json();
-          console.error("❌ خطای سرور:", errorData);
-        } catch (jsonError) {
-          console.error("⚠️ خطا در خواندن پاسخ خطا:", jsonError);
-          errorData = { detail: response.statusText };
-        }
-        setError(`خطا در ارسال درخواست: ${errorData.detail || response.statusText}`);
-        return;
-      }
-
-      const result = await response.json();
       alert("درخواست با موفقیت ارسال شد!");
 
       setFormData({
@@ -135,7 +122,10 @@ function SurveyRequestForm({ onSubmit, user, location }) {
       if (onSubmit) onSubmit(result);
     } catch (error) {
       console.error("⚠️ خطا در ارسال:", error);
-      setError("خطا در ارسال درخواست: " + error.message);
+
+      // اگر خطای سمت سرور باشه و جزئیات داشته باشه
+      const detail = error.response?.data?.detail || error.response?.data?.error || error.message;
+      setError("خطا در ارسال درخواست: " + detail);
     }
   };
 

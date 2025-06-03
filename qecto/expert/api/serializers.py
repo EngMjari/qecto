@@ -21,7 +21,7 @@ class ExpertEvaluationProjectSerializer(serializers.ModelSerializer):
         model = ExpertEvaluationProject
         fields = [
             'id', 'project', 'property_type', 'main_parcel_number', 'sub_parcel_number',
-            'location_lat', 'location_lng', 'description', 'created_at', 'attachments'
+            'location_lat', 'location_lng', 'description', 'created_at', 'attachments', 'status'
         ]
         read_only_fields = ['project', 'created_at']
 

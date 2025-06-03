@@ -1,14 +1,59 @@
-import React from "react";
-import { FaClipboardList, FaCheckCircle, FaExclamationCircle, FaUserEdit, FaTicketAlt } from "react-icons/fa";
+import React, { useEffect, useState } from "react";
+import { FaClipboardList, FaCheckCircle, FaExclamationCircle, FaHourglassHalf } from "react-icons/fa";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import WelcomeCard from "./WelcomeCard";
+import axiosInstance from "../../utils/axiosInstance";
+import { IoIosCloseCircleOutline, IoMdSettings } from "react-icons/io";
 
-const recentRequests = [
-  { id: 1, title: "درخواست ثبت سند", status: "درحال بررسی", statusColor: "#007bff" },
-  { id: 2, title: "درخواست کارشناسی", status: "تاکمیل شده", statusColor: "#28a745" },
-  { id: 3, title: "درخواست رفع نقص", status: "دارای نقص", statusColor: "#dc3545" },
-];
+// تابع تعیین رنگ وضعیت
+const getStatusColor = (status) => {
+  switch (status) {
+    case "pending":
+      return "#f1c40f"; // در حال بررسی
+    case "in_progress":
+      return "#1abc9c"; // در حال انجام
+    case "completed":
+      return "#28a745"; // تکمیل شده
+    case "incomplete":
+      return "#e67e22"; // دارای نقص
+    case "rejected":
+      return "#dc3545"; // رد شده
+    default:
+      return "#999"; // ناشناخته
+  }
+};
+
+// تابع برچسب فارسی وضعیت
+const getStatusLabel = (status) => {
+  switch (status) {
+    case "pending":
+      return "در حال بررسی";
+    case "in_progress":
+      return "در حال انجام";
+    case "completed":
+      return "تکمیل شده";
+    case "incomplete":
+      return "دارای نقص";
+    case "rejected":
+      return "رد شده";
+    default:
+      return "نامشخص";
+  }
+};
+
+const getTicketStatusColor = (status) => {
+  switch (status) {
+    case "پاسخ داده شده":
+      return "#28a745";
+    case "منتظر پاسخ":
+      return "#ffc107";
+    case "بسته شده":
+      return "#6c757d";
+    default:
+      return "#999";
+  }
+};
 
 const recentTickets = [
   { id: 1, title: "پیگیری پروژه X", status: "پاسخ داده شده", statusColor: "#28a745" },
@@ -17,29 +62,113 @@ const recentTickets = [
 ];
 
 export default function Dashboard() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const res = await axiosInstance.get("api/projects/dashboard/");
+        console.log("Response from API:", res.data); // این رو اضافه کن
+        setData(res.data);
+      } catch (error) {
+        console.error("خطا در بارگذاری پروژه‌ها:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
   return (
     <div style={styles.container}>
       <WelcomeCard />
-      <StatsGrid />
-
-      <SectionGrid recentRequests={recentRequests} recentTickets={recentTickets} />
+      <ProjectInfoCard projects={data} />
+      <StatsGrid projects={data} />
+      <SectionGrid
+        recentRequests={Array.isArray(data?.recent_requests) ? data.recent_requests : []}
+        recentTickets={Array.isArray(recentTickets) ? recentTickets : []}
+      />
     </div>
   );
 }
 
-function StatsGrid() {
+function StatsGrid({ projects }) {
+  if (!projects) return null;
+
+  const allRequests = projects.all_requests || [];
+
+  const pending = allRequests.filter((p) => p.data.status === "pending").length;
+  const completed = allRequests.filter((p) => p.data.status === "completed").length;
+  const in_progress = allRequests.filter((p) => p.data.status === "in_progress").length;
+  const rejected = allRequests.filter((p) => p.data.status === "rejected").length;
+  const incomplete = allRequests.filter((p) => p.data.status === "incomplete").length;
+
   const stats = [
-    { icon: <FaClipboardList />, title: "کل درخواست‌ها", value: "15", color: "#002a3a", link: "/requests" },
-    { icon: <FaCheckCircle />, title: "درحال بررسی", value: "5", color: "#007bff", link: "/requests?status=pending" },
-    { icon: <FaCheckCircle />, title: "تکمیل شده", value: "7", color: "#28a745", link: "/requests?status=approved" },
-    { icon: <FaExclamationCircle />, title: "دارای نقص", value: "3", color: "#dc3545", link: "/requests?status=incomplete" },
+    {
+      icon: <FaHourglassHalf style={styles.spinningIcon} />,
+      title: "درحال بررسی",
+      value: pending,
+      color: "#f1c40f",
+      link: "/requests?status=pending",
+    },
+    {
+      icon: <IoMdSettings style={styles.spinningIcon} />,
+      title: "در حال انجام",
+      value: in_progress,
+      color: "#1abc9c",
+      link: "/requests?status=approved",
+    },
+    { icon: <FaCheckCircle />, title: "تکمیل شده", value: completed, color: "#28a745", link: "/requests?status=approved" },
+    { icon: <FaExclamationCircle />, title: "دارای نقص", value: incomplete, color: "#e67e22", link: "/requests?status=incomplete" },
+    { icon: <IoIosCloseCircleOutline />, title: "رد شده", value: rejected, color: "#dc3545", link: "/requests?status=incomplete" },
   ];
 
   return (
-    <div style={styles.statsGrid}>
-      {stats.map(({ icon, title, value, color, link }) => (
-        <StatCard key={title} icon={icon} title={title} value={value} color={color} link={link} />
-      ))}
+    <>
+      <div></div>
+      <div style={styles.statsGrid}>
+        {stats
+          .filter(({ value }) => value > 0)
+          .map(({ icon, title, value, color, link }) => (
+            <StatCard key={title} icon={icon} title={title} value={value} color={color} link={link} />
+          ))}
+      </div>
+      {/* متن مجموع پروژه‌ها */}
+    </>
+  );
+}
+
+function ProjectInfoCard({ projects }) {
+  if (!projects) return null;
+  const total = projects.total_requests || 0;
+  return (
+    <div className="bg-white shadow rounded-4 border-dark">
+      {/* Left Section: Icon and Title */}
+      <div className="flex items-center space-x-3 rtl:space-x-reverse mb-4 sm:mb-0 flex-shrink-0">
+        <div className="p-3 bg-dark" style={styles.projectInfo}>
+          <FaClipboardList size={24} className="text-white" /> {/* Slightly smaller icon for horizontal layout */}
+        </div>
+        <h2 className="text-md text-center md:text-xl font-semibold whitespace-nowrap py-2" style={{ color: "#002a3a" }}>
+          وضعیت پروژه‌ها
+        </h2>
+      </div>
+
+      {/* Middle Section: Greeting and Count - takes available space */}
+      <div className="sm:text-right h5 rtl:sm:text-left mb-4 sm:mb-0 sm:mx-4 flex-grow px-4 py-2">
+        <p className="text-sm md:text-base text-gray-700">
+          سلام{" "}
+          <span className="font-semibold" style={{ color: "#002a3a" }}>
+            {projects.user.full_name}
+          </span>
+          ، تعداد پروژه‌های فعال شما{" "}
+          <span className="font-bold text-base md:text-lg" style={{ color: "#002a3a" }}>
+            {total}
+          </span>{" "}
+          عدد می‌باشد.
+        </p>
+      </div>
     </div>
   );
 }
@@ -56,24 +185,44 @@ function StatCard({ icon, title, value, color, link }) {
   );
 }
 
-function SectionGrid({ recentRequests, recentTickets }) {
+function SectionGrid({ recentRequests = [], recentTickets = [] }) {
   return (
     <div style={styles.sectionGrid}>
-      <DashboardSection title="آخرین درخواست‌ها" linkText="همه درخواست‌ها" linkHref="/requests">
-        {recentRequests.map((req) => (
-          <Link key={req.id} to={`/requests/${req.id}`} style={styles.itemRow} className="hoverItem">
-            <span>{req.title}</span>
-            <span style={{ ...styles.statusBadge, backgroundColor: req.statusColor }}>{req.status}</span>
+      <DashboardSection title="آخرین درخواست‌ها" linkText="همه درخواست‌ها" linkHref="/projects">
+        {(recentRequests || []).map((proj) => (
+          <Link key={proj.data.id} to={`/projects/${proj.data.project.id}`} style={styles.itemRow} className="hoverItem">
+            <div style={styles.itemColumn}>
+              <span>{proj.title}</span>
+              <span style={styles.requestType}>
+                {proj.type === "survey" && "نقشه‌برداری"}
+                {proj.type === "expert" && "کارشناسی"}
+                {proj.type === "ownership" && "ثبت مالکیت"}
+              </span>
+            </div>
+            <span
+              style={{
+                ...styles.statusBadge,
+                backgroundColor: getStatusColor(proj.data.status),
+              }}
+            >
+              {getStatusLabel(proj.data.status)}
+            </span>
           </Link>
         ))}
       </DashboardSection>
 
       <DashboardSection title="آخرین تیکت‌ها" linkText="همه تیکت‌ها" linkHref="/tickets">
-        {recentTickets.map((ticket) => (
+        {(recentTickets || []).map((ticket) => (
           <Link key={ticket.id} to={`/tickets/${ticket.id}`} style={styles.itemRow} className="hoverItem">
             <span>{ticket.title}</span>
-            <span style={{ ...styles.statusBadge, backgroundColor: ticket.statusColor }}>{ticket.status}</span>
-            {/* <FaTicketAlt color="#ff5700" style={{ marginLeft: 5 }} /> */}
+            <span
+              style={{
+                ...styles.statusBadge,
+                backgroundColor: getTicketStatusColor(ticket.status),
+              }}
+            >
+              {getStatusLabel(ticket.status)}
+            </span>
           </Link>
         ))}
       </DashboardSection>
@@ -98,6 +247,12 @@ function DashboardSection({ title, children, linkText, linkHref }) {
 // حذف ActionButtons مطابق درخواست شما
 
 const styles = {
+  projectInfo: {
+    borderRadius: "12px 12px 0 0",
+  },
+  spinningIcon: {
+    animation: "spin 2s linear infinite",
+  },
   container: {
     padding: "10px 20px",
     fontFamily: "'Vazir', sans-serif",
@@ -174,20 +329,35 @@ const styles = {
   itemRow: {
     display: "flex",
     justifyContent: "space-between",
-    padding: "10px",
+    alignItems: "center",
+    padding: "12px 16px",
     borderBottom: "1px solid #eee",
     color: "#002a3a",
     textDecoration: "none",
     fontSize: "0.95rem",
     transition: "background-color 0.3s ease",
     cursor: "pointer",
+    gap: "8px",
   },
   statusBadge: {
-    padding: "2px 10px",
+    padding: "4px 10px",
     borderRadius: "8px",
     fontSize: "0.8rem",
     color: "#fff",
     fontWeight: "bold",
+    minWidth: "100px",
+    textAlign: "center",
+    whiteSpace: "nowrap",
+  },
+  itemColumn: {
+    display: "flex",
+    flexDirection: "column",
+    flexGrow: 1,
+  },
+  requestType: {
+    fontSize: "0.85rem",
+    color: "#666",
+    marginTop: "4px",
   },
 };
 

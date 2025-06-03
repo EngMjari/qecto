@@ -28,6 +28,13 @@ def expert_attachment_upload_to(instance, filename):
 
 
 class ExpertEvaluationProject(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'در انتظار بررسی'),
+        ('in_progress', 'در حال انجام'),
+        ('completed', 'تکمیل شده'),
+        ('rejected', 'رد شده'),
+        ('incomplete', 'ناقص'),
+    ]
     project = models.OneToOneField(
         Project, on_delete=models.CASCADE, related_name='expert_evaluation')
 
@@ -35,6 +42,8 @@ class ExpertEvaluationProject(models.Model):
     main_parcel_number = models.IntegerField("پلاک اصلی")
     sub_parcel_number = models.IntegerField("پلاک فرعی")
 
+    status = status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default='pending')
 
     location_lat = models.FloatField("عرض جغرافیایی", null=True, blank=True)
     location_lng = models.FloatField("طول جغرافیایی", null=True, blank=True)
@@ -53,13 +62,15 @@ class ExpertEvaluationProject(models.Model):
         # پیدا کردن پوشه اصلی پروژه از روی اولین ضمیمه
         first_attachment = self.attachments.first()
         if first_attachment and first_attachment.file:
-            project_folder = os.path.dirname(os.path.dirname(first_attachment.file.path))
+            project_folder = os.path.dirname(
+                os.path.dirname(first_attachment.file.path))
             super().delete(*args, **kwargs)
             if os.path.isdir(project_folder) and not os.listdir(project_folder):
                 try:
                     shutil.rmtree(project_folder)
                 except Exception as e:
-                    print(f"Error removing expert project folder {project_folder}: {e}")
+                    print(
+                        f"Error removing expert project folder {project_folder}: {e}")
         else:
             super().delete(*args, **kwargs)
 
@@ -75,7 +86,8 @@ class ExpertAttachment(models.Model):
         related_name='attachments',
         verbose_name="درخواست کارشناسی"
     )
-    title = models.CharField("عنوان فایل", max_length=255, blank=True, default="بدون عنوان")
+    title = models.CharField("عنوان فایل", max_length=255,
+                             blank=True, default="بدون عنوان")
     file = models.FileField("فایل", upload_to=expert_attachment_upload_to)
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

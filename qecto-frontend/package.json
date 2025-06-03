@@ -5,6 +5,7 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
+    "@heroicons/react": "^2.2.0",
     "@mui/icons-material": "^7.1.0",
     "@mui/material": "^7.1.0",
     "@testing-library/dom": "^10.4.0",
@@ -64,9 +65,12 @@
   },
   "devDependencies": {
     "@craco/craco": "^7.1.0",
+    "autoprefixer": "^10.4.21",
     "css-loader": "^7.1.2",
+    "postcss": "^8.5.4",
     "sass": "^1.89.1",
     "sass-loader": "^16.0.5",
-    "style-loader": "^4.0.0"
+    "style-loader": "^4.0.0",
+    "tailwindcss": "^4.1.8"
   }
 }

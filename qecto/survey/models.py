@@ -1,4 +1,4 @@
-# survey/models.py : 
+# survey/models.py :
 from django.db import models
 from django.conf import settings
 from projects.models import Project
@@ -37,8 +37,14 @@ def survey_attachment_upload_to(instance, filename):
     return f'survey_attachments/{folder_name}/{filename}'
 
 
-
 class SurveyProject(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'در انتظار بررسی'),
+        ('in_progress', 'در حال انجام'),
+        ('completed', 'تکمیل شده'),
+        ('rejected', 'رد شده'),
+        ('incomplete', 'ناقص'),
+    ]
     project = models.OneToOneField(
         Project, on_delete=models.CASCADE, related_name='survey')
     status = models.CharField(
@@ -51,6 +57,8 @@ class SurveyProject(models.Model):
     location_lng = models.FloatField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    status = status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default='pending')
 
     def delete(self, *args, **kwargs):
         # حذف تمام فایل‌های ضمیمه
@@ -60,14 +68,16 @@ class SurveyProject(models.Model):
         # پیدا کردن پوشه‌ی اصلی پروژه از روی اولین فایل
         first_attachment = self.attachments.first()
         if first_attachment and first_attachment.file:
-            project_folder = os.path.dirname(os.path.dirname(first_attachment.file.path))
+            project_folder = os.path.dirname(
+                os.path.dirname(first_attachment.file.path))
             super().delete(*args, **kwargs)
             # اگر پوشه پروژه خالی بود، حذفش کن
             if os.path.isdir(project_folder) and not os.listdir(project_folder):
                 try:
                     shutil.rmtree(project_folder)
                 except Exception as e:
-                    print(f"Error removing survey project folder {project_folder}: {e}")
+                    print(
+                        f"Error removing survey project folder {project_folder}: {e}")
         else:
             super().delete(*args, **kwargs)
 

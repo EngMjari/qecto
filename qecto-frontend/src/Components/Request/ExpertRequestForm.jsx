@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import FileUploadTable from "../FileUpload/FileUploadTable";
-import { Form, Button, Alert } from "react-bootstrap";
+import { Form, Button, Alert, Row, Col } from "react-bootstrap";
 import axiosInstance from "../../utils/axiosInstance";
 
 function ExpertRequestForm({ onSubmit, user, location }) {
@@ -9,6 +9,9 @@ function ExpertRequestForm({ onSubmit, user, location }) {
     description: "",
     location: null,
     attachments: [],
+    propertyType: "",
+    mainParcelNumber: "",
+    subParcelNumber: "",
   });
 
   const [error, setError] = useState(null);
@@ -35,10 +38,21 @@ function ExpertRequestForm({ onSubmit, user, location }) {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+
+    // فقط اجازه عدد در پلاک‌ها
+    if (name === "mainParcelNumber" || name === "subParcelNumber") {
+      if (value === "" || /^[0-9\b]+$/.test(value)) {
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value,
+        }));
+      }
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -52,6 +66,18 @@ function ExpertRequestForm({ onSubmit, user, location }) {
       setError("لطفاً عنوان پروژه را وارد کنید.");
       return;
     }
+    if (!formData.propertyType) {
+      setError("لطفاً نوع ملک را انتخاب کنید.");
+      return;
+    }
+    if (!formData.mainParcelNumber) {
+      setError("لطفاً پلاک اصلی را وارد کنید.");
+      return;
+    }
+    if (!formData.subParcelNumber) {
+      setError("لطفاً پلاک فرعی را وارد کنید.");
+      return;
+    }
 
     setError(null);
 
@@ -60,6 +86,10 @@ function ExpertRequestForm({ onSubmit, user, location }) {
       formPayload.append("title", formData.title);
       formPayload.append("description", formData.description || "");
       formPayload.append("location", JSON.stringify(formData.location));
+      formPayload.append("property_type", formData.propertyType);
+      formPayload.append("main_parcel_number", formData.mainParcelNumber);
+      formPayload.append("sub_parcel_number", formData.subParcelNumber);
+
       if (user && user.id) {
         formPayload.append("user", user.id);
       }
@@ -73,18 +103,12 @@ function ExpertRequestForm({ onSubmit, user, location }) {
 
       const response = await axiosInstance.post("/api/expert/request/", formPayload);
 
-      if (!response.ok) {
-        let errorData;
-        try {
-          errorData = await response.json();
-        } catch {
-          errorData = { detail: response.statusText };
-        }
-        setError(`خطا در ارسال درخواست: ${errorData.detail || response.statusText}`);
+      // چون axios response.ok وجود ندارد، به جای آن باید status بررسی شود:
+      if (response.status !== 201 && response.status !== 200) {
+        setError(`خطا در ارسال درخواست: ${response.statusText}`);
         return;
       }
 
-      const result = await response.json();
       alert("درخواست کارشناسی با موفقیت ارسال شد!");
 
       setFormData({
@@ -92,9 +116,12 @@ function ExpertRequestForm({ onSubmit, user, location }) {
         description: "",
         location: null,
         attachments: [],
+        propertyType: "",
+        mainParcelNumber: "",
+        subParcelNumber: "",
       });
 
-      if (onSubmit) onSubmit(result);
+      if (onSubmit) onSubmit(response.data);
     } catch (error) {
       console.error("⚠️ خطا در ارسال:", error);
       setError("خطا در ارسال درخواست: " + error.message);
@@ -107,8 +134,57 @@ function ExpertRequestForm({ onSubmit, user, location }) {
 
       <Form.Group className="mb-3">
         <Form.Label>عنوان پروژه</Form.Label>
-        <Form.Control type="text" name="title" value={formData.title} onChange={handleInputChange} placeholder="عنوان پروژه کارشناسی" required />
+        <Form.Control
+          type="text"
+          name="title"
+          value={formData.title}
+          onChange={handleInputChange}
+          placeholder="عنوان پروژه کارشناسی"
+          required
+        />
       </Form.Group>
+
+      <Form.Group className="mb-3">
+        <Form.Label>نوع ملک</Form.Label>
+        <Form.Select
+          name="propertyType"
+          value={formData.propertyType}
+          onChange={handleInputChange}
+          required
+        >
+          <option value="">انتخاب کنید</option>
+          <option value="زمین">زمین</option>
+          <option value="ساختمان">ساختمان</option>
+        </Form.Select>
+      </Form.Group>
+
+      <Row className="mb-3">
+        <Form.Group as={Col} controlId="mainParcelNumber">
+          <Form.Label>پلاک اصلی</Form.Label>
+          <Form.Control
+            type="text"
+            name="mainParcelNumber"
+            value={formData.mainParcelNumber}
+            onChange={handleInputChange}
+            placeholder="فقط عدد"
+            required
+            maxLength={10}
+          />
+        </Form.Group>
+
+        <Form.Group as={Col} controlId="subParcelNumber">
+          <Form.Label>پلاک فرعی</Form.Label>
+          <Form.Control
+            type="text"
+            name="subParcelNumber"
+            value={formData.subParcelNumber}
+            onChange={handleInputChange}
+            placeholder="فقط عدد"
+            required
+            maxLength={10}
+          />
+        </Form.Group>
+      </Row>
 
       <Form.Group className="mb-3">
         <Form.Label>توضیحات</Form.Label>

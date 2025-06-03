@@ -14,5 +14,5 @@ class SurveyProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = SurveyProject
         fields = ['id', 'project', 'status', 'description',
-                  'area', 'location_lat', 'location_lng', 'attachments']
+                  'area', 'location_lat', 'location_lng', 'attachments', 'created_at']
         read_only_fields = ['status', 'project']

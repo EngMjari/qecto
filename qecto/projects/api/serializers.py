@@ -4,7 +4,7 @@ from projects.models import Project, ProjectType, ProjectStatus
 from django.contrib.auth import get_user_model
 from survey.api.serializers import SurveyProjectSerializer, SurveyProject, SurveyAttachment
 from expert.api.serializers import ExpertEvaluationProject, ExpertEvaluationProjectSerializer
-
+from core.serializers import UserSerializer
 User = get_user_model()
 
 
@@ -70,13 +70,12 @@ class SurveyProjectCreateSerializer(serializers.Serializer):
 class ProjectDetailSerializer(serializers.ModelSerializer):
     survey = serializers.SerializerMethodField()
     expert = serializers.SerializerMethodField()
-    # documentation = serializers.SerializerMethodField()
-    # supervision = serializers.SerializerMethodField()
-
+    request_count = serializers.SerializerMethodField()
+    assigned_to = UserSerializer()
     class Meta:
         model = Project
         fields = ['id', 'title', 'description', 'status', 'created_at',
-                  'survey', 'expert']
+                  'survey', 'expert', 'request_count', 'assigned_to']
 
     def get_survey(self, obj):
         try:
@@ -91,6 +90,14 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
             return ExpertEvaluationProjectSerializer(sub).data
         except ExpertEvaluationProject.DoesNotExist:
             return None
+
+    def get_request_count(self, obj):
+        count = 0
+        if SurveyProject.objects.filter(project=obj).exists():
+            count += 1
+        if ExpertEvaluationProject.objects.filter(project=obj).exists():
+            count += 1
+        return count
 
 
 class CreateProjectSerializer(serializers.Serializer):

@@ -12,20 +12,24 @@ import json
 
 class SurveyProjectRequestAPIView(APIView):
     permission_classes = [IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser]  # برای پشتیبانی از فایل‌ها
+    parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request):
+        # دریافت داده‌ها
         title = request.data.get('title')
         description = request.data.get('description', '')
         area = request.data.get('area')
+        property_type = request.data.get('propertyType')
         location_raw = request.data.get('location')
 
+        # بررسی اعتبار عنوان و نوع ملک
         if not title:
             return Response({'error': 'عنوان پروژه الزامی است'}, status=status.HTTP_400_BAD_REQUEST)
-        property_type = request.data.get("propertyType")
+
         if not property_type:
-            return Response({'error': 'نوع ملک الزامی است'}, status=status.HTTP_400_BAD_REQUEST) 
-        # Parse location JSON string
+            return Response({'error': 'نوع ملک الزامی است'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # بررسی اعتبار مختصات مکانی
         try:
             location = json.loads(location_raw) if location_raw else None
             location_lat = location.get('lat') if location else None
@@ -33,7 +37,7 @@ class SurveyProjectRequestAPIView(APIView):
         except json.JSONDecodeError:
             return Response({'error': 'موقعیت جغرافیایی نامعتبر است'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # ایجاد پروژه اصلی
+        # ایجاد پروژه‌ی اصلی
         project = Project.objects.create(
             title=title,
             description=description,
@@ -43,7 +47,7 @@ class SurveyProjectRequestAPIView(APIView):
             status=ProjectStatus.PENDING,
         )
 
-        # ایجاد شیء SurveyProject
+        # ایجاد پروژه‌ی نقشه‌برداری
         survey_project = SurveyProject.objects.create(
             project=project,
             description=description,
@@ -52,15 +56,15 @@ class SurveyProjectRequestAPIView(APIView):
             location_lng=location_lng,
         )
 
-        # ذخیره فایل‌های پیوست
+        # ذخیره فایل‌های پیوست (در صورت وجود)
         files = request.FILES.getlist('attachments')
         titles = request.POST.getlist('titles')
 
         for i, file in enumerate(files):
-            title = titles[i] if i < len(titles) else ""
+            attachment_title = titles[i] if i < len(titles) else ""
             SurveyAttachment.objects.create(
                 survey_project=survey_project,
-                title=title,
+                title=attachment_title,
                 file=file,
                 uploaded_by=request.user
             )

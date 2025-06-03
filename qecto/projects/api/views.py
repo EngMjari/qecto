@@ -4,14 +4,18 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from projects.models import Project, ProjectStatus
-from survey.models import SurveyProject
+from survey.api.serializers import SurveyProject, SurveyProjectSerializer
 from document.models import DocumentProject
 from supervision.models import SupervisionProject
-from expert.models import ExpertEvaluationProject
+from expert.api.serializers import ExpertEvaluationProject, ExpertEvaluationProjectSerializer
 from rest_framework.pagination import PageNumberPagination
 from projects.api.serializers import ProjectDetailSerializer, CreateProjectSerializer
 from rest_framework.generics import ListAPIView
 from django.db import transaction
+from core.serializers import UserSerializer
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class CreateProjectRequestAPIView(APIView):
@@ -40,9 +44,11 @@ class CreateProjectRequestAPIView(APIView):
                     elif project_type == 'documentation':
                         sub = DocumentProject.objects.create(project=project)
                     elif project_type == 'supervision':
-                        sub = SupervisionProject.objects.create(project=project)
+                        sub = SupervisionProject.objects.create(
+                            project=project)
                     elif project_type == 'expert':
-                        sub = ExpertEvaluationProject.objects.create(project=project)
+                        sub = ExpertEvaluationProject.objects.create(
+                            project=project)
 
                 return Response({
                     'message': 'درخواست جدید با موفقیت ثبت شد.',
@@ -58,7 +64,7 @@ class CreateProjectRequestAPIView(APIView):
 
 
 class ProjectPagination(PageNumberPagination):
-    page_size = 5
+    page_size = 8
 
 
 class PaginatedProjectDetailsAPIView(ListAPIView):
@@ -68,7 +74,19 @@ class PaginatedProjectDetailsAPIView(ListAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        return Project.objects.filter(owner=user).order_by('-id')
+        queryset = Project.objects.filter(owner=user).order_by('-id')
+
+        # دریافت پارامترهای فیلتر از query params
+        status_param = self.request.query_params.get('status')
+        search_param = self.request.query_params.get('search')
+
+        if status_param:
+            queryset = queryset.filter(status=status_param)
+
+        if search_param:
+            queryset = queryset.filter(title__icontains=search_param)
+
+        return queryset
 
 
 class ProjectDetailAPIView(APIView):
@@ -100,3 +118,61 @@ class ProjectDetailAPIView(APIView):
         }
 
         return Response(data, status=status.HTTP_200_OK)
+
+
+class DashboardStatsAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        projects = Project.objects.filter(owner=user).order_by('-created_at')
+
+        total_requests = 0
+        completed_requests = 0
+        recent_requests = []
+
+        for project in projects:
+            # Survey
+            try:
+                survey = SurveyProject.objects.get(project=project)
+                total_requests += 1
+                if survey.status == 'completed':
+                    completed_requests += 1
+                recent_requests.append({
+                    'type': 'survey',
+                    'title': project.title,  # اضافه کردن عنوان پروژه
+                    'data': SurveyProjectSerializer(survey).data
+                })
+            except SurveyProject.DoesNotExist:
+                pass
+
+            # Expert
+            try:
+                expert = ExpertEvaluationProject.objects.get(project=project)
+                total_requests += 1
+                if expert.status == 'completed':
+                    completed_requests += 1
+                recent_requests.append({
+                    'type': 'expert',
+                    'title': project.title,  # اضافه کردن عنوان پروژه
+                    'data': ExpertEvaluationProjectSerializer(expert).data
+                })
+            except ExpertEvaluationProject.DoesNotExist:
+                pass
+
+        # فقط 5 درخواست آخر
+        recent_requests_sorted = sorted(
+            recent_requests,
+            key=lambda x: x['data']['created_at'],
+            reverse=True
+        )[:5]
+        currentUser = UserSerializer(user).data
+        return Response({
+            'total_requests': total_requests,
+            'completed_requests': completed_requests,
+            'recent_requests': recent_requests_sorted,
+            'all_requests': recent_requests,
+            'user': currentUser,
+            # 'ticket_count': ...  (در آینده اضافه می‌کنی)
+            # 'recent_tickets': ...
+        })

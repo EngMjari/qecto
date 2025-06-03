@@ -1,7 +1,6 @@
 from django.db.models.signals import pre_delete, pre_save, post_save
 from django.dispatch import receiver
 from .models import SurveyProject
-from expert.models import ExpertEvaluationProject
 from projects.signals import check_and_delete_project_if_unused
 
 
