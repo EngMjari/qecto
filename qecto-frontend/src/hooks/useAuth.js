@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
-import {BASE_URL} from "../utils/config";
-
+import axiosInstance from "../utils/axiosInstance";
 
 export function useAuth() {
   const [user, setUser] = useState(null);
@@ -16,18 +14,19 @@ export function useAuth() {
       return;
     }
 
-    axios.get(`${BASE_URL}/api/user-info/`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    .then((res) => {
-      setUser(res.data);
-      setLoading(false);
-    })
-    .catch((err) => {
-      setUser(null);
-      setError(err);
-      setLoading(false);
-    });
+    axiosInstance
+      .get(`/api/user-info/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => {
+        setUser(res.data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setUser(null);
+        setError(err);
+        setLoading(false);
+      });
   }, []);
 
   const isAuthenticated = !!user;

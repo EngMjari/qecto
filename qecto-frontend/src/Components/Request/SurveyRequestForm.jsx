@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 import FileUploadTable from "../FileUpload/FileUploadTable";
 import { Form, Button, Alert } from "react-bootstrap";
-import authFetch from "../../utils/authFetch";
-import { BASE_URL } from "../../utils/config";
+import axiosInstance from "../../utils/axiosInstance";
 function toRad(deg) {
   return (deg * Math.PI) / 180;
 }
@@ -11,9 +10,7 @@ function haversineDistance(lat1, lng1, lat2, lng2) {
   const R = 6371;
   const dLat = toRad(lat2 - lat1);
   const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
@@ -52,8 +49,7 @@ function SurveyRequestForm({ onSubmit, user, location }) {
 
   const handleFileChange = (update) => {
     setFormData((prev) => {
-      const newAttachments =
-        typeof update === "function" ? update(prev.attachments) : update;
+      const newAttachments = typeof update === "function" ? update(prev.attachments) : update;
       return {
         ...prev,
         attachments: newAttachments,
@@ -109,10 +105,7 @@ function SurveyRequestForm({ onSubmit, user, location }) {
         });
       }
 
-      const response = await authFetch(`${BASE_URL}/api/survey/request/`, {
-        method: "POST",
-        body: formPayload,
-      });
+      const response = await axiosInstance.post(`/api/survey/request/`, formPayload);
 
       if (!response.ok) {
         let errorData;
@@ -148,14 +141,7 @@ function SurveyRequestForm({ onSubmit, user, location }) {
 
   const officeCoords = { lat: 36.726217, lng: 51.104315 };
   const areaNum = Number(formData.area);
-  const distanceKm = formData.location
-    ? haversineDistance(
-        officeCoords.lat,
-        officeCoords.lng,
-        formData.location.lat,
-        formData.location.lng
-      )
-    : null;
+  const distanceKm = formData.location ? haversineDistance(officeCoords.lat, officeCoords.lng, formData.location.lat, formData.location.lng) : null;
 
   const baseCost = areaNum ? estimateBaseCost(areaNum) : 0;
   const distanceCost = distanceKm ? Math.floor(distanceKm / 10) * 0.5 : 0;
@@ -179,12 +165,7 @@ function SurveyRequestForm({ onSubmit, user, location }) {
 
       <Form.Group className="mb-3">
         <Form.Label>نوع ملک</Form.Label>
-        <Form.Select
-          name="propertyType"
-          value={formData.propertyType}
-          onChange={handleInputChange}
-          required
-        >
+        <Form.Select name="propertyType" value={formData.propertyType} onChange={handleInputChange} required>
           <option value="">انتخاب کنید</option>
           <option value="مسکونی">مسکونی</option>
           <option value="تجاری">تجاری</option>
@@ -195,15 +176,7 @@ function SurveyRequestForm({ onSubmit, user, location }) {
 
       <Form.Group className="mb-3">
         <Form.Label>مساحت (متر مربع)</Form.Label>
-        <Form.Control
-          type="number"
-          name="area"
-          value={formData.area}
-          onChange={handleInputChange}
-          placeholder="مثلاً 1000"
-          required
-          min={1}
-        />
+        <Form.Control type="number" name="area" value={formData.area} onChange={handleInputChange} placeholder="مثلاً 1000" required min={1} />
       </Form.Group>
 
       <Form.Group className="mb-3">
@@ -222,13 +195,10 @@ function SurveyRequestForm({ onSubmit, user, location }) {
         <Form.Label>موقعیت ملک (عرض و طول جغرافیایی)</Form.Label>
         {formData.location ? (
           <div className="p-2 border rounded bg-light text-success">
-            نقطه به مختصات Φ: {formData.location.lat.toFixed(6)}، λ:{" "}
-            {formData.location.lng.toFixed(6)} انتخاب شده است.
+            نقطه به مختصات Φ: {formData.location.lat.toFixed(6)}، λ: {formData.location.lng.toFixed(6)} انتخاب شده است.
           </div>
         ) : (
-          <div className="p-2 border rounded bg-light text-danger">
-            هنوز موقعیتی انتخاب نشده است.
-          </div>
+          <div className="p-2 border rounded bg-light text-danger">هنوز موقعیتی انتخاب نشده است.</div>
         )}
       </Form.Group>
 
@@ -242,10 +212,7 @@ function SurveyRequestForm({ onSubmit, user, location }) {
 
       <Form.Group className="mb-3">
         <Form.Label>پیوست‌ها</Form.Label>
-        <FileUploadTable
-          attachments={formData.attachments}
-          onFileChange={handleFileChange}
-        />
+        <FileUploadTable attachments={formData.attachments} onFileChange={handleFileChange} />
       </Form.Group>
 
       {error && <Alert variant="danger">{error}</Alert>}

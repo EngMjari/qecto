@@ -2,7 +2,7 @@ from rest_framework import generics, permissions
 from rest_framework.response import Response
 from rest_framework import status
 from projects.models import Project, ProjectType, ProjectStatus
-from survay.models import SurveyProject, SurveyAttachment
+from survey.models import SurveyProject, SurveyAttachment
 from core.models import User
 
 class SurveyRequestCreateAPIView(generics.CreateAPIView):

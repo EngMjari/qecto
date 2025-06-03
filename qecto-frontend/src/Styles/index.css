@@ -1,8 +1,8 @@
 @import "leaflet/dist/leaflet.css";
 body {
   margin: 0;
-  font-family:"Vazirmatn", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-    sans-serif!important;
+  font-family: "Vazirmatn", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans",
+    "Helvetica Neue", sans-serif !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   padding-top: 60px;
@@ -11,12 +11,29 @@ body {
 }
 
 .loginBtn {
-  color: #f1f2f6!important;
+  color: #f1f2f6 !important;
 }
 .loginBtn:hover {
-  color: #ffffff!important;
+  color: #ffffff !important;
 }
 .dropdown-toggle::after {
   display: none !important;
 }
 
+.loader {
+  border: 6px solid #f3f3f3;
+  border-top: 6px solid #ff5700;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}

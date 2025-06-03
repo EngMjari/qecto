@@ -16,11 +16,13 @@
     "bootstrap-icons": "^1.13.1",
     "chart.js": "^4.4.9",
     "framer-motion": "^12.15.0",
+    "jalaali-js": "^1.2.8",
     "jwt-decode": "^4.0.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.511.0",
     "mapbox-gl": "^3.12.0",
     "maplibre-gl": "^5.5.0",
+    "moment-jalaali": "^0.9.2",
     "normalize": "^0.3.1",
     "point-in-polygon": "^1.1.0",
     "react": "^19.1.0",
@@ -38,10 +40,9 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "start": "craco start",
+    "build": "craco build",
+    "test": "craco test"
   },
   "eslintConfig": {
     "extends": [
@@ -62,6 +63,7 @@
     ]
   },
   "devDependencies": {
+    "@craco/craco": "^7.1.0",
     "css-loader": "^7.1.2",
     "sass": "^1.89.1",
     "sass-loader": "^16.0.5",

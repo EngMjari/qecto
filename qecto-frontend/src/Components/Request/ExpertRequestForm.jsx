@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from "react";
 import FileUploadTable from "../FileUpload/FileUploadTable";
 import { Form, Button, Alert } from "react-bootstrap";
-import authFetch from "../../utils/authFetch";
-import { BASE_URL } from "../../utils/config";
+import axiosInstance from "../../utils/axiosInstance";
 
 function ExpertRequestForm({ onSubmit, user, location }) {
   const [formData, setFormData] = useState({
@@ -26,8 +25,7 @@ function ExpertRequestForm({ onSubmit, user, location }) {
 
   const handleFileChange = (update) => {
     setFormData((prev) => {
-      const newAttachments =
-        typeof update === "function" ? update(prev.attachments) : update;
+      const newAttachments = typeof update === "function" ? update(prev.attachments) : update;
       return {
         ...prev,
         attachments: newAttachments,
@@ -73,10 +71,7 @@ function ExpertRequestForm({ onSubmit, user, location }) {
         });
       }
 
-      const response = await authFetch(`${BASE_URL}/api/expert/request/`, {
-        method: "POST",
-        body: formPayload,
-      });
+      const response = await axiosInstance.post("/api/expert/request/", formPayload);
 
       if (!response.ok) {
         let errorData;
@@ -112,14 +107,7 @@ function ExpertRequestForm({ onSubmit, user, location }) {
 
       <Form.Group className="mb-3">
         <Form.Label>عنوان پروژه</Form.Label>
-        <Form.Control
-          type="text"
-          name="title"
-          value={formData.title}
-          onChange={handleInputChange}
-          placeholder="عنوان پروژه کارشناسی"
-          required
-        />
+        <Form.Control type="text" name="title" value={formData.title} onChange={handleInputChange} placeholder="عنوان پروژه کارشناسی" required />
       </Form.Group>
 
       <Form.Group className="mb-3">
@@ -138,22 +126,16 @@ function ExpertRequestForm({ onSubmit, user, location }) {
         <Form.Label>موقعیت ملک (عرض و طول جغرافیایی)</Form.Label>
         {formData.location ? (
           <div className="p-2 border rounded bg-light text-success">
-            نقطه به مختصات Φ: {formData.location.lat.toFixed(6)}، λ:{" "}
-            {formData.location.lng.toFixed(6)} انتخاب شده است.
+            نقطه به مختصات Φ: {formData.location.lat.toFixed(6)}، λ: {formData.location.lng.toFixed(6)} انتخاب شده است.
           </div>
         ) : (
-          <div className="p-2 border rounded bg-light text-danger">
-            هنوز موقعیتی انتخاب نشده است.
-          </div>
+          <div className="p-2 border rounded bg-light text-danger">هنوز موقعیتی انتخاب نشده است.</div>
         )}
       </Form.Group>
 
       <Form.Group className="mb-3">
         <Form.Label>پیوست‌ها</Form.Label>
-        <FileUploadTable
-          attachments={formData.attachments}
-          onFileChange={handleFileChange}
-        />
+        <FileUploadTable attachments={formData.attachments} onFileChange={handleFileChange} />
       </Form.Group>
 
       {error && <Alert variant="danger">{error}</Alert>}

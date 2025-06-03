@@ -1,9 +1,7 @@
 import React, { useContext, useState } from "react";
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { AuthContext } from "./Context/AuthContext";
-
 import Navbar from "./Components/Navbar";
-
 import Login from "./Pages/Auth/Login";
 import Dashboard from "./Pages/Dashboard/Dashboard";
 import Home from "./Pages/Home";
@@ -11,90 +9,114 @@ import About from "./Pages/About";
 import Contact from "./Pages/Contact";
 import SuperAdminPanel from "./Pages/SuperAdminPanel/SuperAdminPanel";
 import AdminPanel from "./Pages/AdminPanel/AdminPanel";
-import ProtectedRoute from "./Components/ProtectedRoute";
+import CreateRequest from "./Components/Request/CreateRequest";
 import NotFound from "./Pages/NotFound";
 import Forbidden from "./Pages/Forbidden";
-import CreateRequest from "./Components/Request/CreateRequest";
+import ProjectsList from "./Pages/Projects/ProjectsList";
+import ProjectDetails from "./Pages/Projects/ProjectDetails";
+
+function ProtectedRoute({ children, isAuthenticated, userRole, allowedRoles, onlyAuth }) {
+  const { loadingProfile } = useContext(AuthContext);
+
+  if (loadingProfile) {
+    return <p className="text-center mt-10">در حال بارگذاری پروفایل...</p>;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (onlyAuth) {
+    return children;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(userRole)) {
+    return <Navigate to="/unauthorized" replace />;
+  }
+
+  return children;
+}
 
 function Router() {
   const { userRole, isAuthenticated } = useContext(AuthContext);
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  if (isAuthenticated && !userRole) {
-    return <p className="text-center mt-5">در حال بارگذاری اطلاعات کاربر...</p>;
-  }
-
-  const UserRoute = ({ children }) => (
-    <ProtectedRoute allowedRoles={["user"]} userRole={userRole} isAuthenticated={isAuthenticated}>
-      {children}
-    </ProtectedRoute>
-  );
-
-  const AdminRoute = ({ children }) => (
-    <ProtectedRoute allowedRoles={["admin"]} userRole={userRole} isAuthenticated={isAuthenticated}>
-      {children}
-    </ProtectedRoute>
-  );
-
-  const SuperAdminRoute = ({ children }) => (
-    <ProtectedRoute allowedRoles={["superadmin"]} userRole={userRole} isAuthenticated={isAuthenticated}>
-      {children}
-    </ProtectedRoute>
-  );
-
-  const routes = [
-    { path: "/", element: <Home />, protected: false },
-    { path: "/login", element: <Login />, protected: false },
-    { path: "/about", element: <About />, protected: false },
-    { path: "/contact", element: <Contact />, protected: false },
-    { path: "/request", element: <CreateRequest />, protected: false },
-
-    { path: "/dashboard", element: <Dashboard />, protected: true, roles: ["user"] },
-    { path: "/admin-panel", element: <AdminPanel />, protected: true, roles: ["admin"] },
-    { path: "/super-admin-panel", element: <SuperAdminPanel />, protected: true, roles: ["superadmin"] },
-  ];
-
-  const isDashboardRoute = location.pathname.startsWith("/dashboard") ||
+  const isDashboardRoute =
+    location.pathname.startsWith("/dashboard") ||
     location.pathname.startsWith("/admin-panel") ||
-    location.pathname.startsWith("/super-admin-panel");
+    location.pathname.startsWith("/super-admin-panel") ||
+    location.pathname.startsWith("/my-projects");
 
   const getPageTitle = () => {
     if (location.pathname.includes("dashboard")) return "داشبورد";
     if (location.pathname.includes("admin-panel")) return "پنل ادمین";
     if (location.pathname.includes("super-admin-panel")) return "پنل ابرادمین";
+    if (location.pathname.includes("my-projects")) return "پروژه‌های من";
     return "";
   };
 
   return (
     <>
-      <Navbar
-        role={userRole}
-        isDashboard={isDashboardRoute}
-        drawerOpen={drawerOpen}
-        setDrawerOpen={setDrawerOpen}
-        currentTitle={getPageTitle()}
-      />
+      <Navbar role={userRole} isDashboard={isDashboardRoute} drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen} currentTitle={getPageTitle()} />
 
       <Routes>
-        {routes.map(({ path, element, protected: isProtected, roles }) => {
-          if (!isProtected) {
-            return <Route key={path} path={path} element={element} />;
-          }
+        {/* مسیرهای عمومی */}
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/request" element={<CreateRequest />} />
 
-          if (roles.includes("user")) {
-            return <Route key={path} path={path} element={<UserRoute>{element}</UserRoute>} />;
+        {/* مسیرهای پروژه */}
+        <Route
+          path="/projects"
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} userRole={userRole} allowedRoles={["user", "admin", "superadmin"]}>
+              <ProjectsList />
+            </ProtectedRoute>
           }
-          if (roles.includes("admin")) {
-            return <Route key={path} path={path} element={<AdminRoute>{element}</AdminRoute>} />;
+        />
+        <Route
+          path="/projects/:id"
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} userRole={userRole} allowedRoles={["user", "admin", "superadmin"]}>
+              <ProjectDetails />
+            </ProtectedRoute>
           }
-          if (roles.includes("superadmin")) {
-            return <Route key={path} path={path} element={<SuperAdminRoute>{element}</SuperAdminRoute>} />;
-          }
+        />
 
-          return null;
-        })}
+        {/* مسیر داشبورد کاربر عادی */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} userRole={userRole} allowedRoles={["user"]}>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
 
+        {/* مسیر داشبورد ادمین */}
+        <Route
+          path="/admin-panel"
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} userRole={userRole} allowedRoles={["admin"]}>
+              <AdminPanel />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* مسیر داشبورد سوپر ادمین */}
+        <Route
+          path="/super-admin-panel"
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} userRole={userRole} allowedRoles={["superadmin"]}>
+              <SuperAdminPanel />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* صفحات دسترسی غیرمجاز و 404 */}
         <Route path="/unauthorized" element={<Forbidden />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

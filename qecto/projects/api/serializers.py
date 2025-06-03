@@ -1,8 +1,9 @@
 # projects/api/serializers.py
 from rest_framework import serializers
 from projects.models import Project, ProjectType, ProjectStatus
-from survey.models import SurveyProject, SurveyAttachment
 from django.contrib.auth import get_user_model
+from survey.api.serializers import SurveyProjectSerializer, SurveyProject, SurveyAttachment
+from expert.api.serializers import ExpertEvaluationProject, ExpertEvaluationProjectSerializer
 
 User = get_user_model()
 
@@ -10,24 +11,7 @@ User = get_user_model()
 class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
-        fields = ['id', 'title', 'description',
-                  'project_type', 'status', 'created_at']
-
-
-class SurveyAttachmentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = SurveyAttachment
-        fields = ['id', 'file', 'title', 'uploaded_at']
-
-
-class SurveyProjectSerializer(serializers.ModelSerializer):
-    attachments = SurveyAttachmentSerializer(many=True, read_only=True)
-
-    class Meta:
-        model = SurveyProject
-        fields = ['id', 'project', 'status', 'description',
-                  'area', 'location_lat', 'location_lng', 'attachments']
-        read_only_fields = ['status', 'project']
+        fields = ['id', 'title', 'description', 'project_type', 'status', 'created_at']
 
 
 class SurveyProjectCreateSerializer(serializers.Serializer):
@@ -81,3 +65,36 @@ class SurveyProjectCreateSerializer(serializers.Serializer):
             )
 
         return survey
+
+
+class ProjectDetailSerializer(serializers.ModelSerializer):
+    survey = serializers.SerializerMethodField()
+    expert = serializers.SerializerMethodField()
+    # documentation = serializers.SerializerMethodField()
+    # supervision = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Project
+        fields = ['id', 'title', 'description', 'status', 'created_at',
+                  'survey', 'expert']
+
+    def get_survey(self, obj):
+        try:
+            sub = SurveyProject.objects.get(project=obj)
+            return SurveyProjectSerializer(sub).data
+        except SurveyProject.DoesNotExist:
+            return None
+
+    def get_expert(self, obj):
+        try:
+            sub = ExpertEvaluationProject.objects.get(project=obj)
+            return ExpertEvaluationProjectSerializer(sub).data
+        except ExpertEvaluationProject.DoesNotExist:
+            return None
+
+
+class CreateProjectSerializer(serializers.Serializer):
+    project_type = serializers.ChoiceField(
+        choices=['survey', 'expert'])
+    title = serializers.CharField(max_length=255)
+    description = serializers.CharField(required=False, allow_blank=True)

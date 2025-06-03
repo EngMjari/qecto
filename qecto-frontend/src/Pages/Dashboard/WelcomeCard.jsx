@@ -20,7 +20,7 @@ export default function WelcomeCard() {
           <FaPlus className="ms-2" /> ثبت درخواست جدید
         </Link>
         <Link
-          to="/requests"
+          to="/projects"
           className="btn btn-outline-dark p-3 d-flex align-items-center justify-content-center"
           style={{ borderRadius: 8, minWidth: 150, flex: "1 1 auto" }}
         >
