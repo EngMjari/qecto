@@ -15,6 +15,9 @@ import Forbidden from "./Pages/Forbidden";
 import ProjectsList from "./Pages/Projects/ProjectsList";
 import ProjectDetails from "./Pages/Projects/ProjectDetails";
 
+// ایمپورت صفحه ارسال تیکت
+import TicketCreatePage from "./Pages/Tickets/TicketCreatePage";
+
 function ProtectedRoute({ children, isAuthenticated, userRole, allowedRoles, onlyAuth }) {
   const { loadingProfile } = useContext(AuthContext);
 
@@ -58,7 +61,13 @@ function Router() {
 
   return (
     <>
-      <Navbar role={userRole} isDashboard={isDashboardRoute} drawerOpen={drawerOpen} setDrawerOpen={setDrawerOpen} currentTitle={getPageTitle()} />
+      <Navbar
+        role={userRole}
+        isDashboard={isDashboardRoute}
+        drawerOpen={drawerOpen}
+        setDrawerOpen={setDrawerOpen}
+        currentTitle={getPageTitle()}
+      />
 
       <Routes>
         {/* مسیرهای عمومی */}
@@ -68,11 +77,25 @@ function Router() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/request" element={<CreateRequest />} />
 
+        {/* مسیر ارسال تیکت - فقط کاربران لاگین شده */}
+        <Route
+          path="/tickets/create"
+          element={
+            <ProtectedRoute isAuthenticated={isAuthenticated} onlyAuth={true}>
+              <TicketCreatePage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* مسیرهای پروژه */}
         <Route
           path="/projects"
           element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} userRole={userRole} allowedRoles={["user", "admin", "superadmin"]}>
+            <ProtectedRoute
+              isAuthenticated={isAuthenticated}
+              userRole={userRole}
+              allowedRoles={["user", "admin", "superadmin"]}
+            >
               <ProjectsList />
             </ProtectedRoute>
           }
@@ -80,7 +103,11 @@ function Router() {
         <Route
           path="/projects/:id"
           element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} userRole={userRole} allowedRoles={["user", "admin", "superadmin"]}>
+            <ProtectedRoute
+              isAuthenticated={isAuthenticated}
+              userRole={userRole}
+              allowedRoles={["user", "admin", "superadmin"]}
+            >
               <ProjectDetails />
             </ProtectedRoute>
           }
@@ -90,7 +117,11 @@ function Router() {
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} userRole={userRole} allowedRoles={["user"]}>
+            <ProtectedRoute
+              isAuthenticated={isAuthenticated}
+              userRole={userRole}
+              allowedRoles={["user"]}
+            >
               <Dashboard />
             </ProtectedRoute>
           }
@@ -100,7 +131,11 @@ function Router() {
         <Route
           path="/admin-panel"
           element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} userRole={userRole} allowedRoles={["admin"]}>
+            <ProtectedRoute
+              isAuthenticated={isAuthenticated}
+              userRole={userRole}
+              allowedRoles={["admin"]}
+            >
               <AdminPanel />
             </ProtectedRoute>
           }
@@ -110,7 +145,11 @@ function Router() {
         <Route
           path="/super-admin-panel"
           element={
-            <ProtectedRoute isAuthenticated={isAuthenticated} userRole={userRole} allowedRoles={["superadmin"]}>
+            <ProtectedRoute
+              isAuthenticated={isAuthenticated}
+              userRole={userRole}
+              allowedRoles={["superadmin"]}
+            >
               <SuperAdminPanel />
             </ProtectedRoute>
           }

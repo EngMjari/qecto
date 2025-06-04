@@ -3,6 +3,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import SendOTPView, VerifyOTPView, AdminUserViewSet, UserInfoView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from projects.api.views import UserDashboardAPIView
 router = DefaultRouter()
 router.register(r'admin-users', AdminUserViewSet, basename='admin-user')
 
@@ -17,5 +18,7 @@ urlpatterns = [
     path('survey/', include('survey.api.urls')),
     path('expert/', include('expert.api.urls')),
     path('projects/', include('projects.api.urls')),
+    path('tickets/', include('tickets.urls')),
+    path('data/', UserDashboardAPIView.as_view(), name='data'),
     
 ]

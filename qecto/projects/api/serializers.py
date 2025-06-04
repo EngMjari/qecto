@@ -105,3 +105,41 @@ class CreateProjectSerializer(serializers.Serializer):
         choices=['survey', 'expert'])
     title = serializers.CharField(max_length=255)
     description = serializers.CharField(required=False, allow_blank=True)
+
+# TODO: serializer ha ro check kon moratab bashan
+class ProjectDataSerializer(serializers.ModelSerializer):
+    assigned_to = UserSerializer()
+    requests = serializers.SerializerMethodField()
+    request_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Project
+        fields = [
+            'id', 'title', 'description', 'status', 'created_at',
+            'assigned_to', 'requests', 'request_count'
+        ]
+
+    def get_requests(self, obj):
+        # گرفتن درخواست‌های نقشه‌برداری
+        surveys = SurveyProject.objects.filter(project=obj).values(
+            'id', 'status', 'created_at'
+        )
+        surveys = [{**item, 'type': 'survey'} for item in surveys]
+
+        # گرفتن درخواست‌های کارشناسی
+        experts = ExpertEvaluationProject.objects.filter(project=obj).values(
+            'id', 'status', 'created_at'
+        )
+        experts = [{**item, 'type': 'expert'} for item in experts]
+
+        # ترکیب و مرتب‌سازی بر اساس تاریخ ایجاد
+        all_requests = surveys + experts
+        all_requests.sort(key=lambda x: x['created_at'], reverse=True)
+        return all_requests
+
+    def get_request_count(self, obj):
+        survey_count = SurveyProject.objects.filter(project=obj).count()
+        expert_count = ExpertEvaluationProject.objects.filter(project=obj).count()
+        return survey_count + expert_count
+
+

@@ -9,12 +9,12 @@ from document.models import DocumentProject
 from supervision.models import SupervisionProject
 from expert.api.serializers import ExpertEvaluationProject, ExpertEvaluationProjectSerializer
 from rest_framework.pagination import PageNumberPagination
-from projects.api.serializers import ProjectDetailSerializer, CreateProjectSerializer
+from projects.api.serializers import ProjectDetailSerializer, CreateProjectSerializer, ProjectDataSerializer
 from rest_framework.generics import ListAPIView
 from django.db import transaction
 from core.serializers import UserSerializer
 from django.contrib.auth import get_user_model
-
+from tickets.serializers import Ticket, TicketSerializer
 User = get_user_model()
 
 
@@ -176,3 +176,57 @@ class DashboardStatsAPIView(APIView):
             # 'ticket_count': ...  (در آینده اضافه می‌کنی)
             # 'recent_tickets': ...
         })
+
+
+class UserDashboardAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+
+        # اطلاعات کامل کاربر
+        user_data = UserSerializer(user).data
+
+        # پروژه‌های کاربر به همراه درخواست‌ها
+        projects = Project.objects.filter(owner=user)
+        projects_data = ProjectDataSerializer(projects, many=True).data
+
+        # درخواست‌های نقشه‌برداری کاربر
+        survey_requests = SurveyProject.objects.filter(project__owner=user)
+
+        # درخواست‌های کارشناسی کاربر
+        expert_requests = ExpertEvaluationProject.objects.filter(project__owner=user)
+
+        # تعداد کل و تعداد تکمیل شده درخواست‌ها
+        total_requests_count = survey_requests.count() + expert_requests.count()
+        completed_requests_count = survey_requests.filter(status='completed').count() + \
+                                   expert_requests.filter(status='completed').count()
+
+        # ۵ درخواست آخر ترکیبی (نقشه‌برداری + کارشناسی)
+        last_5_survey = survey_requests.order_by('-created_at')[:5]
+        last_5_expert = expert_requests.order_by('-created_at')[:5]
+
+        # سریالایز جداگانه
+        last_5_survey_serialized = SurveyProjectSerializer(last_5_survey, many=True).data
+        last_5_expert_serialized = ExpertEvaluationProjectSerializer(last_5_expert, many=True).data
+
+        # ترکیب و مرتب‌سازی بر اساس created_at
+        combined_last_5 = last_5_survey_serialized + last_5_expert_serialized
+        combined_last_5.sort(key=lambda x: x['created_at'], reverse=True)
+        last_5_requests_serialized = combined_last_5[:5]
+
+        # ۵ تیکت آخر کاربر
+        last_5_tickets = Ticket.objects.filter(created_by=user).order_by('-created_at')[:5]
+        last_5_tickets_serialized = TicketSerializer(last_5_tickets, many=True).data
+
+        data = {
+            "user": user_data,
+            "projects": projects_data,
+            "requests_summary": {
+                "total": total_requests_count,
+                "completed": completed_requests_count,
+            },
+            "last_5_requests": last_5_requests_serialized,
+            "last_5_tickets": last_5_tickets_serialized,
+        }
+        return Response(data)

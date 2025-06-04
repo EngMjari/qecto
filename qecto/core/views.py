@@ -11,12 +11,15 @@ from .permissions import IsSuperAdmin
 from .serializers import AdminUserSerializer
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 
 # یه دیکشنری ساده برای ذخیره OTP موقتی (فقط برای تست)
 User = get_user_model()
 
 
 class SendOTPView(APIView):
+    permission_classes = [AllowAny]
+
     def post(self, request):
         phone = request.data.get("phone")
         if not phone:
@@ -38,6 +41,7 @@ class SendOTPView(APIView):
 
 
 class VerifyOTPView(APIView):
+    permission_classes = [AllowAny]
     def post(self, request):
         phone = request.data.get("phone")
         code = request.data.get("otp")

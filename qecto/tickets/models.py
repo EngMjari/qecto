@@ -1,4 +1,3 @@
-# tickets/models.py
 import os
 import shutil
 from django.db import models
@@ -64,7 +63,15 @@ class Ticket(models.Model):
         verbose_name="وضعیت"
     )
 
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاریخ ایجاد")
+    created_at = models.DateTimeField(
+        auto_now_add=True, verbose_name="تاریخ ایجاد")
+    assigned_admin = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="ادمین ارجاع شده"
+    )
 
     def __str__(self):
         return f"تیکت: {self.title} توسط {self.created_by}"
@@ -92,17 +99,18 @@ class TicketAttachment(models.Model):
         related_name='attachments',
         verbose_name="تیکت"
     )
-    file = models.FileField(upload_to=ticket_attachment_upload_to, verbose_name="فایل")
+    file = models.FileField(
+        upload_to=ticket_attachment_upload_to, verbose_name="فایل")
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         verbose_name="آپلودکننده"
     )
-    uploaded_at = models.DateTimeField(auto_now_add=True, verbose_name="تاریخ آپلود")
+    uploaded_at = models.DateTimeField(
+        auto_now_add=True, verbose_name="تاریخ آپلود")
 
     def delete(self, *args, **kwargs):
-        # حذف فایل و پوشه در صورت خالی بودن
         if self.file and os.path.isfile(self.file.path):
             file_dir = os.path.dirname(self.file.path)
             os.remove(self.file.path)
@@ -128,7 +136,10 @@ class TicketReply(models.Model):
         null=True,
         verbose_name="پاسخ‌دهنده"
     )
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاریخ پاسخ")
+    created_at = models.DateTimeField(
+        auto_now_add=True, verbose_name="تاریخ پاسخ")
+    attachment = models.FileField(
+        upload_to='ticket_replies/', blank=True, null=True)
 
     def __str__(self):
         return f"پاسخ به: {self.ticket.title} توسط {self.replied_by}"
@@ -157,14 +168,16 @@ class TicketReplyAttachment(models.Model):
         related_name='attachments',
         verbose_name="پاسخ"
     )
-    file = models.FileField(upload_to=ticket_reply_attachment_upload_to, verbose_name="فایل")
+    file = models.FileField(
+        upload_to=ticket_reply_attachment_upload_to, verbose_name="فایل")
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         verbose_name="آپلودکننده"
     )
-    uploaded_at = models.DateTimeField(auto_now_add=True, verbose_name="تاریخ آپلود")
+    uploaded_at = models.DateTimeField(
+        auto_now_add=True, verbose_name="تاریخ آپلود")
 
     def delete(self, *args, **kwargs):
         if self.file and os.path.isfile(self.file.path):

@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'corsheaders',
     'core.apps.CoreConfig',
     'projects.apps.ProjectsConfig',
     'survey.apps.SurveyConfig',
@@ -55,11 +56,12 @@ INSTALLED_APPS = [
     'document.apps.DocumentConfig',
     'tickets.apps.TicketsConfig',
     'expert.apps.ExpertConfig',
-    
-    
+
+
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -68,6 +70,15 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# فقط اجازه بده به Origin مشخص درخواست با credentials بفرسته
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://192.168.1.101:3000",
+]
+
+# اجازه بده کوکی و هدرهای اعتبارسنجی با درخواست ارسال شود
+CORS_ALLOW_CREDENTIALS = True
 
 ROOT_URLCONF = 'qecto.urls'
 
@@ -129,7 +140,6 @@ USE_L10N = True
 USE_TZ = True
 
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
@@ -143,11 +153,6 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-
-INSTALLED_APPS += ['corsheaders']
-MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')
-CORS_ALLOW_ALL_ORIGINS = True  # برای تست، بعداً محدودش می‌کنیم
-
 AUTH_USER_MODEL = 'core.User'
 
 
@@ -155,4 +160,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ]
 }

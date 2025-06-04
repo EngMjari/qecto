@@ -189,28 +189,27 @@ function SectionGrid({ recentRequests = [], recentTickets = [] }) {
   return (
     <div style={styles.sectionGrid}>
       <DashboardSection title="آخرین درخواست‌ها" linkText="همه درخواست‌ها" linkHref="/projects">
-  {(recentRequests || []).map((proj) => (
-    <Link key={proj.data.id} to={`/projects/${proj.data.project.id}`} style={styles.itemRow} className="hoverItem">
-      <div style={styles.itemColumn}>
-        <span>{proj.title}</span>
-        <span style={styles.requestType}>
-          {proj.type === "survey" && "نقشه‌برداری"}
-          {proj.type === "expert" && "کارشناسی"}
-          {proj.type === "ownership" && "ثبت مالکیت"}
-        </span>
-      </div>
-      <span
-        style={{
-          ...styles.statusBadge,
-          backgroundColor: getStatusColor(proj.data.status),
-        }}
-      >
-        {getStatusLabel(proj.data.status)}
-      </span>
-    </Link>
-  ))}
-</DashboardSection>
-
+        {(recentRequests || []).map((proj) => (
+          <Link key={proj.data.id} to={`/projects/${proj.data.project.id}`} style={styles.itemRow} className="hoverItem">
+            <div style={styles.itemColumn}>
+              <span>{proj.title}</span>
+              <span style={styles.requestType}>
+                {proj.type === "survey" && "نقشه‌برداری"}
+                {proj.type === "expert" && "کارشناسی"}
+                {proj.type === "ownership" && "ثبت مالکیت"}
+              </span>
+            </div>
+            <span
+              style={{
+                ...styles.statusBadge,
+                backgroundColor: getStatusColor(proj.data.status),
+              }}
+            >
+              {getStatusLabel(proj.data.status)}
+            </span>
+          </Link>
+        ))}
+      </DashboardSection>
 
       <DashboardSection title="آخرین تیکت‌ها" linkText="همه تیکت‌ها" linkHref="/tickets">
         {(recentTickets || []).map((ticket) => (
@@ -348,10 +347,9 @@ const styles = {
     fontWeight: "bold",
     minWidth: "100px",
     textAlign: "center",
-        whiteSpace: "nowrap",
-
+    whiteSpace: "nowrap",
   },
-    itemColumn: {
+  itemColumn: {
     display: "flex",
     flexDirection: "column",
     flexGrow: 1,

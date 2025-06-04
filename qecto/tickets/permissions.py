@@ -1,23 +1,29 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 
-class IsOwnerOrAdmin(BasePermission):
+class IsTicketOwnerOrAssignedAdminOrSuperAdmin(BasePermission):
     """
-    فقط خود کاربر سازنده تیکت یا ادمین می‌تواند مشاهده یا تغییر بده.
+    اجازه می‌دهد فقط:
+    - کاربر سازنده تیکت (created_by)
+    - یا ادمینی که تیکت به او ارجاع شده (assigned_admin)
+    - یا سوپرادمین (superuser)
+    بتوانند تیکت را ببینند یا تغییر دهند.
     """
+
     def has_object_permission(self, request, view, obj):
-        # خواندن فقط برای صاحب تیکت یا ادمین
-        if request.method in SAFE_METHODS:
-            return obj.created_by == request.user or request.user.is_staff
-        
-        # تغییرات هم فقط برای صاحب تیکت یا ادمین
-        return obj.created_by == request.user or request.user.is_staff
+        user = request.user
 
-
-class IsAdminOrReadOnly(BasePermission):
-    """
-    فقط ادمین می‌تواند تغییر بده، بقیه فقط خواندن داشته باشند.
-    """
-    def has_permission(self, request, view):
-        if request.method in SAFE_METHODS:
+        if user.is_superuser:
             return True
-        return request.user.is_staff
+
+        if request.method in SAFE_METHODS:
+            return obj.created_by == user or obj.assigned_admin == user
+
+        return obj.created_by == user or obj.assigned_admin == user
+
+class IsSuperAdmin(BasePermission):
+    """
+    فقط سوپرادمین‌ها اجازه دسترسی دارند
+    """
+
+    def has_permission(self, request, view):
+        return request.user and request.user.is_superuser
