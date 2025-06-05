@@ -40,5 +40,23 @@
     "نمایش",
     "وارد",
     "واقعی"
-  ]
+  ],
+  "terminal.integrated.enableFileLinks": "on",
+  "terminal.integrated.detectLocale": "on",
+  "python.terminal.activateEnvInCurrentTerminal": true,
+  "terminal.integrated.cursorStyle": "line",
+  "python.defaultInterpreterPath": "${workspaceFolder}\\env\\Scripts\\python",
+  "terminal.integrated.defaultProfile.windows": "PowerShell with venv",
+  "terminal.integrated.profiles.windows": {
+    "PowerShell with venv": {
+      "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "args": ["-NoExit", "-Command", ".\\env\\Scripts\\Activate.ps1"]
+    },
+    "Command Prompt with venv": {
+      "path": ["C:\\Windows\\System32\\cmd.exe"],
+      "args": ["/k", ".\\env\\Scripts\\activate.bat"]
+    }
+  },
+  // "javascript.preferences.importModuleSpecifier": "relative",
+  // "typescript.preferences.importModuleSpecifier": "relative"
 }

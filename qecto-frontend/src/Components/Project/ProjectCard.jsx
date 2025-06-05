@@ -101,7 +101,7 @@ const ProjectCard = ({ project }) => {
             </span>
 
             {/* نمایش نام ارجاع‌شونده اگر پروژه assigned است */}
-            {project.status === "assigned" && project.assigned_to?.full_name && (
+            {/* {project.status === "assigned" && project.assigned_to?.full_name && (
               <span
                 className="text-muted small"
                 style={{
@@ -111,7 +111,7 @@ const ProjectCard = ({ project }) => {
               >
                 به: <strong>{project.assigned_to.full_name}</strong>
               </span>
-            )}
+            )} */}
           </div>
 
           <span

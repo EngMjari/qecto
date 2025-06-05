@@ -1,26 +1,46 @@
+// src/api/ticketsApi.js
 import axiosInstance from "../utils/axiosInstance";
 
-// دریافت لیست تیکت‌ها
-export const fetchTickets = () => {
-  return axiosInstance.get("/api/tickets/");
+// لیست تمام سشن‌هایی که کاربر مجاز به دیدن آنهاست
+export const getTicketSessions = () => {
+  return axiosInstance.get("/api/tickets/sessions/");
 };
 
-// دریافت جزئیات یک تیکت با آیدی
-export const fetchTicketDetails = (ticketId) => {
-  return axiosInstance.get(`/api/tickets/${ticketId}/`);
+// ایجاد یک سشن جدید
+export const createTicketSession = (data) => {
+  return axiosInstance.post("/api/tickets/sessions/", data);
 };
 
-// ارسال تیکت جدید
-export const createTicket = (ticketData) => {
-  return axiosInstance.post("/api/tickets/", ticketData);
+// دریافت جزئیات یک سشن خاص
+export const getTicketSessionById = (id) => {
+  return axiosInstance.get(`/api/tickets/sessions/${id}/`);
 };
 
-// بستن تیکت (مثلا با تغییر وضعیت)
-export const closeTicket = (ticketId) => {
-  return axiosInstance.post(`/api/tickets/${ticketId}/close/`);
+// آپدیت کردن اطلاعات یک سشن (فقط ادمین‌ها یا سوپر یوزر)
+export const updateTicketSession = (id, data) => {
+  return axiosInstance.patch(`/api/tickets/sessions/${id}/`, data);
 };
 
-// ارسال پاسخ یا پیوست به تیکت
-export const replyToTicket = (ticketId, replyData) => {
-  return axiosInstance.post(`/api/tickets/${ticketId}/reply/`, replyData);
+// گرفتن پیام‌های مربوط به یک سشن
+export const getTicketMessages = (sessionId) => {
+  return axiosInstance.get(`/api/tickets/sessions/${sessionId}/messages/`);
+};
+
+// ارسال پیام جدید در یک سشن
+export const createTicketMessage = (sessionId, data) => {
+  return axiosInstance.post(`/api/tickets/sessions/${sessionId}/messages/`, data);
+};
+
+// آپلود فایل برای یک پیام
+export const uploadMessageFiles = (messageId, files) => {
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append("files", file);
+  });
+
+  return axiosInstance.post(`/api/tickets/messages/${messageId}/upload/`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
 };

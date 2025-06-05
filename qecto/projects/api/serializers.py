@@ -2,7 +2,8 @@
 from rest_framework import serializers
 from projects.models import Project, ProjectType, ProjectStatus
 from django.contrib.auth import get_user_model
-from survey.api.serializers import SurveyProjectSerializer, SurveyProject, SurveyAttachment
+from survey.api.serializers import SurveyProjectSerializer
+from survey.models import SurveyProject, SurveyAttachment 
 from expert.api.serializers import ExpertEvaluationProject, ExpertEvaluationProjectSerializer
 from core.serializers import UserSerializer
 User = get_user_model()

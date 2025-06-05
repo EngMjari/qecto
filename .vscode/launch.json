@@ -1,0 +1,29 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Django Server",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/qecto/manage.py",
+      "args": ["runserver", "0.0.0.0:8000"],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Run React App",
+      "type": "pwa-node",
+      "request": "launch",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start"],
+      "cwd": "${workspaceFolder}/qecto-frontend",
+      "console": "integratedTerminal"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Run Django and React",
+      "configurations": ["Run Django Server", "Run React App"]
+    }
+  ]
+}

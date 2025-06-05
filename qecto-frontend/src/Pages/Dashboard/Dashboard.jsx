@@ -3,8 +3,8 @@ import { FaClipboardList, FaCheckCircle, FaExclamationCircle, FaHourglassHalf } 
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import WelcomeCard from "./WelcomeCard";
-import axiosInstance from "../../utils/axiosInstance";
 import { IoIosCloseCircleOutline, IoMdSettings } from "react-icons/io";
+import { fetchAllData } from "../../api/projectsApi";
 
 // تابع تعیین رنگ وضعیت
 const getStatusColor = (status) => {
@@ -63,47 +63,44 @@ const recentTickets = [
 
 export default function Dashboard() {
   const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const res = await axiosInstance.get("api/projects/dashboard/");
-        console.log("Response from API:", res.data); // این رو اضافه کن
-        setData(res.data);
-      } catch (error) {
-        console.error("خطا در بارگذاری پروژه‌ها:", error);
-      } finally {
+    fetchAllData()
+      .then((response) => {
+        setData(response.data); // داده‌های برگشتی از API رو ذخیره کن
         setLoading(false);
-      }
-    };
-
-    fetchData();
+        console.log("Data : ", response.data);
+      })
+      .catch((err) => {
+        setError(err.message || "خطا در دریافت داده‌ها");
+        setLoading(false);
+      });
   }, []);
+  if (loading) return <p>در حال بارگذاری...</p>;
+  if (error) return <p>خطا: {error}</p>;
   return (
     <div style={styles.container}>
       <WelcomeCard />
-      <ProjectInfoCard projects={data} />
-      <StatsGrid projects={data} />
+      <ProjectInfoCard requests={data.requests.length} user={data.user} />
+      <StatsGrid projects={data.projects} requests={data.requests} />
       <SectionGrid
-        recentRequests={Array.isArray(data?.recent_requests) ? data.recent_requests : []}
-        recentTickets={Array.isArray(recentTickets) ? recentTickets : []}
+        recentRequests={Array.isArray(data?.latest_requests) ? data.latest_requests : []}
+        recentTickets={Array.isArray(data?.latest_messages) ? data.latest_messages : []}
       />
     </div>
   );
 }
 
-function StatsGrid({ projects }) {
+function StatsGrid({ projects, requests }) {
   if (!projects) return null;
 
-  const allRequests = projects.all_requests || [];
-
-  const pending = allRequests.filter((p) => p.data.status === "pending").length;
-  const completed = allRequests.filter((p) => p.data.status === "completed").length;
-  const in_progress = allRequests.filter((p) => p.data.status === "in_progress").length;
-  const rejected = allRequests.filter((p) => p.data.status === "rejected").length;
-  const incomplete = allRequests.filter((p) => p.data.status === "incomplete").length;
+  const pending = requests.filter((p) => p.status === "pending").length;
+  const completed = requests.filter((p) => p.status === "completed").length;
+  const in_progress = requests.filter((p) => p.status === "in_progress").length;
+  const rejected = requests.filter((p) => p.status === "rejected").length;
+  const incomplete = requests.filter((p) => p.status === "incomplete").length;
 
   const stats = [
     {
@@ -140,9 +137,8 @@ function StatsGrid({ projects }) {
   );
 }
 
-function ProjectInfoCard({ projects }) {
-  if (!projects) return null;
-  const total = projects.total_requests || 0;
+function ProjectInfoCard({ requests, user }) {
+  if (!requests) return null;
   return (
     <div className="bg-white shadow rounded-4 border-dark">
       {/* Left Section: Icon and Title */}
@@ -151,7 +147,7 @@ function ProjectInfoCard({ projects }) {
           <FaClipboardList size={24} className="text-white" /> {/* Slightly smaller icon for horizontal layout */}
         </div>
         <h2 className="text-md text-center md:text-xl font-semibold whitespace-nowrap py-2" style={{ color: "#002a3a" }}>
-          وضعیت پروژه‌ها
+          وضعیت کارتابل
         </h2>
       </div>
 
@@ -160,11 +156,11 @@ function ProjectInfoCard({ projects }) {
         <p className="text-sm md:text-base text-gray-700">
           سلام{" "}
           <span className="font-semibold" style={{ color: "#002a3a" }}>
-            {projects.user.full_name}
+            {user.full_name}
           </span>
-          ، تعداد پروژه‌های فعال شما{" "}
+          ، تعداد درخواست های شما{" "}
           <span className="font-bold text-base md:text-lg" style={{ color: "#002a3a" }}>
-            {total}
+            {requests}
           </span>{" "}
           عدد می‌باشد.
         </p>
@@ -189,28 +185,26 @@ function SectionGrid({ recentRequests = [], recentTickets = [] }) {
   return (
     <div style={styles.sectionGrid}>
       <DashboardSection title="آخرین درخواست‌ها" linkText="همه درخواست‌ها" linkHref="/projects">
-  {(recentRequests || []).map((proj) => (
-    <Link key={proj.data.id} to={`/projects/${proj.data.project.id}`} style={styles.itemRow} className="hoverItem">
-      <div style={styles.itemColumn}>
-        <span>{proj.title}</span>
-        <span style={styles.requestType}>
-          {proj.type === "survey" && "نقشه‌برداری"}
-          {proj.type === "expert" && "کارشناسی"}
-          {proj.type === "ownership" && "ثبت مالکیت"}
-        </span>
-      </div>
-      <span
-        style={{
-          ...styles.statusBadge,
-          backgroundColor: getStatusColor(proj.data.status),
-        }}
-      >
-        {getStatusLabel(proj.data.status)}
-      </span>
-    </Link>
-  ))}
-</DashboardSection>
-
+        {(recentRequests || []).map((req) => (
+          <Link key={req.id} to={`/projects/${req.project.id}`} style={styles.itemRow} className="hoverItem">
+            <div style={styles.itemColumn}>
+              <span>{req.project.title}</span>
+              <span style={styles.requestType}>
+                {req.request_type === "survey" && "نقشه‌برداری"}
+                {req.request_type === "expert" && "کارشناسی"}
+              </span>
+            </div>
+            <span
+              style={{
+                ...styles.statusBadge,
+                backgroundColor: getStatusColor(req.status),
+              }}
+            >
+              {getStatusLabel(req.status)}
+            </span>
+          </Link>
+        ))}
+      </DashboardSection>
 
       <DashboardSection title="آخرین تیکت‌ها" linkText="همه تیکت‌ها" linkHref="/tickets">
         {(recentTickets || []).map((ticket) => (
@@ -348,10 +342,9 @@ const styles = {
     fontWeight: "bold",
     minWidth: "100px",
     textAlign: "center",
-        whiteSpace: "nowrap",
-
+    whiteSpace: "nowrap",
   },
-    itemColumn: {
+  itemColumn: {
     display: "flex",
     flexDirection: "column",
     flexGrow: 1,

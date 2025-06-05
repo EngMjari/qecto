@@ -1,4 +1,4 @@
-# Expert/api/serializers.py : 
+# Expert/api/serializers.py :
 from rest_framework import serializers
 from expert.models import ExpertEvaluationProject, ExpertAttachment
 from django.contrib.auth import get_user_model
@@ -7,6 +7,8 @@ from projects.models import Project, ProjectType, ProjectStatus
 User = get_user_model()
 
 # --- سریالایزر فایل‌های پیوست کارشناسی ---
+
+
 class ExpertAttachmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = ExpertAttachment
@@ -16,14 +18,23 @@ class ExpertAttachmentSerializer(serializers.ModelSerializer):
 # --- سریالایزر پروژه کارشناسی (نمایش) ---
 class ExpertEvaluationProjectSerializer(serializers.ModelSerializer):
     attachments = ExpertAttachmentSerializer(many=True, read_only=True)
+    project = serializers.SerializerMethodField()
+    request_type = serializers.SerializerMethodField()
 
     class Meta:
         model = ExpertEvaluationProject
         fields = [
             'id', 'project', 'property_type', 'main_parcel_number', 'sub_parcel_number',
-            'location_lat', 'location_lng', 'description', 'created_at', 'attachments', 'status'
+            'location_lat', 'location_lng', 'description', 'created_at', 'attachments', 'status', 'request_type'
         ]
         read_only_fields = ['project', 'created_at']
+
+    def get_project(self, obj):
+        from projects.api.serializers import ProjectDataSerializer  # ایمپورت تنبل
+        return ProjectDataSerializer(obj.project).data
+
+    def get_request_type(self, obj):
+        return 'expert'
 
 
 # --- سریالایزر ایجاد پروژه کارشناسی (فرانت‌اند فرم ارسال) ---
@@ -46,7 +57,8 @@ class ExpertEvaluationProjectCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         request = self.context.get('request')
-        print("FILES in context:", request.FILES if request else "No request in context")
+        print("FILES in context:",
+              request.FILES if request else "No request in context")
         attachments = request.FILES.getlist('attachments')
         print("FILES RECEIVED in create:", attachments)
         user = request.user if request else None

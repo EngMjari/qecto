@@ -27,7 +27,7 @@ export default function WelcomeCard() {
           <FaFolderOpen className="ms-2" /> مشاهده پروژه‌ها
         </Link>
         <Link
-          to="/tickets/create"
+          to="/tickets/new"
           className="btn btn-outline-primary p-3 d-flex align-items-center justify-content-center"
           style={{ borderRadius: 8, minWidth: 150, flex: "1 1 auto" }}
         >

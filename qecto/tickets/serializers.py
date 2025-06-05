@@ -1,118 +1,60 @@
 from rest_framework import serializers
-from .models import Ticket, TicketReply, TicketAttachment, TicketReplyAttachment
-from projects.models import Project
-from expert.models import ExpertEvaluationProject
-from survey.models import SurveyProject
+from .models import TicketSession, TicketMessage, TicketMessageFile
 
-class TicketAttachmentSerializer(serializers.ModelSerializer):
+
+class TicketMessageFileSerializer(serializers.ModelSerializer):
     class Meta:
-        model = TicketAttachment
-        fields = ['id', 'file', 'uploaded_at']
-        read_only_fields = ['id', 'uploaded_at']
+        model = TicketMessageFile
+        fields = ['id', 'file', 'uploaded_at', 'file_extension']
+        read_only_fields = ['id', 'uploaded_at', 'file_extension']
 
-class TicketReplyAttachmentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TicketReplyAttachment
-        fields = ['id', 'file', 'uploaded_at']
-        read_only_fields = ['id', 'uploaded_at']
 
-class TicketReplySerializer(serializers.ModelSerializer):
-    attachments = TicketReplyAttachmentSerializer(many=True, read_only=True)
-    uploaded_files = serializers.ListField(
-        child=serializers.FileField(), write_only=True, required=False
-    )
+class TicketMessageSerializer(serializers.ModelSerializer):
+    files = TicketMessageFileSerializer(many=True, read_only=True)
+    sender_phone = serializers.SerializerMethodField()
+    session = serializers.PrimaryKeyRelatedField(
+        read_only=True)  # برای جلوگیری از حلقه‌ی تو در تو
 
     class Meta:
-        model = TicketReply
+        model = TicketMessage
+        fields = ['id', 'session', 'sender_user', 'sender_admin',
+                  'sender_phone', 'content', 'created_at', 'files']
+        read_only_fields = ['id', 'created_at',
+                            'sender_phone', 'sender_user', 'sender_admin']
+
+    def get_sender_phone(self, obj):
+        if obj.sender_user:
+            return getattr(obj.sender_user, 'phone_number', str(obj.sender_user))
+        elif obj.sender_admin:
+            return getattr(obj.sender_admin, 'phone_number', str(obj.sender_admin))
+        return "مهمان"
+
+
+class TicketSessionSerializer(serializers.ModelSerializer):
+    messages = TicketMessageSerializer(many=True, read_only=True)
+    user_phone = serializers.SerializerMethodField()
+    assigned_admin_phone = serializers.SerializerMethodField()
+
+    # اضافه کن این خط را برای پنهان کردن فیلد user از ورودی کلاینت
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = TicketSession
         fields = [
-            'id',
-            'ticket',
-            'message',
-            'replied_by',
-            'created_at',
-            'attachments',
-            'uploaded_files',  # اضافه‌شده
+            'id', 'session_type', 'survey_request', 'evaluation_request',
+            'user', 'user_phone', 'assigned_admin', 'assigned_admin_phone',
+            'status', 'reply_status', 'last_message_by', 'closed_reason',
+            'created_at', 'updated_at', 'messages'
         ]
-        read_only_fields = ['id', 'replied_by', 'created_at', 'attachments']
+        read_only_fields = ['id', 'created_at', 'updated_at',
+                            'messages', 'user_phone', 'assigned_admin_phone', 'user']
 
-    def create(self, validated_data):
-        user = self.context['request'].user
-        ticket = validated_data['ticket']
-        files = validated_data.pop('uploaded_files', [])
+    def get_user_phone(self, obj):
+        if obj.user:
+            return getattr(obj.user, 'phone_number', str(obj.user))
+        return None
 
-        if ticket.status == 'closed':
-            raise serializers.ValidationError("نمی‌توان به تیکت بسته شده پاسخ داد.")
-
-        reply = TicketReply.objects.create(
-            ticket=ticket,
-            message=validated_data['message'],
-            replied_by=user
-        )
-
-        # ایجاد فایل‌های پیوست برای پاسخ
-        for f in files:
-            TicketReplyAttachment.objects.create(
-                reply=reply,
-                file=f,
-                uploaded_by=user
-            )
-
-        # اگر ادمین یا سوپرادمین پاسخ دهد، وضعیت تیکت تغییر می‌کند
-        if user.is_staff or user.is_superuser:
-            ticket.status = 'answered'
-            ticket.save()
-
-        return reply
-
-class TicketSerializer(serializers.ModelSerializer):
-    attachments = TicketAttachmentSerializer(many=True, read_only=True)
-    replies = TicketReplySerializer(many=True, read_only=True)
-    
-    class Meta:
-        model = Ticket
-        fields = [
-            'id',
-            'title',
-            'description',
-            'created_by',
-            'related_project',
-            'related_survey',
-            'related_expert',
-            'subject_type',
-            'status',
-            'created_at',
-            'assigned_admin',
-            'attachments',
-            'replies'
-        ]
-        read_only_fields = ['id', 'created_by', 'status', 'created_at', 'assigned_admin', 'attachments', 'replies']
-
-    def validate(self, attrs):
-        user = self.context['request'].user
-        related_project = attrs.get('related_project')
-
-        # جلوگیری از ایجاد session جدید در صورت باز بودن session قبلی
-        if related_project:
-            open_tickets = Ticket.objects.filter(
-                created_by=user,
-                related_project=related_project,
-                status__in=['open', 'answered']
-            )
-            if open_tickets.exists():
-                raise serializers.ValidationError("برای این پروژه یک session باز وجود دارد. ابتدا آن را ببندید.")
-
-        return attrs
-
-    def create(self, validated_data):
-        user = self.context['request'].user
-        validated_data['created_by'] = user
-        validated_data['status'] = 'open'
-
-        # ارجاع خودکار به ادمین پروژه
-        assigned_admin = None
-        project = validated_data.get('related_project')
-        if project and hasattr(project, 'admin') and project.admin:
-            assigned_admin = project.admin
-        validated_data['assigned_admin'] = assigned_admin
-
-        return super().create(validated_data)
+    def get_assigned_admin_phone(self, obj):
+        if obj.assigned_admin:
+            return getattr(obj.assigned_admin, 'phone_number', str(obj.assigned_admin))
+        return None
