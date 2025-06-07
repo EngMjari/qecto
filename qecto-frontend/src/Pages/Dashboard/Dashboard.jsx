@@ -1,7 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { FaClipboardList, FaCheckCircle, FaExclamationCircle, FaHourglassHalf } from "react-icons/fa";
+import {
+  FaClipboardList,
+  FaProjectDiagram,
+  FaEnvelopeOpenText,
+  FaCheckCircle,
+  FaExclamationCircle,
+  FaHourglassHalf,
+  FaChevronUp,
+  FaChevronDown,
+} from "react-icons/fa";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import WelcomeCard from "./WelcomeCard";
 import { IoIosCloseCircleOutline, IoMdSettings } from "react-icons/io";
 import { fetchAllData } from "../../api/projectsApi";
@@ -41,24 +50,47 @@ const getStatusLabel = (status) => {
       return "نامشخص";
   }
 };
+const getTicketStatusLabel = (status) => {
+  switch (status) {
+    case "waiting_for_admin":
+      return "در انتظار پاسخ";
+    case "answered":
+      return "پاسخ داده شده";
+    default:
+      return "نامشخص";
+  }
+};
 
 const getTicketStatusColor = (status) => {
   switch (status) {
-    case "پاسخ داده شده":
+    case "answered":
       return "#28a745";
-    case "منتظر پاسخ":
+    case "waiting_for_admin":
       return "#ffc107";
-    case "بسته شده":
-      return "#6c757d";
     default:
       return "#999";
   }
 };
 
 const recentTickets = [
-  { id: 1, title: "پیگیری پروژه X", status: "پاسخ داده شده", statusColor: "#28a745" },
-  { id: 2, title: "سوال در مورد هزینه", status: "منتظر پاسخ", statusColor: "#ffc107" },
-  { id: 3, title: "مشکل در آپلود فایل‌ها", status: "بسته شده", statusColor: "#6c757d" },
+  {
+    id: 1,
+    title: "پیگیری پروژه X",
+    status: "پاسخ داده شده",
+    statusColor: "#28a745",
+  },
+  {
+    id: 2,
+    title: "سوال در مورد هزینه",
+    status: "منتظر پاسخ",
+    statusColor: "#ffc107",
+  },
+  {
+    id: 3,
+    title: "مشکل در آپلود فایل‌ها",
+    status: "بسته شده",
+    statusColor: "#6c757d",
+  },
 ];
 
 export default function Dashboard() {
@@ -83,163 +115,615 @@ export default function Dashboard() {
   return (
     <div style={styles.container}>
       <WelcomeCard />
-      <ProjectInfoCard requests={data.requests.length} user={data.user} />
-      <StatsGrid projects={data.projects} requests={data.requests} />
+      <ProjectInfoCard
+        requests={data.requests.length}
+        user={data.user}
+        requestsList={data.requests}
+        projects={data.projects}
+        tickets={data.latest_messages || []}
+      />
+      {/* <StatsGrid projects={data.projects} requests={data.requests} /> */}
       <SectionGrid
-        recentRequests={Array.isArray(data?.latest_requests) ? data.latest_requests : []}
-        recentTickets={Array.isArray(data?.latest_messages) ? data.latest_messages : []}
+        recentRequests={
+          Array.isArray(data?.latest_requests) ? data.latest_requests : []
+        }
+        recentTickets={
+          Array.isArray(data?.latest_messages) ? data.latest_messages : []
+        }
       />
     </div>
   );
 }
 
-function StatsGrid({ projects, requests }) {
-  if (!projects) return null;
+// function StatsGrid({ projects, requests }) {
+//   if (!projects) return null;
 
-  const pending = requests.filter((p) => p.status === "pending").length;
-  const completed = requests.filter((p) => p.status === "completed").length;
-  const in_progress = requests.filter((p) => p.status === "in_progress").length;
-  const rejected = requests.filter((p) => p.status === "rejected").length;
-  const incomplete = requests.filter((p) => p.status === "incomplete").length;
+//   const pending = requests.filter((p) => p.status === "pending").length;
+//   const completed = requests.filter((p) => p.status === "completed").length;
+//   const in_progress = requests.filter((p) => p.status === "in_progress").length;
+//   const rejected = requests.filter((p) => p.status === "rejected").length;
+//   const incomplete = requests.filter((p) => p.status === "incomplete").length;
 
-  const stats = [
+//   const stats = [
+//     {
+//       icon: <FaHourglassHalf style={styles.spinningIcon} />,
+//       title: "درحال بررسی",
+//       value: pending,
+//       color: "#f1c40f",
+//       link: "/requests?status=pending",
+//     },
+//     {
+//       icon: <IoMdSettings style={styles.spinningIcon} />,
+//       title: "در حال انجام",
+//       value: in_progress,
+//       color: "#1abc9c",
+//       link: "/requests?status=approved",
+//     },
+//     {
+//       icon: <FaCheckCircle />,
+//       title: "تکمیل شده",
+//       value: completed,
+//       color: "#28a745",
+//       link: "/requests?status=approved",
+//     },
+//     {
+//       icon: <FaExclamationCircle />,
+//       title: "دارای نقص",
+//       value: incomplete,
+//       color: "#e67e22",
+//       link: "/requests?status=incomplete",
+//     },
+//     {
+//       icon: <IoIosCloseCircleOutline />,
+//       title: "رد شده",
+//       value: rejected,
+//       color: "#dc3545",
+//       link: "/requests?status=incomplete",
+//     },
+//   ];
+
+//   return (
+//     <>
+//       <div></div>
+//       <div style={styles.statsGrid}>
+//         {stats
+//           .filter(({ value }) => value > 0)
+//           .map(({ icon, title, value, color, link }) => (
+//             <StatCard
+//               key={title}
+//               icon={icon}
+//               title={title}
+//               value={value}
+//               color={color}
+//               link={link}
+//             />
+//           ))}
+//       </div>
+//       {/* متن مجموع پروژه‌ها */}
+//     </>
+//   );
+// }
+
+function ProjectInfoCard({
+  requests,
+  user,
+  requestsList = [],
+  projects = [],
+  tickets = [],
+}) {
+  const [openAccordion, setOpenAccordion] = useState(null);
+  const navigate = useNavigate();
+
+  // پروژه‌ها
+  const totalProjects = projects.length;
+
+  // درخواست‌ها
+  const totalRequests = requestsList.length;
+  const statusList = [
     {
-      icon: <FaHourglassHalf style={styles.spinningIcon} />,
-      title: "درحال بررسی",
-      value: pending,
+      key: "all",
+      label: "کل درخواست‌ها",
+      color: "#2563eb",
+      icon: <FaClipboardList size={24} />,
+      link: "/requests",
+      value: totalRequests,
+    },
+    {
+      key: "pending",
+      label: "در حال بررسی",
       color: "#f1c40f",
+      icon: <FaHourglassHalf size={24} />,
       link: "/requests?status=pending",
+      value: requestsList.filter((r) => r.status === "pending").length,
     },
     {
-      icon: <IoMdSettings style={styles.spinningIcon} />,
-      title: "در حال انجام",
-      value: in_progress,
+      key: "in_progress",
+      label: "در حال انجام",
       color: "#1abc9c",
-      link: "/requests?status=approved",
+      icon: <IoMdSettings size={24} />,
+      link: "/requests?status=in_progress",
+      value: requestsList.filter((r) => r.status === "in_progress").length,
     },
-    { icon: <FaCheckCircle />, title: "تکمیل شده", value: completed, color: "#28a745", link: "/requests?status=approved" },
-    { icon: <FaExclamationCircle />, title: "دارای نقص", value: incomplete, color: "#e67e22", link: "/requests?status=incomplete" },
-    { icon: <IoIosCloseCircleOutline />, title: "رد شده", value: rejected, color: "#dc3545", link: "/requests?status=incomplete" },
+    {
+      key: "completed",
+      label: "تکمیل شده",
+      color: "#28a745",
+      icon: <FaCheckCircle size={24} />,
+      link: "/requests?status=completed",
+      value: requestsList.filter((r) => r.status === "completed").length,
+    },
+    {
+      key: "incomplete",
+      label: "دارای نقص",
+      color: "#e67e22",
+      icon: <FaExclamationCircle size={24} />,
+      link: "/requests?status=incomplete",
+      value: requestsList.filter((r) => r.status === "incomplete").length,
+    },
+    {
+      key: "rejected",
+      label: "رد شده",
+      color: "#dc3545",
+      icon: <IoIosCloseCircleOutline size={24} />,
+      link: "/requests?status=rejected",
+      value: requestsList.filter((r) => r.status === "rejected").length,
+    },
   ];
 
-  return (
-    <>
-      <div></div>
-      <div style={styles.statsGrid}>
-        {stats
-          .filter(({ value }) => value > 0)
-          .map(({ icon, title, value, color, link }) => (
-            <StatCard key={title} icon={icon} title={title} value={value} color={color} link={link} />
-          ))}
-      </div>
-      {/* متن مجموع پروژه‌ها */}
-    </>
-  );
-}
+  // تیکت‌ها
+  const answeredTickets = (tickets || []).filter(
+    (t) => t.session?.reply_status === "answered"
+  ).length;
+  const waitingTickets = (tickets || []).filter(
+    (t) => t.session?.reply_status === "waiting_for_admin"
+  ).length;
+  const ticketStats = [
+    {
+      key: "all",
+      label: "کل تیکت‌ها",
+      color: "#2563eb",
+      icon: <FaEnvelopeOpenText size={24} />,
+      link: "/tickets",
+      value: tickets.length,
+    },
+    {
+      key: "answered",
+      label: "پاسخ داده شده",
+      color: "#28a745",
+      icon: <FaCheckCircle size={24} />,
+      link: "/tickets?status=answered",
+      value: answeredTickets,
+    },
+    {
+      key: "waiting_for_admin",
+      label: "در انتظار پاسخ",
+      color: "#ffc107",
+      icon: <FaHourglassHalf size={24} />,
+      link: "/tickets?status=waiting_for_admin",
+      value: waitingTickets,
+    },
+  ];
 
-function ProjectInfoCard({ requests, user }) {
-  if (!requests) return null;
-  return (
-    <div className="bg-white shadow rounded-4 border-dark">
-      {/* Left Section: Icon and Title */}
-      <div className="flex items-center space-x-3 rtl:space-x-reverse mb-4 sm:mb-0 flex-shrink-0">
-        <div className="p-3 bg-dark" style={styles.projectInfo}>
-          <FaClipboardList size={24} className="text-white" /> {/* Slightly smaller icon for horizontal layout */}
-        </div>
-        <h2 className="text-md text-center md:text-xl font-semibold whitespace-nowrap py-2" style={{ color: "#002a3a" }}>
-          وضعیت کارتابل
-        </h2>
-      </div>
+  // آکاردئون هندلر
+  const handleAccordion = (key) => {
+    setOpenAccordion((prev) => (prev === key ? null : key));
+  };
 
-      {/* Middle Section: Greeting and Count - takes available space */}
-      <div className="sm:text-right h5 rtl:sm:text-left mb-4 sm:mb-0 sm:mx-4 flex-grow px-4 py-2">
-        <p className="text-sm md:text-base text-gray-700">
-          سلام{" "}
-          <span className="font-semibold" style={{ color: "#002a3a" }}>
-            {user.full_name}
+  // انیمیشن آیکون‌ها
+  const iconVariants = {
+    initial: { scale: 1 },
+    hover: { scale: 1.13, rotate: 6 },
+    tap: { scale: 0.97, rotate: -6 },
+    active: { scale: 1.18, rotate: 0 },
+  };
+
+  return (
+    <div
+      style={{
+        background: "linear-gradient(120deg, #e0e7ff 0%, #fff 100%)",
+        borderRadius: 24,
+        boxShadow: "0 8px 32px rgba(80, 120, 255, 0.10)",
+        padding: "32px 24px 18px 24px",
+        marginBottom: 32,
+        border: "1px solid #e0e7ff",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 24,
+          marginBottom: 18,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div
+            style={{
+              background: "linear-gradient(135deg, #2563eb 60%, #60a5fa 100%)",
+              borderRadius: "50%",
+              width: 38,
+              height: 38,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 2px 8px rgba(37,99,235,0.10)",
+            }}
+          >
+            <FaClipboardList size={20} color="#fff" />
+          </div>
+          <span style={{ fontWeight: "bold", fontSize: 18, color: "#1e293b" }}>
+            وضعیت کارتابل
           </span>
-          ، تعداد درخواست های شما{" "}
-          <span className="font-bold text-base md:text-lg" style={{ color: "#002a3a" }}>
-            {requests}
-          </span>{" "}
-          عدد می‌باشد.
-        </p>
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          {/* پروژه‌ها */}
+          <button
+            className={`flex flex-col items-center px-2 py-1 rounded-lg transition font-bold ${
+              openAccordion === "projects"
+                ? "bg-blue-100 text-blue-700 scale-110 shadow"
+                : "text-gray-500 opacity-80 hover:bg-blue-50"
+            }`}
+            onClick={() =>
+              setOpenAccordion(openAccordion === "projects" ? null : "projects")
+            }
+            style={{
+              minWidth: 60,
+              background:
+                openAccordion === "projects" ? "#e0e7ff" : "transparent",
+              border: "none",
+              outline: "none",
+              cursor: "pointer",
+              transition: "all 0.2s",
+            }}
+          >
+            <motion.span
+              variants={iconVariants}
+              animate={openAccordion === "projects" ? "active" : "initial"}
+              whileHover="hover"
+              whileTap="tap"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "#fff",
+                borderRadius: "50%",
+                width: 32,
+                height: 32,
+                boxShadow:
+                  openAccordion === "projects" ? "0 0 0 3px #a5b4fc55" : "none",
+                marginBottom: 2,
+              }}
+            >
+              <FaProjectDiagram size={18} color="#2563eb" />
+            </motion.span>
+            <span style={{ fontSize: 11, marginTop: 1 }}>پروژه‌ها</span>
+          </button>
+          {/* درخواست‌ها */}
+          <button
+            className={`flex flex-col items-center px-2 py-1 rounded-lg transition font-bold ${
+              openAccordion === "requests"
+                ? "bg-blue-100 text-blue-700 scale-110 shadow"
+                : "text-gray-500 opacity-80 hover:bg-blue-50"
+            }`}
+            onClick={() =>
+              setOpenAccordion(openAccordion === "requests" ? null : "requests")
+            }
+            style={{
+              minWidth: 60,
+              background:
+                openAccordion === "requests" ? "#e0e7ff" : "transparent",
+              border: "none",
+              outline: "none",
+              cursor: "pointer",
+              transition: "all 0.2s",
+            }}
+          >
+            <motion.span
+              variants={iconVariants}
+              animate={openAccordion === "requests" ? "active" : "initial"}
+              whileHover="hover"
+              whileTap="tap"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "#fff",
+                borderRadius: "50%",
+                width: 32,
+                height: 32,
+                boxShadow:
+                  openAccordion === "requests" ? "0 0 0 3px #a5b4fc55" : "none",
+                marginBottom: 2,
+              }}
+            >
+              <FaClipboardList size={18} color="#1e293b" />
+            </motion.span>
+            <span style={{ fontSize: 11, marginTop: 1 }}>درخواست‌ها</span>
+          </button>
+          {/* تیکت‌ها */}
+          <button
+            className={`flex flex-col items-center px-2 py-1 rounded-lg transition font-bold ${
+              openAccordion === "tickets"
+                ? "bg-blue-100 text-blue-700 scale-110 shadow"
+                : "text-gray-500 opacity-80 hover:bg-blue-50"
+            }`}
+            onClick={() =>
+              setOpenAccordion(openAccordion === "tickets" ? null : "tickets")
+            }
+            style={{
+              minWidth: 60,
+              background:
+                openAccordion === "tickets" ? "#e0e7ff" : "transparent",
+              border: "none",
+              outline: "none",
+              cursor: "pointer",
+              transition: "all 0.2s",
+            }}
+          >
+            <motion.span
+              variants={iconVariants}
+              animate={openAccordion === "tickets" ? "active" : "initial"}
+              whileHover="hover"
+              whileTap="tap"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "#fff",
+                borderRadius: "50%",
+                width: 32,
+                height: 32,
+                boxShadow:
+                  openAccordion === "tickets" ? "0 0 0 3px #a5b4fc55" : "none",
+                marginBottom: 2,
+              }}
+            >
+              <FaEnvelopeOpenText size={18} color="#f59e42" />
+            </motion.span>
+            <span style={{ fontSize: 11, marginTop: 1 }}>تیکت‌ها</span>
+          </button>
+        </div>
+      </div>
+      {/* سرتیترها */}
+
+      {/* آکاردئون آمار */}
+      <div className="transition-all duration-300 mt-4">
+        {/* پروژه‌ها */}
+        {openAccordion === "projects" && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.97 }}
+              className="flex items-center gap-2 bg-blue-50 rounded-xl shadow-sm p-4 border border-blue-100 cursor-pointer"
+              onClick={() => navigate("/projects")}
+              style={{ transition: "background 0.2s" }}
+            >
+              <FaProjectDiagram size={24} color="#2563eb" />
+              <span className="font-medium text-gray-700">کل پروژه‌ها</span>
+              <span className="px-3 py-1 rounded-lg font-bold bg-blue-100 text-blue-700 ml-auto">
+                {projects.length}
+              </span>
+            </motion.div>
+          </div>
+        )}
+        {/* درخواست‌ها */}
+        {openAccordion === "requests" && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {statusList.map((item) => (
+              <motion.div
+                key={item.key}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.97 }}
+                className="flex items-center gap-2 bg-blue-50 rounded-xl shadow-sm p-4 border border-blue-100 cursor-pointer"
+                onClick={() => navigate(item.link)}
+                style={{ transition: "background 0.2s" }}
+              >
+                {item.icon}
+                <span className="font-medium text-gray-700">{item.label}</span>
+                <span
+                  className="px-3 py-1 rounded-lg font-bold ml-auto"
+                  style={{
+                    background: item.color + "22",
+                    color: item.color,
+                    minWidth: 36,
+                    textAlign: "center",
+                  }}
+                >
+                  {item.value}
+                </span>
+              </motion.div>
+            ))}
+          </div>
+        )}
+        {/* تیکت‌ها */}
+        {openAccordion === "tickets" && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {ticketStats.map((item) => (
+              <motion.div
+                key={item.key}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.97 }}
+                className="flex items-center gap-2 bg-blue-50 rounded-xl shadow-sm p-4 border border-blue-100 cursor-pointer"
+                onClick={() => navigate(item.link)}
+                style={{ transition: "background 0.2s" }}
+              >
+                {item.icon}
+                <span className="font-medium text-gray-700">{item.label}</span>
+                <span
+                  className="px-3 py-1 rounded-lg font-bold ml-auto"
+                  style={{
+                    background: item.color + "22",
+                    color: item.color,
+                    minWidth: 36,
+                    textAlign: "center",
+                  }}
+                >
+                  {item.value}
+                </span>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function StatCard({ icon, title, value, color, link }) {
-  return (
-    <motion.a href={link} whileHover={{ scale: 1.05 }} style={{ ...styles.statCard, borderRight: `5px solid ${color}` }}>
-      <div style={{ fontSize: "2rem", color }}>{icon}</div>
-      <div>
-        <h4 style={{ margin: "10px 0 5px", fontWeight: "bold" }}>{title}</h4>
-        <p style={{ fontSize: "1.2rem", color }}>{value}</p>
-      </div>
-    </motion.a>
-  );
-}
+// function StatCard({ icon, title, value, color, link }) {
+//   return (
+//     <motion.a
+//       href={link}
+//       whileHover={{ scale: 1.05 }}
+//       style={{ ...styles.statCard, borderRight: `5px solid ${color}` }}
+//     >
+//       <div style={{ fontSize: "2rem", color }}>{icon}</div>
+//       <div>
+//         <h4 style={{ margin: "10px 0 5px", fontWeight: "bold" }}>{title}</h4>
+//         <p style={{ fontSize: "1.2rem", color }}>{value}</p>
+//       </div>
+//     </motion.a>
+//   );
+// }
 
 function SectionGrid({ recentRequests = [], recentTickets = [] }) {
+  const [openSections, setOpenSections] = useState({
+    requests: false,
+    tickets: false,
+  });
+
   return (
-    <div style={styles.sectionGrid}>
-      <DashboardSection title="آخرین درخواست‌ها" linkText="همه درخواست‌ها" linkHref="/projects">
-        {(recentRequests || []).map((req) => (
-          <Link key={req.id} to={`/projects/${req.project.id}`} style={styles.itemRow} className="hoverItem">
-            <div style={styles.itemColumn}>
-              <span>{req.project.title}</span>
-              <span style={styles.requestType}>
-                {req.request_type === "survey" && "نقشه‌برداری"}
-                {req.request_type === "expert" && "کارشناسی"}
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        gap: "20px",
+        marginBottom: "40px",
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 320 }}>
+        <DashboardSection
+          title="آخرین درخواست‌ها"
+          linkText="همه درخواست‌ها"
+          linkHref="/requests"
+          open={openSections.requests}
+          onToggle={() =>
+            setOpenSections((prev) => ({
+              ...prev,
+              requests: !prev.requests,
+            }))
+          }
+        >
+          {(recentRequests || []).map((req) => (
+            <Link
+              key={req.id}
+              to={`/projects/${req.project.id}`}
+              style={styles.itemRow}
+              className="hoverItem"
+            >
+              <div style={styles.itemColumn}>
+                <span>{req.project.title}</span>
+                <span style={styles.requestType}>
+                  {req.request_type === "survey" && "نقشه‌برداری"}
+                  {req.request_type === "expert" && "کارشناسی"}
+                </span>
+              </div>
+              <span
+                style={{
+                  ...styles.statusBadge,
+                  backgroundColor: getStatusColor(req.status),
+                }}
+              >
+                {getStatusLabel(req.status)}
               </span>
-            </div>
-            <span
-              style={{
-                ...styles.statusBadge,
-                backgroundColor: getStatusColor(req.status),
-              }}
-            >
-              {getStatusLabel(req.status)}
-            </span>
-          </Link>
-        ))}
-      </DashboardSection>
-
-      <DashboardSection title="آخرین تیکت‌ها" linkText="همه تیکت‌ها" linkHref="/tickets">
-        {(recentTickets || []).map((ticket) => (
-          <Link key={ticket.id} to={`/tickets/${ticket.id}`} style={styles.itemRow} className="hoverItem">
-            <span>{ticket.title}</span>
-            <span
-              style={{
-                ...styles.statusBadge,
-                backgroundColor: getTicketStatusColor(ticket.status),
-              }}
-            >
-              {getStatusLabel(ticket.status)}
-            </span>
-          </Link>
-        ))}
-      </DashboardSection>
-    </div>
-  );
-}
-
-function DashboardSection({ title, children, linkText, linkHref }) {
-  return (
-    <div style={styles.section}>
-      <div style={styles.sectionHeader}>
-        <h3>{title}</h3>
-        <Link to={linkHref} style={styles.sectionLink}>
-          {linkText}
-        </Link>
+            </Link>
+          ))}
+        </DashboardSection>
       </div>
-      <div>{children}</div>
+      <div style={{ flex: 1, minWidth: 320 }}>
+        <DashboardSection
+          title="آخرین تیکت‌ها"
+          linkText="همه تیکت‌ها"
+          linkHref="/tickets"
+          open={openSections.tickets}
+          onToggle={() =>
+            setOpenSections((prev) => ({
+              ...prev,
+              tickets: !prev.tickets,
+            }))
+          }
+        >
+          {(recentTickets || []).map((ticket) => (
+            <Link
+              key={ticket.id}
+              to={`/tickets/session/${ticket.session.id}`}
+              style={styles.itemRow}
+              className="hoverItem"
+            >
+              <div style={styles.itemColumn}>
+                <span>{ticket.session.title}</span>
+                <span style={styles.requestType}>&nbsp;</span>{" "}
+                {/* برای تراز ارتفاع */}
+              </div>
+              <span
+                style={{
+                  ...styles.statusBadge,
+                  backgroundColor: getTicketStatusColor(
+                    ticket.session.reply_status
+                  ),
+                }}
+              >
+                {getTicketStatusLabel(ticket.session.reply_status)}
+              </span>
+            </Link>
+          ))}
+        </DashboardSection>
+      </div>
     </div>
   );
 }
 
-// حذف ActionButtons مطابق درخواست شما
+function DashboardSection({
+  title,
+  children,
+  defaultOpen = false,
+  open,
+  onToggle,
+  linkText,
+  linkHref,
+}) {
+  // حذف state داخلی و استفاده از prop open
+  return (
+    <div className="mb-6 bg-white rounded-xl shadow p-4 border border-blue-100">
+      <button
+        className="flex items-center justify-between w-full text-right font-bold text-blue-900 text-lg focus:outline-none"
+        onClick={onToggle}
+      >
+        <span>{title}</span>
+        {open ? <FaChevronUp /> : <FaChevronDown />}
+      </button>
+      <div
+        style={{
+          maxHeight: open ? "1000px" : "0",
+          overflow: "hidden",
+          transition: "max-height 0.4s cubic-bezier(0.4,0,0.2,1), margin 0.3s",
+          marginTop: open ? 16 : 0,
+        }}
+      >
+        {open && <div>{children}</div>}
+      </div>
+      {linkText && linkHref && (
+        <div className="text-left mt-2">
+          <Link to={linkHref} style={styles.sectionLink}>
+            {linkText}
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const styles = {
   projectInfo: {
@@ -270,12 +754,12 @@ const styles = {
     marginRight: 5,
     textDecoration: "underline",
   },
-  statsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-    gap: "15px",
-    marginBottom: "25px",
-  },
+  // statsGrid: {
+  //   display: "grid",
+  //   gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+  //   gap: "15px",
+  //   marginBottom: "25px",
+  // },
   statCard: {
     backgroundColor: "white",
     borderRadius: "12px",

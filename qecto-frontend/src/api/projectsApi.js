@@ -25,3 +25,7 @@ export const fetchDashboardStats = () => {
 export const fetchAllData = () => {
   return axiosInstance.get("/api/data/");
 };
+
+export const fetchAllRequests = (params = {}) => {
+  return axiosInstance.get("/api/projects/requests/", { params });
+};

@@ -249,7 +249,8 @@ const Navbar = () => {
                 border: `2px solid ${drawerOpen ? "#fff" : "#002a3a"}`,
                 position: "fixed",
                 right: 25,
-                bottom: 20,
+                bottom: drawerOpen ? 20 : 100,
+                transition: "all 500ms ease-in",
                 // transform: "translateY(-50%)",
                 "&:hover": {
                   backgroundColor: drawerOpen ? "#fff" : "#002a3a",

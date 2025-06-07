@@ -35,10 +35,16 @@ class ExpertEvaluationProject(models.Model):
         ('rejected', 'رد شده'),
         ('incomplete', 'ناقص'),
     ]
+    PROPERTY_TYPE = [
+        ('field', 'زمین'),
+        ('Building', 'ساختمان'),
+        ('other', 'سایر'),
+    ]
     project = models.OneToOneField(
         Project, on_delete=models.CASCADE, related_name='expert_evaluation')
-
-    property_type = models.CharField("نوع ملک", max_length=50)
+    area = models.FloatField("مساحت (متر مربع)", null=True, blank=True)
+    property_type = models.CharField(
+        "نوع ملک", max_length=20, choices=PROPERTY_TYPE, default='field')
     main_parcel_number = models.IntegerField("پلاک اصلی")
     sub_parcel_number = models.IntegerField("پلاک فرعی")
 

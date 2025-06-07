@@ -3,6 +3,7 @@ import axios from "axios";
 
 const axiosInstance = axios.create({
   baseURL: "http://192.168.1.101:8000",
+  // baseURL: "http://192.168.1.3:8000",
   withCredentials: true,
 });
 
@@ -25,10 +26,7 @@ axiosInstance.interceptors.response.use(
     const originalRequest = error.config;
 
     // اگر خطای 401 و اولین بار رفرش کردن توکن است
-    if (
-      error.response?.status === 401 &&
-      !originalRequest._retry
-    ) {
+    if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       const refresh = localStorage.getItem("refresh");
 

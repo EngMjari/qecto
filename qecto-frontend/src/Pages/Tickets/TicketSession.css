@@ -1,0 +1,40 @@
+@keyframes modalShowAnimation {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.animate-modalshow {
+  animation-name: modalShowAnimation;
+  animation-duration: 0.2s; /* Faster animation */
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+}
+/* Custom Scrollbar for webkit browsers */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #c7c7c7;
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #a3a3a3;
+}
+/* For Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #c7c7c7 #f1f1f1;
+}
+
+.My-modal {
+  max-height: 85vh;
+}

@@ -6,36 +6,41 @@ import {
   getTicketSessionById,
   uploadMessageFiles,
 } from "../../api/ticketsApi";
-import { ImAttachment } from "react-icons/im";
+import { IoIosAttach } from "react-icons/io";
 import "./TicketSession.css";
 import noPreviewImage from "./../../assets/images/NoPreview.png";
-import { CiFileOn, CiCirclePlus } from "react-icons/ci";
-
+// Helper function to check if a file is an image by its name
 const isImageFile = (fileName) => {
   if (!fileName || typeof fileName !== "string") return false;
   return /(jpe?g|png|gif|webp|bmp|svg)$/i.test(fileName);
 };
-function forceDownload(fileUrl, fileName) {
-  fetch(fileUrl, {
-    method: "GET",
-    headers: {
-      // اگر نیاز به احراز هویت یا هدر خاص داری اینجا بذار
-    },
-  })
-    .then((res) => res.blob())
-    .then((blob) => {
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fileName || "download";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    })
-    .catch((err) => console.error("Download failed:", err));
-}
+function downloadClickedFile(event, filename) {
+  event.preventDefault();
 
+  let url = "";
+  const target = event.currentTarget;
+
+  if (target.tagName === "IMG") {
+    url = target.src;
+  } else if (target.tagName === "A") {
+    url = target.href;
+  } else {
+    // اگر عنصر دیگه‌ای بود، مثلاً داده‌ای از data attribute
+    url = target.getAttribute("data-file-url") || "";
+  }
+
+  if (!url) {
+    alert("آدرس فایل یافت نشد!");
+    return;
+  }
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename || "";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
 // Icon for non-image files in the modal
 const FileIcon = () => (
   <svg
@@ -90,7 +95,7 @@ function TicketSession() {
     try {
       const response = await getTicketSessionById(sessionId);
       setTicketInfo(response.data);
-      console.log(response.data);
+      console.log("Ticket title: ", response.data);
     } catch (error) {
       console.error("خطا در دریافت اطلاعات تیکت:", error);
       if (error.response && error.response.status === 404) {
@@ -111,15 +116,6 @@ function TicketSession() {
 
       setMessages((prevMessages) => {
         if (JSON.stringify(prevMessages) !== JSON.stringify(messagesData)) {
-          if (
-            !isPoll ||
-            messagesData.length > prevMessages.length ||
-            messagesData.some(
-              (msg, idx) =>
-                JSON.stringify(msg) !== JSON.stringify(prevMessages[idx])
-            )
-          ) {
-          }
           return messagesData;
         }
         return prevMessages;
@@ -146,7 +142,7 @@ function TicketSession() {
         (f) => !prevFiles.some((pf) => pf.name === f.name && pf.size === f.size)
       );
       newFiles.forEach((file) => {
-        if (isImageFile(file.file_extension)) {
+        if (isImageFile(file.name)) {
           newPreviewUrls[file.name] = URL.createObjectURL(file);
         }
       });
@@ -181,33 +177,6 @@ function TicketSession() {
     Object.values(previewUrls).forEach((url) => URL.revokeObjectURL(url)); // Revoke all on close
     setPreviewUrls({});
     setSelectedFiles([]);
-  };
-
-  const closeModalAddFile = (e) => {
-    if (isModalOpen) {
-      setIsModalOpen(false);
-    }
-
-    const newFiles = Array.from(e.target.files);
-    const updatedFiles = [
-      ...selectedFiles,
-      ...newFiles.map((file) => ({
-        file,
-        name: file.name,
-        size: file.size,
-        file_extension: file.name.split(".").pop().toLowerCase(),
-      })),
-    ];
-    setSelectedFiles(updatedFiles);
-
-    // update preview URLs
-    const newPreviewUrls = {};
-    newFiles.forEach((file) => {
-      if (isImageFile(file.name)) {
-        newPreviewUrls[file.name] = URL.createObjectURL(file);
-      }
-    });
-    setPreviewUrls((prev) => ({ ...prev, ...newPreviewUrls }));
   };
 
   const confirmSendFromModal = async () => {
@@ -276,7 +245,7 @@ function TicketSession() {
   const ticketStatusText = () => {
     if (!messages || messages.length === 0) return "در انتظار پاسخ";
     const lastMsg = messages[messages.length - 1];
-    return lastMsg.sender_user ? "در انتظار پاسخ" : "پاسخ داده شد";
+    return lastMsg.sender_user ? "در انتظار پاسخ شما" : "پاسخ داده شد";
   };
 
   const ticketStatusColor = () => {
@@ -286,14 +255,6 @@ function TicketSession() {
   };
 
   const ticketSubject = ticketInfo?.title || "در حال بارگذاری...";
-  const requestTitle =
-    ticketInfo?.session_type === "survey"
-      ? `نقشه بردای - ${ticketInfo.survey_request?.project.title}`
-      : ticketInfo?.session_type === "expert"
-      ? `کارشناسی - ${ticketInfo.evaluation_request?.project.title}`
-      : ticketInfo?.session_type === "general"
-      ? `عمومی `
-      : "در حال بارگذاری...";
   const ticketCreatedAt = ticketInfo?.created_at
     ? new Date(ticketInfo.created_at).toLocaleString("fa-IR", {
         dateStyle: "short",
@@ -307,7 +268,8 @@ function TicketSession() {
         <div className="container mx-auto max-w-3xl">
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-semibold text-orange-600">
-              موضوع تیکت: {ticketSubject}
+              موضوع تیکت : {ticketInfo.title}
+              <div class="text-orange-600">این متن باید نارنجی تیره باشه</div>
             </h2>
             <span
               className={`px-3 py-1 text-xs font-semibold text-white rounded-full ${ticketStatusColor()}`}
@@ -317,7 +279,7 @@ function TicketSession() {
           </div>
           <div className="text-xs text-gray-600 mt-1">
             <p>
-              <strong>موضوع درخواست :</strong> {requestTitle}
+              <strong>موضوع:</strong> {ticketSubject}
             </p>
             <p>
               <strong>تاریخ ایجاد:</strong> {ticketCreatedAt}
@@ -326,8 +288,8 @@ function TicketSession() {
         </div>
       </header>
 
-      <main className="flex-grow overflow-y-auto p-4 space-y-4 bg-gray-50">
-        <div className="container mx-auto max-w-3xl">
+      <main className="container px-lg-5 d-flex mainChatContainer">
+        <div className="justify-content-between mx-auto vw-100">
           {messages.length === 0 && (
             <p className="text-center text-gray-500 py-10">
               هیچ پیامی وجود ندارد. اولین پیام را شما ارسال کنید!
@@ -336,73 +298,70 @@ function TicketSession() {
           {messages.map((msg) => (
             <div
               key={msg.id}
-              className={`flex my-1 ${
-                msg.sender_user ? "justify-end" : "justify-start"
+              className={`d-flex  ${
+                msg.sender_user
+                  ? "justify-content-end"
+                  : "justify-content-start"
               }`}
             >
               <div
-                className={`max-w-[75%] md:max-w-[70%] p-3 shadow-md ${
+                className={`p-3 my-1 shadow border border-1   ${
                   // General styling
                   msg.sender_user
-                    ? "bg-orange-500 text-white rounded-xl rounded-br-none" // User's message: orange, tail bottom-right
-                    : "bg-gray-200 text-gray-700 rounded-xl rounded-bl-none" // Support's message: gray, tail bottom-left
+                    ? "userChat" // User's message: orange, tail bottom-right
+                    : `adminChat` // Support's message: gray, tail bottom-left
                 }`}
               >
-                <p className="text-sm whitespace-pre-wrap break-words">
+                <p
+                  className={`h6 msgContainer${
+                    msg.files && msg.files.length && msg.content
+                      ? "border-bottom border-2"
+                      : "ss"
+                  }`}
+                >
                   {msg.content}
                 </p>
-
+                {/* Files */}
                 {msg.files && msg.files.length > 0 && (
                   <div
-                    className={`mt-2 pt-2 space-y-2 ${
+                    className={`mt-2 fileContainer rounded rounded-2 shadow ${
                       msg.sender_user
-                        ? "border-t border-orange-400/60"
-                        : "border-t border-gray-300/70"
+                        ? "FileUserContainer"
+                        : "border-t FileAdminContainer"
                     }`}
                   >
                     {msg.files.map((file, index) => (
                       <div key={file.id || index}>
                         {isImageFile(file.file_extension) ? (
-                          <button
-                            className="block group"
-                            onClick={() =>
-                              forceDownload(
-                                file.file,
-                                file.custom_name || "file"
+                          <img
+                            src={file.file}
+                            onClick={(e) =>
+                              downloadClickedFile(
+                                e,
+                                `${file.title || "پیوست عکس"}.${
+                                  file.file_extension
+                                }`
                               )
                             }
-                          >
-                            <img
-                              src={file.file}
-                              alt={file.title || "پیوست عکس"}
-                              className="max-w-[200px] md:max-w-[280px] max-h-72 rounded-lg object-cover border border-gray-300 group-hover:opacity-90 transition-opacity"
-                              onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.src =
-                                  "https://placehold.co/200x150/CCCCCC/FFFFFF?text=Preview+Error&font=arial";
-                              }}
-                            />
-                          </button>
+                            alt={file.title || "پیوست عکس"}
+                            className="imageChat"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = { noPreviewImage };
+                            }}
+                          />
                         ) : (
-                          <button
-                            className={`inline-flex items-center text-decoration-none gap-2 text-xs px-3 py-1.5 rounded-md transition-colors ${
-                              msg.sender_user
-                                ? "bg-orange-400 hover:bg-orange-300 text-white"
-                                : "bg-gray-300 hover:bg-gray-400 text-gray-700" // Adjusted support file button
+                          <a
+                            href={file.file}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`fileAttachment rounded ${
+                              msg.sender_user ? "text-white" : "text-dark" // Adjusted support file button
                             }`}
-                            onClick={() =>
-                              forceDownload(
-                                file.file,
-                                file.custom_name || "file"
-                              )
-                            }
                           >
-                            <ImAttachment size={14} />
-                            {"فایل پیوست"}
-                            <div className="= small">
-                              {file.readable_file_size || "بدون حجم"}
-                            </div>
-                          </button>
+                            <IoIosAttach size={20} />
+                            {file.title || "فایل پیوست"}
+                          </a>
                         )}
                       </div>
                     ))}
@@ -431,18 +390,18 @@ function TicketSession() {
         multiple
         id="fileUpload"
         ref={fileInputRef}
-        className="hidden"
+        className="d-none"
         onChange={handleFileChange}
         accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.zip,.rar,.txt,.csv"
       />
 
       {isModalOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-75 mt-5 flex items-center justify-center z-50 p-4 transition-opacity duration-300 ease-out"
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 transition-opacity duration-300 ease-out"
           onClick={closeModalAndClearFiles}
         >
           <div
-            className="bg-white p-3 rounded-xl shadow-2xl w-full My-modal max-w-lg transform transition-all duration-300 ease-out animate-modalshow"
+            className="bg-white p-5 rounded-xl shadow-2xl w-full max-w-lg transform transition-all duration-300 ease-out scale-95 opacity-0 animate-modalshow"
             onClick={(e) => e.stopPropagation()}
             style={{
               animationName: "modalShowAnimation",
@@ -456,7 +415,7 @@ function TicketSession() {
               </h4>
               <button
                 onClick={closeModalAndClearFiles}
-                className="text-red-500 hover:text-red-700 px-2 h3 rounded-full rounded-circle hover:scale-125 transition-all text-xl"
+                className="text-gray-400 hover:text-gray-600 text-2xl"
               >
                 &times;
               </button>
@@ -464,35 +423,34 @@ function TicketSession() {
 
             {selectedFiles.length === 0 ? (
               <p className="text-center text-gray-500 py-4">
-                هیچ فایلی انتخاب نشده است برای انتخاب فایل روی دکمه پایین کلیک
-                کنید
+                هیچ فایلی انتخاب نشده است. برای انتخاب، روی دکمه گیره کاغذ کلیک
+                کنید.
               </p>
             ) : (
-              <ul className="space-y-3 max-h-36 overflow-y-auto mb-1 pr-2 custom-scrollbar">
+              <ul className="space-y-3 max-h-64 overflow-y-auto mb-4 pr-2 custom-scrollbar">
                 {selectedFiles.map((file, index) => (
                   <li
                     key={index}
-                    className="text-sm text-gray-700 flex items-center p-2 bg-gray-50 rounded-lg border border-gray-200 justify-between"
+                    className="text-sm text-gray-700 flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200 justify-between"
                   >
                     <div className="flex items-center gap-3 overflow-hidden">
-                      {isImageFile(file.file_extension) &&
-                      previewUrls[file.file] ? (
+                      {isImageFile(file.name) && previewUrls[file.name] ? (
                         <img
-                          src={previewUrls[file.file]}
-                          alt={file.custom_name}
+                          src={previewUrls[file.name]}
+                          alt={file.name}
                           className="w-12 h-12 object-cover rounded-md border"
                         />
                       ) : (
                         <div className="w-12 h-12 bg-gray-200 rounded-md flex items-center justify-center border">
-                          <CiFileOn size={50} />
+                          <FileIcon />
                         </div>
                       )}
                       <div className="truncate">
-                        <p className="font-medium text-gray-800 m-0 py-1">
+                        <p className="font-medium text-gray-800 truncate">
                           {file.name}
                         </p>
-                        <p className="text-xs text-gray-500 m-0 py-1">
-                          {(file.size / 1024 / 1024).toFixed(1)} MB
+                        <p className="text-xs text-gray-500">
+                          {(file.size / 1024).toFixed(1)} KB
                         </p>
                       </div>
                     </div>
@@ -520,22 +478,7 @@ function TicketSession() {
                 ))}
               </ul>
             )}
-            <div className="my-4">
-              <label
-                htmlFor="message"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                پیام شما :
-              </label>
-              <textarea
-                id="message"
-                rows={4}
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
-                placeholder="توضیحی درباره فایل‌ها یا درخواست خود وارد کنید..."
-              />
-            </div>
+
             {selectedFiles.length === 0 && (
               <button
                 onClick={() => {
@@ -544,28 +487,32 @@ function TicketSession() {
                 }}
                 className="w-full mt-2 px-4 py-2.5 text-sm rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition-colors flex items-center justify-center gap-2"
               >
-                <CiCirclePlus size={22} />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  />
+                </svg>
                 انتخاب فایل‌ها
               </button>
             )}
 
             {selectedFiles.length > 0 && (
               <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 mt-2">
-                {/* :TODO fix button Size in mobile view */}
                 <button
                   onClick={closeModalAndClearFiles}
                   className="px-5 py-2.5 text-sm rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 transition-colors"
                   disabled={isSending}
                 >
                   انصراف
-                </button>
-                <button
-                  onClick={() =>
-                    fileInputRef.current && fileInputRef.current.click()
-                  }
-                  className="px-5 py-2.5 text-sm rounded-lg bg-orange-500 hover:bg-orange-600 text-white transition-colors flex items-center min-w-[120px] justify-center"
-                >
-                  افزودن فایل
                 </button>
                 <button
                   onClick={confirmSendFromModal}
@@ -597,7 +544,7 @@ function TicketSession() {
                       <span className="rtl:mr-2 ltr:ml-2">در حال ارسال...</span>
                     </>
                   ) : (
-                    "ارسال"
+                    "ارسال پیام و فایل‌ها"
                   )}
                 </button>
               </div>
@@ -606,8 +553,8 @@ function TicketSession() {
         </div>
       )}
 
-      <footer className="bg-white p-3 shadow-top sticky bottom-0 border-t border-gray-200 z-10">
-        <div className="container mx-auto max-w-3xl flex items-end gap-2">
+      <footer className="bg-dark p-3 shadow-top fixed-bottom bottom-0 border-t border-gray-200 z-10">
+        <div className=" input-group container mx-auto max-w-3xl flex items-end gap-2">
           <textarea
             placeholder="پیام خود را بنویسید..."
             value={newMessage}
@@ -622,27 +569,24 @@ function TicketSession() {
                   handleSendMessage();
               }
             }}
-            className="flex-1 p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-none text-sm min-h-[44px] max-h-[120px] custom-scrollbar"
+            className="form-control  flex-1 p-2.5 border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-none text-sm min-h-[44px] max-h-[120px] custom-scrollbar"
             rows="1"
             disabled={isSending}
           />
-          <button
+          {/* <span
             title="افزودن فایل"
+            
+            className="text-danger p-2.5 rounded rounded-2  transition-colors disabled:opacity-50 items-center justify-center"
+            
+          > */}
+          <IoIosAttach
+            title="افزودن فایل"
+            size={40}
+            cursor={"pointer"}
+            className="text-danger"
             onClick={() => fileInputRef.current && fileInputRef.current.click()}
-            className="p-2.5 h-[44px] border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors disabled:opacity-50 flex items-center justify-center"
             disabled={isSending}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              fill="currentColor"
-              viewBox="0 0 16 16"
-              className="transform rtl:rotate-90"
-            >
-              <path d="M4.5 3a2.5 2.5 0 0 1 5 0v9a1.5 1.5 0 0 1-3 0V5a.5.5 0 0 1 1 0v7a.5.5 0 0 0 1 0V3a1.5 1.5 0 1 0-3 0v9a2.5 2.5 0 0 0 5 0V5a.5.5 0 0 1 1 0v7a1.5 1.5 0 0 1-3 0V4.5a.5.5 0 0 1 1 0v7.5a.5.5 0 0 0 1 0V4.5a.5.5 0 0 1 .5-.5z" />
-            </svg>
-          </button>
+          />
           <button
             onClick={() => handleSendMessage()}
             className="px-5 h-[44px] bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors flex items-center justify-center disabled:opacity-50 min-w-[52px]"

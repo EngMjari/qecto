@@ -4,6 +4,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 from django.db import models
+from rest_framework.exceptions import NotFound
 
 from .models import TicketSession, TicketMessage, TicketMessageFile
 from .serializers import TicketSessionSerializer, TicketMessageSerializer, TicketMessageFileSerializer
@@ -35,6 +36,12 @@ class TicketSessionRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
     permission_classes = [permissions.IsAuthenticated, IsTicketOwnerOrAdmin]
     queryset = TicketSession.objects.all()
 
+    def get_object(self):
+        try:
+            return super().get_object()
+        except TicketSession.DoesNotExist:
+            raise NotFound("سشن مورد نظر پیدا نشد")
+
     def perform_update(self, serializer):
         user = self.request.user
         if not (user.is_staff or user.is_superuser):
@@ -46,36 +53,44 @@ class TicketMessageListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = TicketMessageSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_session(self):
+        session_id = self.kwargs.get('session_id')
+        try:
+            return TicketSession.objects.get(id=session_id)
+        except TicketSession.DoesNotExist:
+            raise NotFound("سشن مورد نظر پیدا نشد.")
+
     def get_queryset(self):
-        session_id = self.kwargs['session_id']
-        session = TicketSession.objects.get(id=session_id)
+        session = self.get_session()
         user = self.request.user
+
         if user.is_superuser:
             return TicketMessage.objects.filter(session=session)
+
         elif user.is_staff:
             if session.assigned_admin == user or (session.survey_request is None and session.evaluation_request is None):
                 return TicketMessage.objects.filter(session=session)
             else:
                 return TicketMessage.objects.none()
+
         else:
-            if session.user == user:  # اصلاح شده
+            if session.user == user:
                 return TicketMessage.objects.filter(session=session)
             else:
                 return TicketMessage.objects.none()
 
     def perform_create(self, serializer):
-        session_id = self.kwargs['session_id']
-        session = TicketSession.objects.get(id=session_id)
+        session = self.get_session()
         user = self.request.user
-        if session.status != 'open':
-            raise PermissionDenied(
-                "سشن بسته شده و امکان ارسال پیام وجود ندارد")
 
-        # تعیین فرستنده درست بر اساس نقش:
+        if session.status != 'open':
+            raise PermissionDenied("سشن بسته شده و امکان ارسال پیام وجود ندارد.")
+
         if user.is_staff:
             serializer.save(session=session, sender_admin=user)
         else:
             serializer.save(session=session, sender_user=user)
+
 
 
 class TicketMessageFileUploadAPIView(APIView):

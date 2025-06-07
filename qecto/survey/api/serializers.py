@@ -17,12 +17,12 @@ class SurveyProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = SurveyProject
         fields = ['id', 'project', 'status', 'description',
-                  'area', 'location_lat', 'location_lng', 'attachments', 'created_at', 'request_type']
+                  'area', 'location_lat', 'location_lng', 'attachments', 'created_at', 'request_type', "property_type"]
         read_only_fields = ['status', 'project']
 
     def get_project(self, obj):
         from projects.api.serializers import ProjectDataSerializer  # ✅ ایمپورت تنبل
         return ProjectDataSerializer(obj.project).data
-    
+
     def get_request_type(self, obj):
         return 'survey'

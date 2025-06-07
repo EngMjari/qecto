@@ -3,7 +3,7 @@ from rest_framework import serializers
 from projects.models import Project, ProjectType, ProjectStatus
 from django.contrib.auth import get_user_model
 from survey.api.serializers import SurveyProjectSerializer
-from survey.models import SurveyProject, SurveyAttachment 
+from survey.models import SurveyProject, SurveyAttachment
 from expert.api.serializers import ExpertEvaluationProject, ExpertEvaluationProjectSerializer
 from core.serializers import UserSerializer
 User = get_user_model()
@@ -12,7 +12,8 @@ User = get_user_model()
 class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
-        fields = ['id', 'title', 'description', 'project_type', 'status', 'created_at']
+        fields = ['id', 'title', 'description',
+                  'project_type', 'status', 'created_at']
 
 
 class SurveyProjectCreateSerializer(serializers.Serializer):
@@ -73,6 +74,7 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
     expert = serializers.SerializerMethodField()
     request_count = serializers.SerializerMethodField()
     assigned_to = UserSerializer()
+
     class Meta:
         model = Project
         fields = ['id', 'title', 'description', 'status', 'created_at',
@@ -108,6 +110,8 @@ class CreateProjectSerializer(serializers.Serializer):
     description = serializers.CharField(required=False, allow_blank=True)
 
 # TODO: serializer ha ro check kon moratab bashan
+
+
 class ProjectDataSerializer(serializers.ModelSerializer):
     assigned_to = UserSerializer()
     requests = serializers.SerializerMethodField()
@@ -123,13 +127,13 @@ class ProjectDataSerializer(serializers.ModelSerializer):
     def get_requests(self, obj):
         # گرفتن درخواست‌های نقشه‌برداری
         surveys = SurveyProject.objects.filter(project=obj).values(
-            'id', 'status', 'created_at'
+            'id', 'status', 'created_at', 'location_lat', 'location_lng', 'area', 'main_parcel_number', 'sub_parcel_number', 'property_type'
         )
         surveys = [{**item, 'type': 'survey'} for item in surveys]
 
         # گرفتن درخواست‌های کارشناسی
         experts = ExpertEvaluationProject.objects.filter(project=obj).values(
-            'id', 'status', 'created_at'
+            'id', 'status', 'created_at', 'location_lat', 'location_lng', 'area', 'main_parcel_number', 'sub_parcel_number', 'property_type'
         )
         experts = [{**item, 'type': 'expert'} for item in experts]
 
@@ -140,7 +144,6 @@ class ProjectDataSerializer(serializers.ModelSerializer):
 
     def get_request_count(self, obj):
         survey_count = SurveyProject.objects.filter(project=obj).count()
-        expert_count = ExpertEvaluationProject.objects.filter(project=obj).count()
+        expert_count = ExpertEvaluationProject.objects.filter(
+            project=obj).count()
         return survey_count + expert_count
-
-

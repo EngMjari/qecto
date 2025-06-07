@@ -26,6 +26,7 @@ SECRET_KEY = 'django-insecure-m@5pt1tg%(90!k@ol^_#vbi4*-*8&2vx!j8b3+no$q0ob7x@e9
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 ip = "192.168.1.101"
+# ip = "192.168.1.3"
 ALLOWED_HOSTS = [
     f"http://{ip}",
     f"{ip}",
@@ -74,6 +75,8 @@ MIDDLEWARE = [
 # فقط اجازه بده به Origin مشخص درخواست با credentials بفرسته
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://192.168.1.3:3000",  # آی‌پی کامپیوتر شما در شبکه
     "http://192.168.1.101:3000",
 ]
 
@@ -99,7 +102,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'qecto.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
@@ -109,7 +111,6 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -129,7 +130,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
@@ -138,7 +138,6 @@ TIME_ZONE = 'Asia/Tehran'
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
@@ -152,9 +151,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
 AUTH_USER_MODEL = 'core.User'
-
 
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',

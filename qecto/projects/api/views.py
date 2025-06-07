@@ -17,8 +17,15 @@ from django.contrib.auth import get_user_model
 from tickets.models import TicketMessage
 from tickets.serializers import TicketMessageSerializer
 from django.db.models import Q, Max
+from django.utils.timezone import localtime
+
 
 User = get_user_model()
+
+
+class Pagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page'
 
 
 class CreateProjectRequestAPIView(APIView):
@@ -66,14 +73,10 @@ class CreateProjectRequestAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ProjectPagination(PageNumberPagination):
-    page_size = 8
-
-
 class PaginatedProjectDetailsAPIView(ListAPIView):
     serializer_class = ProjectDetailSerializer
     permission_classes = [IsAuthenticated]
-    pagination_class = ProjectPagination
+    pagination_class = Pagination
 
     def get_queryset(self):
         user = self.request.user
@@ -180,6 +183,8 @@ class DashboardStatsAPIView(APIView):
             # 'recent_tickets': ...
         })
 
+# TODO: check
+
 
 class UserDashboardAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -196,11 +201,14 @@ class UserDashboardAPIView(APIView):
 
         # همه درخواست‌های کاربر
         survey_requests = SurveyProject.objects.filter(project__owner=user)
-        expert_requests = ExpertEvaluationProject.objects.filter(project__owner=user)
+        expert_requests = ExpertEvaluationProject.objects.filter(
+            project__owner=user)
 
         # سریال‌سازی همه درخواست‌ها
-        all_survey_serialized = SurveyProjectSerializer(survey_requests, many=True).data
-        all_expert_serialized = ExpertEvaluationProjectSerializer(expert_requests, many=True).data
+        all_survey_serialized = SurveyProjectSerializer(
+            survey_requests, many=True).data
+        all_expert_serialized = ExpertEvaluationProjectSerializer(
+            expert_requests, many=True).data
         all_requests = all_survey_serialized + all_expert_serialized
 
         # ۵ درخواست آخر ترکیبی (براساس created_at)
@@ -211,7 +219,8 @@ class UserDashboardAPIView(APIView):
             SurveyProjectSerializer(latest_survey, many=True).data +
             ExpertEvaluationProjectSerializer(latest_expert, many=True).data
         )
-        combined_latest_serialized.sort(key=lambda x: x['created_at'], reverse=True)
+        combined_latest_serialized.sort(
+            key=lambda x: x['created_at'], reverse=True)
         latest_requests = combined_latest_serialized[:5]
 
         # ۵ پیام آخر از سشن‌های مختلف
@@ -222,9 +231,12 @@ class UserDashboardAPIView(APIView):
             .annotate(latest_id=Max('id'))
             .order_by('-latest_id')[:5]
         )
-        latest_ids = [item['latest_id'] for item in latest_messages_per_session]
-        last_5_messages = TicketMessage.objects.filter(id__in=latest_ids).order_by('-created_at')
-        latest_messages = TicketMessageSerializer(last_5_messages, many=True).data
+        latest_ids = [item['latest_id']
+                      for item in latest_messages_per_session]
+        last_5_messages = TicketMessage.objects.filter(
+            id__in=latest_ids).order_by('-created_at')
+        latest_messages = TicketMessageSerializer(
+            last_5_messages, many=True).data
 
         # خروجی نهایی
         data = {
@@ -236,3 +248,156 @@ class UserDashboardAPIView(APIView):
         }
 
         return Response(data)
+
+
+class AllRequestsView(APIView):
+    permission_classes = [IsAuthenticated]  # فقط کاربران لاگین‌شده
+
+    def get(self, request):
+        type_filter = request.GET.get("type")
+        title_filter = request.GET.get("title")
+        location_filter = request.GET.get("location")
+        date_filter = request.GET.get("created_at")
+        area_filter = request.GET.get("area")
+        main_parcel_number = request.GET.get("main_parcel_number")
+        sub_parcel_number = request.GET.get("sub_parcel_number")
+        status_filter = request.GET.get("status")
+        combined = []
+
+        # Survey Projects
+        if type_filter in [None, "", "survey", "نقشه‌برداری"]:
+            survey_qs = SurveyProject.objects.filter(
+                project__owner=request.user)
+
+            if title_filter:
+                survey_qs = survey_qs.filter(
+                    project__title__icontains=title_filter)
+            if location_filter:
+                survey_qs = survey_qs.filter(
+                    project__location__icontains=location_filter)
+            if date_filter:
+                survey_qs = survey_qs.filter(created_at__date=date_filter)
+            if area_filter:
+                survey_qs = survey_qs.filter(area=area_filter)
+            if main_parcel_number:
+                survey_qs = survey_qs.filter(
+                    main_parcel_number__icontains=main_parcel_number)
+            if sub_parcel_number:
+                survey_qs = survey_qs.filter(
+                    sub_parcel_number__icontains=sub_parcel_number)
+            if status_filter and status_filter != "all":
+                survey_qs = survey_qs.filter(status=status_filter)
+
+            for obj in survey_qs:
+                data = SurveyProjectSerializer(obj).data
+                data['created_at'] = localtime(obj.created_at)
+                combined.append(data)
+
+        # Expert Requests
+        if type_filter in [None, "", "expert", "کارشناسی"]:
+            expert_qs = ExpertEvaluationProject.objects.filter(
+                project__owner=request.user)
+
+            if title_filter:
+                expert_qs = expert_qs.filter(
+                    project__title__icontains=title_filter)
+            if location_filter:
+                expert_qs = expert_qs.filter(
+                    project__location__icontains=location_filter)
+            if date_filter:
+                expert_qs = expert_qs.filter(created_at__date=date_filter)
+            if area_filter:
+                expert_qs = expert_qs.filter(area=area_filter)
+            if main_parcel_number:
+                expert_qs = expert_qs.filter(
+                    main_parcel_number__icontains=main_parcel_number)
+
+            if sub_parcel_number:
+                expert_qs = expert_qs.filter(
+                    sub_parcel_number__icontains=sub_parcel_number)
+
+            if status_filter and status_filter != "all":
+                expert_qs = expert_qs.filter(status=status_filter)
+
+            for obj in expert_qs:
+                data = ExpertEvaluationProjectSerializer(obj).data
+                data['created_at'] = localtime(obj.created_at)
+                combined.append(data)
+
+        # مرتب‌سازی به ترتیب تاریخ
+        combined_sorted = sorted(
+            combined, key=lambda x: x['created_at'], reverse=True)
+        # اگر هیچ فیلتر یا پارامتر مشخص نشده باشد، همه درخواست‌ها را برمی‌گردانیم
+        # صفحه‌بندی
+        paginator = Pagination()
+        paginated_data = paginator.paginate_queryset(combined_sorted, request)
+
+        return paginator.get_paginated_response(paginated_data)
+
+
+class AllProjectView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        title_filter = request.GET.get("title")
+        main_parcel_number = request.GET.get("main_parcel_number")
+        sub_parcel_number = request.GET.get("sub_parcel_number")
+        request_type = request.GET.get("request_type")  # survey, expert, ...
+        project_status = request.GET.get("status")  # وضعیت پروژه
+        request_status = request.GET.get("request_status")  # وضعیت درخواست
+
+        # فیلتر اولیه پروژه‌ها
+        projects = Project.objects.filter(owner=user)
+        if title_filter:
+            projects = projects.filter(title__icontains=title_filter)
+        if project_status and project_status != "all":
+            projects = projects.filter(status=project_status)
+
+        filtered_projects = []
+        for project in projects:
+            requests_qs = []
+
+            # بررسی درخواست‌های نقشه‌برداری
+            if request_type in [None, "", "all", "survey", "نقشه‌برداری"]:
+                survey_qs = SurveyProject.objects.filter(project=project)
+                if main_parcel_number:
+                    survey_qs = survey_qs.filter(main_parcel_number__icontains=main_parcel_number)
+                if sub_parcel_number:
+                    survey_qs = survey_qs.filter(sub_parcel_number__icontains=sub_parcel_number)
+                if request_status and request_status != "all":
+                    survey_qs = survey_qs.filter(status=request_status)
+                if survey_qs.exists():
+                    requests_qs.extend(list(survey_qs))
+
+            # بررسی درخواست‌های کارشناسی
+            if request_type in [None, "", "all", "expert", "کارشناسی"]:
+                expert_qs = ExpertEvaluationProject.objects.filter(project=project)
+                if main_parcel_number:
+                    expert_qs = expert_qs.filter(main_parcel_number__icontains=main_parcel_number)
+                if sub_parcel_number:
+                    expert_qs = expert_qs.filter(sub_parcel_number__icontains=sub_parcel_number)
+                if request_status and request_status != "all":
+                    expert_qs = expert_qs.filter(status=request_status)
+                if expert_qs.exists():
+                    requests_qs.extend(list(expert_qs))
+
+            # اگر نوع درخواست خاصی انتخاب شده فقط همان را نگه دار
+            if request_type not in [None, "", "all"]:
+                if request_type in ["survey", "نقشه‌برداری"]:
+                    requests_qs = [r for r in requests_qs if isinstance(r, SurveyProject)]
+                elif request_type in ["expert", "کارشناسی"]:
+                    requests_qs = [r for r in requests_qs if isinstance(r, ExpertEvaluationProject)]
+
+            # فقط پروژه‌هایی که حداقل یک درخواست مرتبط دارند
+            if requests_qs:
+                filtered_projects.append(project)
+
+        # مرتب‌سازی پروژه‌ها بر اساس وضعیت پروژه
+        filtered_projects = sorted(filtered_projects, key=lambda p: p.status)
+
+        # صفحه‌بندی پروژه‌های فیلترشده
+        paginator = Pagination()
+        paginated_projects = paginator.paginate_queryset(filtered_projects, request)
+        serializer = ProjectDataSerializer(paginated_projects, many=True)
+        return paginator.get_paginated_response(serializer.data)

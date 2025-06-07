@@ -3,6 +3,12 @@ import FileUploadTable from "../FileUpload/FileUploadTable";
 import { Form, Button, Alert, Row, Col } from "react-bootstrap";
 import axiosInstance from "../../utils/axiosInstance";
 
+const propertyTypes = () => [
+  { value: "field", label: "زمین" },
+  { value: "Building", label: "ساختمان" },
+  { value: "other", label: "سایر" },
+];
+
 function ExpertRequestForm({ onSubmit, user, location }) {
   const [formData, setFormData] = useState({
     title: "",
@@ -28,7 +34,8 @@ function ExpertRequestForm({ onSubmit, user, location }) {
 
   const handleFileChange = (update) => {
     setFormData((prev) => {
-      const newAttachments = typeof update === "function" ? update(prev.attachments) : update;
+      const newAttachments =
+        typeof update === "function" ? update(prev.attachments) : update;
       return {
         ...prev,
         attachments: newAttachments,
@@ -101,7 +108,10 @@ function ExpertRequestForm({ onSubmit, user, location }) {
         });
       }
 
-      const response = await axiosInstance.post("/api/expert/request/", formPayload);
+      const response = await axiosInstance.post(
+        "/api/expert/request/",
+        formPayload
+      );
 
       // چون axios response.ok وجود ندارد، به جای آن باید status بررسی شود:
       if (response.status !== 201 && response.status !== 200) {
@@ -129,7 +139,10 @@ function ExpertRequestForm({ onSubmit, user, location }) {
   };
 
   return (
-    <Form onSubmit={handleSubmit} className="p-3 border rounded shadow-sm bg-white">
+    <Form
+      onSubmit={handleSubmit}
+      className="p-3 border rounded shadow-sm bg-white"
+    >
       <h5 className="mb-3 text-primary">درخواست کارشناسی</h5>
 
       <Form.Group className="mb-3">
@@ -152,9 +165,11 @@ function ExpertRequestForm({ onSubmit, user, location }) {
           onChange={handleInputChange}
           required
         >
-          <option value="">انتخاب کنید</option>
-          <option value="زمین">زمین</option>
-          <option value="ساختمان">ساختمان</option>
+          {propertyTypes().map((type) => (
+            <option key={type.value} value={type.value}>
+              {type.label}
+            </option>
+          ))}
         </Form.Select>
       </Form.Group>
 
@@ -202,16 +217,22 @@ function ExpertRequestForm({ onSubmit, user, location }) {
         <Form.Label>موقعیت ملک (عرض و طول جغرافیایی)</Form.Label>
         {formData.location ? (
           <div className="p-2 border rounded bg-light text-success">
-            نقطه به مختصات Φ: {formData.location.lat.toFixed(6)}، λ: {formData.location.lng.toFixed(6)} انتخاب شده است.
+            نقطه به مختصات Φ: {formData.location.lat.toFixed(6)}، λ:{" "}
+            {formData.location.lng.toFixed(6)} انتخاب شده است.
           </div>
         ) : (
-          <div className="p-2 border rounded bg-light text-danger">هنوز موقعیتی انتخاب نشده است.</div>
+          <div className="p-2 border rounded bg-light text-danger">
+            هنوز موقعیتی انتخاب نشده است.
+          </div>
         )}
       </Form.Group>
 
       <Form.Group className="mb-3">
         <Form.Label>پیوست‌ها</Form.Label>
-        <FileUploadTable attachments={formData.attachments} onFileChange={handleFileChange} />
+        <FileUploadTable
+          attachments={formData.attachments}
+          onFileChange={handleFileChange}
+        />
       </Form.Group>
 
       {error && <Alert variant="danger">{error}</Alert>}

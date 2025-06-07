@@ -45,14 +45,28 @@ class SurveyProject(models.Model):
         ('rejected', 'رد شده'),
         ('incomplete', 'ناقص'),
     ]
+    PROPERTY_TYPE = [
+        ('field', 'زمین'),
+        ('Building', 'ساختمان'),
+        ('other', 'سایر'),
+    ]
+
     project = models.OneToOneField(
         Project, on_delete=models.CASCADE, related_name='survey')
     status = models.CharField(
         max_length=32, choices=SurveyStatus.choices, default=SurveyStatus.INITIAL_REQUEST)
-    assigned_admin = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
-                                       on_delete=models.SET_NULL, related_name='assigned_survey_projects')
+    assigned_admin = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='assigned_survey_projects')
     description = models.TextField(blank=True, null=True)
-    area = models.FloatField(null=True, blank=True)
+    area = models.FloatField("مساحت (متر مربع)", null=True, blank=True)
+    main_parcel_number = models.IntegerField(
+        "پلاک اصلی", null=True, blank=True)
+    sub_parcel_number = models.IntegerField("پلاک فرعی", null=True, blank=True)
+    property_type = models.CharField(
+        "نوع ملک", max_length=20, choices=PROPERTY_TYPE, default='field')
+
     location_lat = models.FloatField(null=True, blank=True)
     location_lng = models.FloatField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

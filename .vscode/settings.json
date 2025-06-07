@@ -57,6 +57,7 @@
       "args": ["/k", ".\\env\\Scripts\\activate.bat"]
     }
   },
+  "html-css-class-completion.enableEmmetSupport": true
   // "javascript.preferences.importModuleSpecifier": "relative",
   // "typescript.preferences.importModuleSpecifier": "relative"
 }
