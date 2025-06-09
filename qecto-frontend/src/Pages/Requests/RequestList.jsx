@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { fetchAllRequests } from "api/projectsApi";
 import { FaSearch, FaFilter, FaTimes } from "react-icons/fa";
-import { useLocation } from "react-router-dom";
-
+import { useLocation, useNavigate } from "react-router-dom";
 const FiChevronsLeft = () => (
   <svg
     stroke="currentColor"
@@ -409,8 +408,13 @@ function FilterSidebar({
 
 // Card component to display each request
 function RequestCard({ request }) {
+  const navigate = useNavigate();
   const handleCardClick = () => {
-    alert(`رفتن به صفحه جزئیات درخواست شماره ${request.id}`);
+    // اگر نیاز به ارسال اطلاعات درخواست به صفحه جزئیات است، می‌توانیم از useNavigate استفاده کنیم
+    // و اطلاعات درخواست را به عنوان state ارسال کنیم
+    navigate(`/requests/${request.id}`, {
+      state: { request }, // ارسال اطلاعات درخواست به صفحه جزئیات
+    });
   };
   const {
     project,

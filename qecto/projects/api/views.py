@@ -2,7 +2,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from projects.models import Project, ProjectStatus
 from survey.api.serializers import SurveyProject, SurveyProjectSerializer
 from document.models import DocumentProject
@@ -362,9 +362,11 @@ class AllProjectView(APIView):
             if request_type in [None, "", "all", "survey", "نقشه‌برداری"]:
                 survey_qs = SurveyProject.objects.filter(project=project)
                 if main_parcel_number:
-                    survey_qs = survey_qs.filter(main_parcel_number__icontains=main_parcel_number)
+                    survey_qs = survey_qs.filter(
+                        main_parcel_number__icontains=main_parcel_number)
                 if sub_parcel_number:
-                    survey_qs = survey_qs.filter(sub_parcel_number__icontains=sub_parcel_number)
+                    survey_qs = survey_qs.filter(
+                        sub_parcel_number__icontains=sub_parcel_number)
                 if request_status and request_status != "all":
                     survey_qs = survey_qs.filter(status=request_status)
                 if survey_qs.exists():
@@ -372,11 +374,14 @@ class AllProjectView(APIView):
 
             # بررسی درخواست‌های کارشناسی
             if request_type in [None, "", "all", "expert", "کارشناسی"]:
-                expert_qs = ExpertEvaluationProject.objects.filter(project=project)
+                expert_qs = ExpertEvaluationProject.objects.filter(
+                    project=project)
                 if main_parcel_number:
-                    expert_qs = expert_qs.filter(main_parcel_number__icontains=main_parcel_number)
+                    expert_qs = expert_qs.filter(
+                        main_parcel_number__icontains=main_parcel_number)
                 if sub_parcel_number:
-                    expert_qs = expert_qs.filter(sub_parcel_number__icontains=sub_parcel_number)
+                    expert_qs = expert_qs.filter(
+                        sub_parcel_number__icontains=sub_parcel_number)
                 if request_status and request_status != "all":
                     expert_qs = expert_qs.filter(status=request_status)
                 if expert_qs.exists():
@@ -385,9 +390,11 @@ class AllProjectView(APIView):
             # اگر نوع درخواست خاصی انتخاب شده فقط همان را نگه دار
             if request_type not in [None, "", "all"]:
                 if request_type in ["survey", "نقشه‌برداری"]:
-                    requests_qs = [r for r in requests_qs if isinstance(r, SurveyProject)]
+                    requests_qs = [
+                        r for r in requests_qs if isinstance(r, SurveyProject)]
                 elif request_type in ["expert", "کارشناسی"]:
-                    requests_qs = [r for r in requests_qs if isinstance(r, ExpertEvaluationProject)]
+                    requests_qs = [r for r in requests_qs if isinstance(
+                        r, ExpertEvaluationProject)]
 
             # فقط پروژه‌هایی که حداقل یک درخواست مرتبط دارند
             if requests_qs:
@@ -398,6 +405,40 @@ class AllProjectView(APIView):
 
         # صفحه‌بندی پروژه‌های فیلترشده
         paginator = Pagination()
-        paginated_projects = paginator.paginate_queryset(filtered_projects, request)
+        paginated_projects = paginator.paginate_queryset(
+            filtered_projects, request)
         serializer = ProjectDataSerializer(paginated_projects, many=True)
         return paginator.get_paginated_response(serializer.data)
+
+
+class RequestDetailAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        user = request.user
+        is_admin = user.is_staff or user.is_superuser
+
+        # ابتدا در SurveyProject جستجو کن
+        try:
+            survey = SurveyProject.objects.get(id=pk)
+            if not is_admin and survey.project.owner != user:
+                return Response({'error': 'دسترسی غیرمجاز.'}, status=status.HTTP_404_NOT_FOUND)
+            data = SurveyProjectSerializer(survey).data
+            data['type'] = 'survey'
+            return Response(data, status=status.HTTP_200_OK)
+        except SurveyProject.DoesNotExist:
+            pass
+
+        # سپس در ExpertEvaluationProject جستجو کن
+        try:
+            expert = ExpertEvaluationProject.objects.get(id=pk)
+            if not is_admin and expert.project.owner != user:
+                return Response({'error': 'دسترسی غیرمجاز.'}, status=status.HTTP_404_NOT_FOUND)
+            data = ExpertEvaluationProjectSerializer(expert).data
+            data['type'] = 'expert'
+            return Response(data, status=status.HTTP_200_OK)
+        except ExpertEvaluationProject.DoesNotExist:
+            pass
+
+        # اگر هیچکدام نبود
+        return Response({'error': 'درخواست یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)

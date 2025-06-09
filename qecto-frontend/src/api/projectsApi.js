@@ -27,5 +27,15 @@ export const fetchAllData = () => {
 };
 
 export const fetchAllRequests = (params = {}) => {
-  return axiosInstance.get("/api/projects/requests/", { params });
+  return axiosInstance.get("/api/requests/", { params });
+};
+
+export const fetchRequestDetails = (uuid) => {
+  return axiosInstance.get(`/api/requests/${uuid}/`);
+};
+
+export const fetchSurveyAttachmentPreview = (attachmentId) => {
+  return axiosInstance.get(`/api/survey/attachments/${attachmentId}/preview/`, {
+    responseType: "blob", // چون خروجی تصویر است
+  });
 };

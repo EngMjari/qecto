@@ -1,9 +1,9 @@
-# core/urls.py : 
+# core/urls.py :
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import SendOTPView, VerifyOTPView, AdminUserViewSet, UserInfoView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from projects.api.views import UserDashboardAPIView
+from projects.api.views import UserDashboardAPIView, RequestDetailAPIView, AllRequestsView
 router = DefaultRouter()
 router.register(r'admin-users', AdminUserViewSet, basename='admin-user')
 
@@ -20,5 +20,8 @@ urlpatterns = [
     path('projects/', include('projects.api.urls')),
     path('tickets/', include('tickets.urls')),
     path('data/', UserDashboardAPIView.as_view(), name='data'),
-    
+    path('requests/<uuid:pk>/',
+         RequestDetailAPIView.as_view(), name='request-detail'),
+    path('requests/', AllRequestsView.as_view(), name='all-requests'),
+
 ]

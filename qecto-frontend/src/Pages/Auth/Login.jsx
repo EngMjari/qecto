@@ -1,6 +1,5 @@
 import React, { useState, useContext, useEffect } from "react";
 import { AuthContext } from "../../Context/AuthContext";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import logo from "../../assets/images/logo.png";
 import "../../Styles/Login.css";
@@ -84,7 +83,10 @@ export default function Login() {
   };
 
   return (
-    <div className="d-flex justify-content-center align-items-center mt-5" style={{ fontFamily: "Vazirmatn, sans-serif" }}>
+    <div
+      className="d-flex justify-content-center align-items-center mt-5"
+      style={{ fontFamily: "Vazirmatn, sans-serif" }}
+    >
       <div
         className="shadow p-4 text-center"
         style={{
@@ -101,7 +103,10 @@ export default function Login() {
         <form onSubmit={handleSubmit} noValidate>
           {step === 1 ? (
             <>
-              <div className="form-group mb-3 text-end" style={{ position: "relative" }}>
+              <div
+                className="form-group mb-3 text-end"
+                style={{ position: "relative" }}
+              >
                 <input
                   type="tel"
                   id="phone"
@@ -111,7 +116,10 @@ export default function Login() {
                   className={`form-control ${error ? "is-invalid" : ""}`}
                   required
                 />
-                <label htmlFor="phone" className={`floating-label ${phone ? "filled" : ""}`}>
+                <label
+                  htmlFor="phone"
+                  className={`floating-label ${phone ? "filled" : ""}`}
+                >
                   <i
                     className="bi bi-phone"
                     style={{
@@ -125,18 +133,28 @@ export default function Login() {
                   شماره موبایل
                 </label>
                 {error && (
-                  <div className="invalid-feedback" style={{ textAlign: "right" }}>
+                  <div
+                    className="invalid-feedback"
+                    style={{ textAlign: "right" }}
+                  >
                     شماره موبایل صحیح نیست
                   </div>
                 )}
               </div>
-              <button type="submit" className="btn btn-outline-danger w-100 mt-2" disabled={!phone.trim()}>
+              <button
+                type="submit"
+                className="btn btn-outline-danger w-100 mt-2"
+                disabled={!phone.trim()}
+              >
                 ارسال کد تأیید
               </button>
             </>
           ) : (
             <>
-              <div className="form-group mb-3 text-end" style={{ position: "relative" }}>
+              <div
+                className="form-group mb-3 text-end"
+                style={{ position: "relative" }}
+              >
                 <input
                   type="tel"
                   inputMode="numeric"
@@ -148,7 +166,10 @@ export default function Login() {
                   style={{ direction: "rtl" }}
                   required
                 />
-                <label htmlFor="otp" className={`floating-label ${otp ? "filled" : ""}`}>
+                <label
+                  htmlFor="otp"
+                  className={`floating-label ${otp ? "filled" : ""}`}
+                >
                   <i
                     className="bi bi-shield-lock"
                     style={{
@@ -162,14 +183,31 @@ export default function Login() {
                   کد تأیید
                 </label>
               </div>
-              <button type="submit" className="btn btn-outline-success col-11 mx-auto mb-2" disabled={!otp.trim()}>
+              <button
+                type="submit"
+                className="btn btn-outline-success col-11 mx-auto mb-2"
+                disabled={!otp.trim()}
+              >
                 تأیید و ورود
               </button>
-              <button className="btn btn-outline-secondary col-11 mx-auto mb-2" onClick={sendOTP} disabled={timer > 0} type="button">
+              <button
+                className="btn btn-outline-secondary col-11 mx-auto mb-2"
+                onClick={sendOTP}
+                disabled={timer > 0}
+                type="button"
+              >
                 {timer > 0 ? `ارسال مجدد تا ${timer} ثانیه` : "ارسال مجدد کد"}
               </button>
-              {message && <p className="mt-3 text-primary fw-bold text-center">{message}</p>}
-              <button className="btn btn-outline-info col-11 mx-auto mb-2" type="button" onClick={() => setStep(1)}>
+              {message && (
+                <p className="mt-3 text-primary fw-bold text-center">
+                  {message}
+                </p>
+              )}
+              <button
+                className="btn btn-outline-info col-11 mx-auto mb-2"
+                type="button"
+                onClick={() => setStep(1)}
+              >
                 تغییر شماره موبایل
               </button>
             </>

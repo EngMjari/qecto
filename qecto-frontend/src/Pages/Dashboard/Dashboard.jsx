@@ -512,59 +512,67 @@ function ProjectInfoCard({
         {/* درخواست‌ها */}
         {openAccordion === "requests" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {statusList.map((item) => (
-              <motion.div
-                key={item.key}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.97 }}
-                className="flex items-center gap-2 bg-blue-50 rounded-xl shadow-sm p-4 border border-blue-100 cursor-pointer"
-                onClick={() => navigate(item.link)}
-                style={{ transition: "background 0.2s" }}
-              >
-                {item.icon}
-                <span className="font-medium text-gray-700">{item.label}</span>
-                <span
-                  className="px-3 py-1 rounded-lg font-bold ml-auto"
-                  style={{
-                    background: item.color + "22",
-                    color: item.color,
-                    minWidth: 36,
-                    textAlign: "center",
-                  }}
+            {statusList.map((item) =>
+              item.value === 0 ? null : (
+                <motion.div
+                  key={item.key}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="flex items-center gap-2 bg-blue-50 rounded-xl shadow-sm p-4 border border-blue-100 cursor-pointer"
+                  onClick={() => navigate(item.link)}
+                  style={{ transition: "background 0.2s" }}
                 >
-                  {item.value}
-                </span>
-              </motion.div>
-            ))}
+                  {item.icon}
+                  <span className="font-medium text-gray-700">
+                    {item.label}
+                  </span>
+                  <span
+                    className="px-3 py-1 rounded-lg font-bold ml-auto"
+                    style={{
+                      background: item.color + "22",
+                      color: item.color,
+                      minWidth: 36,
+                      textAlign: "center",
+                    }}
+                  >
+                    {item.value}
+                  </span>
+                </motion.div>
+              )
+            )}
           </div>
         )}
         {/* تیکت‌ها */}
         {openAccordion === "tickets" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {ticketStats.map((item) => (
-              <motion.div
-                key={item.key}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.97 }}
-                className="flex items-center gap-2 bg-blue-50 rounded-xl shadow-sm p-4 border border-blue-100 cursor-pointer"
-                onClick={() => navigate(item.link)}
-                style={{ transition: "background 0.2s" }}
-              >
-                {item.icon}
-                <span className="font-medium text-gray-700">{item.label}</span>
-                <span
-                  className="px-3 py-1 rounded-lg font-bold ml-auto"
-                  style={{
-                    background: item.color + "22",
-                    color: item.color,
-                    minWidth: 36,
-                    textAlign: "center",
-                  }}
+            {ticketStats.map((item) =>
+              item.value === 0 ? null : (
+                <motion.div
+                  key={item.key}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="flex items-center gap-2 bg-blue-50 rounded-xl shadow-sm p-4 border border-blue-100 cursor-pointer"
+                  onClick={() => navigate(item.link)}
+                  style={{ transition: "background 0.2s" }}
                 >
-                  {item.value}
-                </span>
-              </motion.div>
-            ))}
+                  {item.icon}
+                  <span className="font-medium text-gray-700">
+                    {item.label}
+                  </span>
+                  <span
+                    className="px-3 py-1 rounded-lg font-bold ml-auto"
+                    style={{
+                      background: item.color + "22",
+                      color: item.color,
+                      minWidth: 36,
+                      textAlign: "center",
+                    }}
+                  >
+                    {item.value}
+                  </span>
+                </motion.div>
+              )
+            )}
           </div>
         )}
       </div>
@@ -619,7 +627,7 @@ function SectionGrid({ recentRequests = [], recentTickets = [] }) {
           {(recentRequests || []).map((req) => (
             <Link
               key={req.id}
-              to={`/projects/${req.project.id}`}
+              to={`/requests/${req.id}`}
               style={styles.itemRow}
               className="hoverItem"
             >

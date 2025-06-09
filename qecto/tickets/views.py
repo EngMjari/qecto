@@ -17,15 +17,22 @@ class TicketSessionListCreateAPIView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        if user.is_superuser:
-            return TicketSession.objects.all()
-        elif user.is_staff:
-            return TicketSession.objects.filter(
-                models.Q(assigned_admin=user) | models.Q(
-                    survey_request__isnull=True, evaluation_request__isnull=True)
-            )
+        queryset = TicketSession.objects.filter(user=user)
+        survey_request_id = self.request.query_params.get('survey_request')
+        evaluation_request_id = self.request.query_params.get(
+            'evaluation_request')
+
+        # فقط سشن‌هایی که به یک درخواست خاص وصل‌اند را نمایش بده
+        if survey_request_id:
+            queryset = queryset.filter(survey_request_id=survey_request_id)
+        elif evaluation_request_id:
+            queryset = queryset.filter(
+                evaluation_request_id=evaluation_request_id)
         else:
-            return TicketSession.objects.filter(user=user)  # اصلاح
+            # اگر هیچ پارامتری نبود، هیچ سشنی برنگردان
+            queryset = queryset.none()
+
+        return queryset
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)  # اصلاح
@@ -84,13 +91,13 @@ class TicketMessageListCreateAPIView(generics.ListCreateAPIView):
         user = self.request.user
 
         if session.status != 'open':
-            raise PermissionDenied("سشن بسته شده و امکان ارسال پیام وجود ندارد.")
+            raise PermissionDenied(
+                "سشن بسته شده و امکان ارسال پیام وجود ندارد.")
 
         if user.is_staff:
             serializer.save(session=session, sender_admin=user)
         else:
             serializer.save(session=session, sender_user=user)
-
 
 
 class TicketMessageFileUploadAPIView(APIView):

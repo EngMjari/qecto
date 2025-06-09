@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import TicketSession, TicketMessage, TicketMessageFile
-from survey.api.serializers import SurveyProjectSerializer
-from expert.api.serializers import ExpertEvaluationProjectSerializer
+from survey.models import SurveyProject
+from expert.models import ExpertEvaluationProject
 
 
 class TicketMessageFileSerializer(serializers.ModelSerializer):
@@ -73,31 +73,21 @@ class TicketMessageSerializer(serializers.ModelSerializer):
 
 
 class TicketSessionSerializer(serializers.ModelSerializer):
-    messages = TicketMessageSerializer(many=True, read_only=True)
-    user_phone = serializers.SerializerMethodField()
-    assigned_admin_phone = serializers.SerializerMethodField()
-    survey_request = SurveyProjectSerializer()
-    evaluation_request = ExpertEvaluationProjectSerializer()
-    # اضافه کن این خط را برای پنهان کردن فیلد user از ورودی کلاینت
-    user = serializers.PrimaryKeyRelatedField(read_only=True)
+    survey_request = serializers.PrimaryKeyRelatedField(
+        queryset=SurveyProject.objects.all(), required=False, allow_null=True
+    )
+    evaluation_request = serializers.PrimaryKeyRelatedField(
+        queryset=ExpertEvaluationProject.objects.all(), required=False, allow_null=True
+    )
+    tickets = serializers.SerializerMethodField()
 
     class Meta:
         model = TicketSession
         fields = [
-            'id', 'title', 'session_type', 'survey_request', 'evaluation_request',
-            'user', 'user_phone', 'assigned_admin', 'assigned_admin_phone',
-            'status', 'reply_status', 'last_message_by', 'closed_reason',
-            'created_at', 'updated_at', 'messages'
+            'id', 'title', 'session_type', 'status',
+            'survey_request', 'evaluation_request', 'tickets'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at',
-                            'messages', 'user_phone', 'assigned_admin_phone', 'user']
 
-    def get_user_phone(self, obj):
-        if obj.user:
-            return getattr(obj.user, 'phone_number', str(obj.user))
-        return None
-
-    def get_assigned_admin_phone(self, obj):
-        if obj.assigned_admin:
-            return getattr(obj.assigned_admin, 'phone_number', str(obj.assigned_admin))
-        return None
+    def get_tickets(self, obj):
+        messages = obj.messages.order_by('created_at')
+        return TicketMessageSerializer(messages, many=True).data

@@ -5,6 +5,7 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
+    "@headlessui/react": "^2.2.4",
     "@heroicons/react": "^2.2.0",
     "@mui/icons-material": "^7.1.0",
     "@mui/material": "^7.1.0",
@@ -73,5 +74,6 @@
     "sass": "^1.89.1",
     "sass-loader": "^16.0.5",
     "style-loader": "^4.0.0"
-  }
+  },
+  "proxy": "http://localhost:8000"
 }

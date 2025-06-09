@@ -4,6 +4,7 @@ import { Form, Button, Alert } from "react-bootstrap";
 import axiosInstance from "../../utils/axiosInstance";
 
 const propertyTypes = () => [
+  { value: "", label: "انتخاب کنید..." },
   { value: "field", label: "زمین" },
   { value: "Building", label: "ساختمان" },
   { value: "other", label: "سایر" },

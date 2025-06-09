@@ -28,7 +28,10 @@ export const getTicketMessages = (sessionId) => {
 
 // ارسال پیام جدید در یک سشن
 export const createTicketMessage = (sessionId, data) => {
-  return axiosInstance.post(`/api/tickets/sessions/${sessionId}/messages/`, data);
+  return axiosInstance.post(
+    `/api/tickets/sessions/${sessionId}/messages/`,
+    data
+  );
 };
 
 // آپلود فایل برای یک پیام
@@ -38,9 +41,27 @@ export const uploadMessageFiles = (messageId, files) => {
     formData.append("files", file);
   });
 
-  return axiosInstance.post(`/api/tickets/messages/${messageId}/upload/`, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  return axiosInstance.post(
+    `/api/tickets/messages/${messageId}/upload/`,
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }
+  );
+};
+
+// گرفتن سشن‌های مربوط به یک survey_request
+export const getTicketSessionsBySurveyRequest = (surveyRequestId) => {
+  return axiosInstance.get(
+    `/api/tickets/sessions/?survey_request=${surveyRequestId}`
+  );
+};
+
+// گرفتن سشن‌های مربوط به یک evaluation_request
+export const getTicketSessionsByEvaluationRequest = (evaluationRequestId) => {
+  return axiosInstance.get(
+    `/api/tickets/sessions/?evaluation_request=${evaluationRequestId}`
+  );
 };

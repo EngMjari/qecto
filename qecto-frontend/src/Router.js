@@ -1,7 +1,12 @@
-import React, { useContext, useState } from "react";
-import { Routes, Route, useLocation, Navigate } from "react-router-dom";
+import React, { useContext, useState, useEffect } from "react";
+import {
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import { AuthContext } from "./Context/AuthContext";
-import Navbar from "./Components/Navbar";
 import Login from "./Pages/Auth/Login";
 import Dashboard from "./Pages/Dashboard/Dashboard";
 import Home from "./Pages/Home";
@@ -9,14 +14,25 @@ import About from "./Pages/About";
 import Contact from "./Pages/Contact";
 import SuperAdminPanel from "./Pages/SuperAdminPanel/SuperAdminPanel";
 import AdminPanel from "./Pages/AdminPanel/AdminPanel";
-import CreateRequest from "./Components/Request/CreateRequest";
+import CreateRequest from "./Pages/Requests/CreateRequest";
 import NotFound from "./Pages/NotFound";
 import Forbidden from "./Pages/Forbidden";
 import ProjectsList from "./Pages/Projects/ProjectsList";
 import ProjectDetails from "./Pages/Projects/ProjectDetails";
 import NewTicket from "./Pages/Tickets/NewTicket";
 import TicketSession from "./Pages/Tickets/TicketSession";
-import RequestList from "Pages/Requests/RequestList";
+import RequestList from "./Pages/Requests/RequestList";
+import RequestPage from "./Pages/Requests/RequestPage";
+import Header from "./Components/Layouts/Header";
+import Footer from "./Components/Layouts/Footer";
+import MobileBottomNav from "./Components/Layouts/MobileBottomNav";
+import {
+  HomeIcon,
+  InfoIcon,
+  PhoneIcon,
+  UserIcon,
+  SettingsIcon,
+} from "lucide-react";
 
 function ProtectedRoute({
   children,
@@ -26,64 +42,98 @@ function ProtectedRoute({
   onlyAuth,
 }) {
   const { loadingProfile } = useContext(AuthContext);
-
   if (loadingProfile) {
     return <p className="text-center mt-10">در حال بارگذاری پروفایل...</p>;
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (onlyAuth) {
-    return children;
-  }
-
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (onlyAuth) return children;
   if (allowedRoles && !allowedRoles.includes(userRole)) {
     return <Navigate to="/unauthorized" replace />;
   }
-
   return children;
 }
 
 function Router() {
-  const { userRole, isAuthenticated } = useContext(AuthContext);
-  const location = useLocation();
+  const { isAuthenticated, userRole, logout, userProfile } =
+    useContext(AuthContext);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const isDashboardRoute =
-    location.pathname.startsWith("/dashboard") ||
-    location.pathname.startsWith("/admin-panel") ||
-    location.pathname.startsWith("/super-admin-panel") ||
-    location.pathname.startsWith("/my-projects");
+  // وضعیت موبایل بر اساس عرض صفحه
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  useEffect(() => {
+    function handleResize() {
+      setIsMobile(window.innerWidth < 1024);
+    }
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
-  const getPageTitle = () => {
-    if (location.pathname.includes("dashboard")) return "داشبورد";
-    if (location.pathname.includes("admin-panel")) return "پنل ادمین";
-    if (location.pathname.includes("super-admin-panel")) return "پنل ابرادمین";
-    if (location.pathname.includes("my-projects")) return "پروژه‌های من";
-    return "";
-  };
+  // برای هر نقش، لینک‌ها با آیکون:
+  const guestLinks = [
+    { name: "خانه", page: "home", link: "/", Icon: HomeIcon },
+    { name: "درباره ما", page: "about", link: "/about", Icon: InfoIcon },
+    { name: "تماس با ما", page: "contact", link: "/contact", Icon: PhoneIcon },
+  ];
+  const userLinks = [
+    ...guestLinks,
+    { name: "پنل کاربری", page: "user", link: "/dashboard", Icon: UserIcon },
+  ];
+  const adminLinks = [
+    ...userLinks,
+    { name: "مدیریت", page: "admin", link: "/admin-panel", Icon: SettingsIcon },
+  ];
+  const superAdminLinks = [
+    ...adminLinks,
+    {
+      name: "سوپر ادمین",
+      page: "superadmin",
+      link: "/super-admin-panel",
+      Icon: SettingsIcon,
+    },
+  ];
+  let navLinks = guestLinks;
+  if (userRole === "user") navLinks = userLinks;
+  if (userRole === "admin") navLinks = adminLinks;
+  if (userRole === "superadmin") navLinks = superAdminLinks;
+
+  // کنترل صفحه فعال و ناوبری موبایل
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const activePage =
+    navLinks.find((link) => link.link === location.pathname)?.page || "home";
+
+  function setPage(page) {
+    const target = navLinks.find((link) => link.page === page);
+    if (target) {
+      navigate(target.link);
+    }
+  }
 
   return (
     <>
-      <Navbar
-        role={userRole}
-        isDashboard={isDashboardRoute}
-        drawerOpen={drawerOpen}
-        setDrawerOpen={setDrawerOpen}
-        currentTitle={getPageTitle()}
-      />
+      {/* فقط در حالت دسکتاپ هدر و فوتر را نمایش بده */}
+      {!isMobile && (
+        <>
+          <Header
+            role={userRole}
+            isAuthenticated={isAuthenticated}
+            drawerOpen={drawerOpen}
+            setDrawerOpen={setDrawerOpen}
+            userProfile={userProfile}
+            logout={logout}
+            navLinks={navLinks}
+          />
+        </>
+      )}
 
       <Routes>
-        {/* مسیرهای عمومی */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/request" element={<CreateRequest />} />
-
-        {/* صفحه ارسال تیکت جدید */}
         <Route
           path="/tickets/new"
           element={
@@ -91,14 +141,12 @@ function Router() {
               isAuthenticated={isAuthenticated}
               userRole={userRole}
               allowedRoles={["user", "admin", "superadmin"]}
-              onlyAuth={true} // فقط ورود کافی است
+              onlyAuth={true}
             >
               <NewTicket />
             </ProtectedRoute>
           }
         />
-
-        {/* صفحه چت سشن تیکت */}
         <Route
           path="/tickets/session/:sessionId"
           element={
@@ -112,7 +160,6 @@ function Router() {
             </ProtectedRoute>
           }
         />
-        {/* مسیرهای پروژه */}
         <Route
           path="/projects"
           element={
@@ -137,8 +184,6 @@ function Router() {
             </ProtectedRoute>
           }
         />
-
-        {/* مسیر داشبورد کاربر عادی */}
         <Route
           path="/dashboard"
           element={
@@ -151,8 +196,6 @@ function Router() {
             </ProtectedRoute>
           }
         />
-
-        {/* مسیر داشبورد ادمین */}
         <Route
           path="/admin-panel"
           element={
@@ -177,8 +220,18 @@ function Router() {
             </ProtectedRoute>
           }
         />
-
-        {/* مسیر داشبورد سوپر ادمین */}
+        <Route
+          path="/requests/:id"
+          element={
+            <ProtectedRoute
+              isAuthenticated={isAuthenticated}
+              userRole={userRole}
+              allowedRoles={["user"]}
+            >
+              <RequestPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/super-admin-panel"
           element={
@@ -191,11 +244,20 @@ function Router() {
             </ProtectedRoute>
           }
         />
-
-        {/* صفحات دسترسی غیرمجاز و 404 */}
         <Route path="/unauthorized" element={<Forbidden />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
+
+      {/* در حالت موبایل فقط ناوبری پایین موبایل را نمایش بده */}
+      {isMobile ? (
+        <MobileBottomNav
+          activePage={activePage}
+          setPage={setPage}
+          navItems={navLinks}
+        />
+      ) : (
+        <Footer navLinks={navLinks} />
+      )}
     </>
   );
 }

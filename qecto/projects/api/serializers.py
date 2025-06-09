@@ -116,12 +116,13 @@ class ProjectDataSerializer(serializers.ModelSerializer):
     assigned_to = UserSerializer()
     requests = serializers.SerializerMethodField()
     request_count = serializers.SerializerMethodField()
+    owner = UserSerializer()
 
     class Meta:
         model = Project
         fields = [
             'id', 'title', 'description', 'status', 'created_at',
-            'assigned_to', 'requests', 'request_count'
+            'assigned_to', 'requests', 'request_count', 'owner', 'project_type'
         ]
 
     def get_requests(self, obj):

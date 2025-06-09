@@ -8,11 +8,20 @@ User = get_user_model()
 
 # --- سریالایزر فایل‌های پیوست کارشناسی ---
 
-
+ 
 class ExpertAttachmentSerializer(serializers.ModelSerializer):
+    file_extension = serializers.SerializerMethodField()
+    readable_file_size = serializers.SerializerMethodField()
+
     class Meta:
         model = ExpertAttachment
-        fields = ['id', 'file', 'uploaded_at']
+        fields = ['id', 'file', 'uploaded_at', 'file_extension', 'file_size', 'readable_file_size']
+
+    def get_file_extension(self, obj):
+        return obj.file_extension() if hasattr(obj, 'file_extension') else obj.file.name.split('.')[-1].lower()
+
+    def get_readable_file_size(self, obj):
+        return obj.readable_file_size() if hasattr(obj, 'readable_file_size') else obj.file.size
 
 
 # --- سریالایزر پروژه کارشناسی (نمایش) ---

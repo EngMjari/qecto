@@ -47,7 +47,9 @@ function NewTicket() {
       };
 
       if (relatedRequestId) {
-        const related = requests.find((r) => r.id === parseInt(relatedRequestId));
+        const related = requests.find(
+          (r) => r.id === parseInt(relatedRequestId)
+        );
         if (related) {
           // تعیین نوع سشن بر اساس نوع درخواست
           sessionPayload.session_type = related.request_type || "general";
@@ -103,7 +105,8 @@ function NewTicket() {
           <option value="">عمومی</option>
           {requests.map((req) => (
             <option key={req.id} value={req.id}>
-              {req.project.title} ({req.request_type === "survey" ? "نقشه‌برداری" : "کارشناسی"})
+              {req.project.title} (
+              {req.request_type === "survey" ? "نقشه‌برداری" : "کارشناسی"})
             </option>
           ))}
         </select>
