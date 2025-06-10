@@ -1,16 +1,17 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 import cx from "classnames";
 import { LogInIcon, UserIcon, ChevronDownIcon } from "lucide-react";
-import Logo from "../../assets/images/logo.png";
 import { Link, useLocation } from "react-router-dom";
 import LoginModal from "./LoginModal";
-
+import { SiteConfigContext } from "Contexts/SiteConfigContext";
 export default function Header({ isAuthenticated, role, logout, navLinks }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
   const [showLogin, setShowLogin] = useState(false);
   const location = useLocation();
+  const { siteConfig } = useContext(SiteConfigContext);
+
   const currentPath = location.pathname;
 
   const handleLogout = () => {
@@ -36,7 +37,6 @@ export default function Header({ isAuthenticated, role, logout, navLinks }) {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
   return (
     <header
       className={cx(
@@ -51,7 +51,11 @@ export default function Header({ isAuthenticated, role, logout, navLinks }) {
         {/* لوگو سمت راست */}
         <div className="flex-1 flex justify-start">
           <Link to="/" className="flex items-center cursor-pointer">
-            <img src={Logo} alt="لوگو ککتوسازهیرکاسب" className="h-14 w-auto" />
+            <img
+              src={siteConfig.logo_url}
+              alt="لوگو ککتوسازهیرکاسب"
+              className="h-14 w-auto"
+            />
           </Link>
         </div>
 

@@ -1,0 +1,56 @@
+// src/components/LoadingScreen/LoadingScreen.scss
+.loading-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  user-select: none;
+}
+
+.loading-content {
+  text-align: center;
+}
+
+.loading-logo {
+  width: 120px;
+  margin-bottom: 30px;
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 6px solid #ff5700;
+  border-radius: 50%;
+  border-top-color: transparent;
+  animation: spin 1.2s linear infinite;
+  margin: 0 auto 20px auto;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  font-size: 1.2rem;
+  font-weight: 600;
+  font-family: "Vazir", sans-serif;
+  letter-spacing: 0.05em;
+}

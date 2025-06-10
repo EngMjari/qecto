@@ -29,11 +29,12 @@ import SupervisedUserCircleIcon from "@mui/icons-material/SupervisedUserCircle";
 import ExitToAppIcon from "@mui/icons-material/ExitToApp";
 import CloseIcon from "@mui/icons-material/Close";
 
-import { AuthContext } from "../Context/AuthContext";
+import { AuthContext } from "../Contexts/AuthContext";
 import logo from "../assets/images/logo.png";
 
 const Navbar = () => {
-  const { isAuthenticated, userRole, logout, userProfile } = useContext(AuthContext);
+  const { isAuthenticated, userRole, logout, userProfile } =
+    useContext(AuthContext);
   const [anchorRoleEl, setAnchorRoleEl] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const isMobile = useMediaQuery("(max-width:768px)");
@@ -49,13 +50,25 @@ const Navbar = () => {
   const roleLinks = [];
   if (isAuthenticated) {
     if (userRole === "user") {
-      roleLinks.push({ text: "داشبورد", icon: <DashboardIcon />, path: "/dashboard" });
+      roleLinks.push({
+        text: "داشبورد",
+        icon: <DashboardIcon />,
+        path: "/dashboard",
+      });
     }
     if (userRole === "admin") {
-      roleLinks.push({ text: "پنل ادمین", icon: <AdminPanelSettingsIcon />, path: "/admin-panel" });
+      roleLinks.push({
+        text: "پنل ادمین",
+        icon: <AdminPanelSettingsIcon />,
+        path: "/admin-panel",
+      });
     }
     if (userRole === "superadmin") {
-      roleLinks.push({ text: "پنل سوپرادمین", icon: <SupervisedUserCircleIcon />, path: "/super-admin-panel" });
+      roleLinks.push({
+        text: "پنل سوپرادمین",
+        icon: <SupervisedUserCircleIcon />,
+        path: "/super-admin-panel",
+      });
     }
   }
 
@@ -88,10 +101,20 @@ const Navbar = () => {
           fontFamily: "'Vazir', sans-serif",
         }}
       >
-        <Toolbar sx={{ display: "flex", justifyContent: "space-between", px: 2 }}>
+        <Toolbar
+          sx={{ display: "flex", justifyContent: "space-between", px: 2 }}
+        >
           {/* سمت راست: لوگو و نام شرکت */}
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Box component={Link} to="/" sx={{ display: "flex", alignItems: "center", textDecoration: "none" }}>
+            <Box
+              component={Link}
+              to="/"
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                textDecoration: "none",
+              }}
+            >
               <img src={logo} alt="لوگو" style={{ height: 40 }} />
               <Typography
                 variant="h6"
@@ -168,11 +191,17 @@ const Navbar = () => {
                       onClick={handleRoleMenuOpen}
                       size="small"
                       sx={{ padding: 0 }}
-                      aria-controls={Boolean(anchorRoleEl) ? "account-menu" : undefined}
+                      aria-controls={
+                        Boolean(anchorRoleEl) ? "account-menu" : undefined
+                      }
                       aria-haspopup="true"
                       aria-expanded={Boolean(anchorRoleEl) ? "true" : undefined}
                     >
-                      <Avatar src={userProfile?.image} alt={userProfile?.name} sx={{ width: 40, height: 40 }} />
+                      <Avatar
+                        src={userProfile?.image}
+                        alt={userProfile?.name}
+                        sx={{ width: 40, height: 40 }}
+                      />
                       <Typography
                         variant="body1"
                         sx={{
@@ -215,7 +244,9 @@ const Navbar = () => {
                           },
                         }}
                       >
-                        <ListItemIcon sx={{ color: "inherit", minWidth: 30 }}>{item.icon}</ListItemIcon>
+                        <ListItemIcon sx={{ color: "inherit", minWidth: 30 }}>
+                          {item.icon}
+                        </ListItemIcon>
                         <ListItemText primary={item.text} />
                       </MenuItem>
                     ))}
@@ -223,7 +254,10 @@ const Navbar = () => {
                     <MenuItem
                       onClick={handleLogout}
                       sx={{
-                        "&:hover": { color: "red", backgroundColor: "transparent" },
+                        "&:hover": {
+                          color: "red",
+                          backgroundColor: "transparent",
+                        },
                       }}
                     >
                       <ListItemIcon sx={{ color: "inherit", minWidth: 30 }}>
@@ -259,7 +293,11 @@ const Navbar = () => {
                 },
               }}
             >
-              {drawerOpen ? <CloseIcon sx={{ fontSize: 25 }} /> : <MenuIcon sx={{ fontSize: 25 }} />}
+              {drawerOpen ? (
+                <CloseIcon sx={{ fontSize: 25 }} />
+              ) : (
+                <MenuIcon sx={{ fontSize: 25 }} />
+              )}
             </IconButton>
           )}
         </Toolbar>

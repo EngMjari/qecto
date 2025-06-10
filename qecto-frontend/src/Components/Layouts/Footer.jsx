@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useContext } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { siteInfo, footerLinks } from "../../config/siteConfig";
+import { SiteConfigContext } from "Contexts/SiteConfigContext";
 const Footer = () => {
+  const { siteConfig } = useContext(SiteConfigContext);
   const location = useLocation();
 
   return (
@@ -13,8 +15,10 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-right">
           {/* اطلاعات سایت */}
           <div>
-            <h3 className="text-lg font-bold mb-4">{siteInfo.title}</h3>
-            <p className="text-gray-400">{siteInfo.description}</p>
+            <h3 className="text-lg font-bold mb-4">{siteConfig.site_name}</h3>
+            <p className="text-gray-400 text-wrap text-justify">
+              {siteConfig.description}
+            </p>
           </div>
 
           {/* لینک‌ها */}
@@ -45,17 +49,20 @@ const Footer = () => {
           <div>
             <h3 className="text-lg font-bold mb-4">تماس با ما</h3>
             <ul className="text-gray-400 space-y-2">
-              <li>{siteInfo.contact.address}</li>
-              <li>تلفن: {siteInfo.contact.phone}</li>
-              <li>ایمیل: {siteInfo.contact.email}</li>
+              <li className="text-wrap">{siteConfig.address}</li>
+              <li>تلفن: {siteConfig.phone}</li>
+              <li>ایمیل: {siteConfig.email}</li>
             </ul>
           </div>
         </div>
 
         <div className="mt-8 pt-6 border-t border-gray-700 text-center text-gray-500">
           <p>
-            &copy; {new Date().getFullYear()} {siteInfo.title}. تمام حقوق محفوظ
-            است.
+            &copy; {new Date().getFullYear()}{" "}
+            <Link className="text-reset" to={"/"}>
+              {siteConfig.site_name}
+            </Link>
+            . تمام حقوق محفوظ است.
           </p>
         </div>
       </div>

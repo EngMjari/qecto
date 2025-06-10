@@ -23,5 +23,7 @@ urlpatterns = [
     path('requests/<uuid:pk>/',
          RequestDetailAPIView.as_view(), name='request-detail'),
     path('requests/', AllRequestsView.as_view(), name='all-requests'),
+    path("site/", include("siteconfig.urls")),
+
 
 ]

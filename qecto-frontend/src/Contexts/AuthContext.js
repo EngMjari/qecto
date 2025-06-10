@@ -1,6 +1,8 @@
+// Contexts/AuthContext.js:
 import React, { createContext, useState, useEffect } from "react";
 import axiosInstance from "../utils/axiosInstance"; // دقت کن axiosInstance ایمپورت شده
 import { useNavigate } from "react-router-dom";
+import LoadingScreen from "../Pages/LoadingScreen/LoadingScreen"; // اصلاح آدرس ایمپورت
 
 export const AuthContext = createContext();
 
@@ -72,8 +74,13 @@ export function AuthProvider({ children }) {
     setUserProfile(null);
     setUserRole(null);
     setLoadingProfile(false);
-    navigate("/login");
+    navigate("/");
   };
+
+  // اگر در حال لودینگ هستیم لودینگ نمایش بده، وگرنه children رو رندر کن
+  if (loadingProfile) {
+    return <LoadingScreen />;
+  }
 
   return (
     <AuthContext.Provider

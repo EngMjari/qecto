@@ -754,155 +754,88 @@ const ContactPage = ({ showToast }) => {
       </section>
 
       {/* Contact Form Section */}
-      <section className="py-20 bg-gray-100">
-        <div className="container mx-auto px-6">
-          <div className="bg-white rounded-xl shadow-2xl p-8 lg:p-12">
-            <div className="flex flex-wrap lg:flex-nowrap lg:gap-12">
-              <div className="w-full lg:w-1/2">
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">
-                  ارسال پیام مستقیم
-                </h2>
-                <form onSubmit={handleSubmit} noValidate>
-                  <div className="mb-4">
+      <section className="py-5 bg-light" style={{ direction: "rtl" }}>
+        <div className="container">
+          <div className="bg-white rounded shadow p-4 p-lg-5">
+            <div className="row gx-lg-5 gy-4">
+              <div className="col-12 col-lg-6">
+                <h2 className="mb-4 fw-bold text-dark">ارسال پیام مستقیم</h2>
+                <form>
+                  <div className="mb-3">
                     <input
                       type="text"
-                      name="name"
                       placeholder="نام شما"
-                      value={formData.name}
-                      onChange={handleChange}
-                      className={cx(
-                        "w-full px-4 py-3 border rounded-lg bg-gray-50 focus:outline-none focus:ring-2",
-                        errors.name
-                          ? "border-red-500 ring-red-300"
-                          : "border-gray-200 focus:ring-orange-400"
-                      )}
+                      className="form-control"
                     />
-                    {errors.name && (
-                      <p className="text-red-500 text-sm mt-1">{errors.name}</p>
-                    )}
                   </div>
-                  <div className="mb-4">
+                  <div className="mb-3">
                     <input
                       type="tel"
-                      name="phone"
-                      placeholder="شماره تماس (مثال: 09123456789)"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      className={cx(
-                        "w-full px-4 py-3 border rounded-lg bg-gray-50 focus:outline-none focus:ring-2",
-                        errors.phone
-                          ? "border-red-500 ring-red-300"
-                          : "border-gray-200 focus:ring-orange-400"
-                      )}
+                      placeholder="شماره تماس"
+                      className="form-control"
                       style={{ direction: "ltr", textAlign: "right" }}
                     />
-                    {errors.phone && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors.phone}
-                      </p>
-                    )}
                   </div>
-                  <div className="mb-4">
+                  <div className="mb-3">
                     <input
                       type="text"
-                      name="subject"
                       placeholder="موضوع پیام"
-                      value={formData.subject}
-                      onChange={handleChange}
-                      className={cx(
-                        "w-full px-4 py-3 border rounded-lg bg-gray-50 focus:outline-none focus:ring-2",
-                        errors.subject
-                          ? "border-red-500 ring-red-300"
-                          : "border-gray-200 focus:ring-orange-400"
-                      )}
+                      className="form-control"
                     />
-                    {errors.subject && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors.subject}
-                      </p>
-                    )}
                   </div>
-                  <div className="mb-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <label
-                        htmlFor="message"
-                        className="block text-gray-700 font-bold"
-                      >
-                        پیام شما
-                      </label>
-                      <button
-                        type="button"
-                        onClick={handleFormalizeRequest}
-                        disabled={isFormalizing || !formData.message}
-                        className="text-xs flex items-center gap-1 text-teal-600 hover:text-teal-800 disabled:text-gray-400 disabled:cursor-not-allowed transition"
-                      >
-                        {isFormalizing ? (
-                          <div className="w-4 h-4 border-2 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
-                        ) : (
-                          <SparklesIcon c="w-4 h-4" />
-                        )}
-                        <span>
-                          {isFormalizing ? "..." : "✨ ایجاد درخواست رسمی"}
-                        </span>
-                      </button>
-                    </div>
+                  <div className="mb-3">
+                    <label className="form-label fw-bold">پیام شما</label>
                     <textarea
-                      name="message"
                       rows="5"
                       placeholder="متن پیام خود را اینجا بنویسید..."
-                      value={formData.message}
-                      onChange={handleChange}
-                      className={cx(
-                        "w-full px-4 py-3 border rounded-lg bg-gray-50 focus:outline-none focus:ring-2",
-                        errors.message
-                          ? "border-red-500 ring-red-300"
-                          : "border-gray-200 focus:ring-orange-400"
-                      )}
+                      className="form-control"
                     ></textarea>
-                    {errors.message && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors.message}
-                      </p>
-                    )}
                   </div>
                   <button
                     type="submit"
-                    className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-lg transition duration-300 shadow-md hover:shadow-lg transform hover:scale-105"
+                    className="btn btn-warning w-100 fw-bold"
                   >
                     ارسال پیام
                   </button>
                 </form>
               </div>
-              <div className="w-full lg:w-1/2 mt-12 lg:mt-0">
-                <div className="bg-teal-800 rounded-lg p-8 h-full text-white bg-gradient-to-br from-teal-700 to-teal-900 shadow-xl">
-                  <h2 className="text-2xl font-bold mb-6">اطلاعات تماس</h2>
-                  <ul className="space-y-6">
-                    <li className="flex items-start">
-                      <MapPinIcon c="w-7 h-7 ml-4 mt-1 flex-shrink-0 text-orange-400" />
+
+              <div className="col-12 col-lg-6">
+                <div
+                  className="bg-teal rounded p-4 h-100 text-white shadow"
+                  style={{
+                    background:
+                      "linear-gradient(to bottom right, #0d9488, #134e4a)",
+                  }}
+                >
+                  <h2 className="mb-4 fw-bold">اطلاعات تماس</h2>
+                  <ul className="list-unstyled mb-0">
+                    <li className="d-flex align-items-start mb-3">
+                      <span className="me-3 fs-3 text-warning">📍</span>
                       <div>
-                        <h3 className="font-bold">آدرس</h3>
+                        <h3 className="fw-bold mb-1">آدرس</h3>
                         <p>
                           استان گلستان، گرگان، خیابان ولیعصر، عدالت ۲۲، مجتمع
                           هیرکان، طبقه ۵، واحد ۴۱۴
                         </p>
                       </div>
                     </li>
-                    <li className="flex items-start">
-                      <PhoneIcon c="w-6 h-6 ml-4 mt-1 flex-shrink-0 text-orange-400" />
+                    <li className="d-flex align-items-start mb-3">
+                      <span className="me-3 fs-4 text-warning">📞</span>
                       <div>
-                        <h3 className="font-bold">تلفن</h3>
+                        <h3 className="fw-bold mb-1">تلفن</h3>
                         <p>۰۱۷-۱۲۳۴۵۶۷۸</p>
                       </div>
                     </li>
-                    <li className="flex items-start">
-                      <MailIcon c="w-6 h-6 ml-4 mt-1 flex-shrink-0 text-orange-400" />
+                    <li className="d-flex align-items-start">
+                      <span className="me-3 fs-4 text-warning">✉️</span>
                       <div>
-                        <h3 className="font-bold">ایمیل</h3>
+                        <h3 className="fw-bold mb-1">ایمیل</h3>
                         <p>info@kaktussazeh.com</p>
                       </div>
                     </li>
                   </ul>
-                  <div className="mt-8 pt-6 border-t border-teal-600/50">
+                  <div className="mt-4 pt-3 border-top border-white-50">
                     <p>ساعات کاری: شنبه تا چهارشنبه، ۹ صبح تا ۵ عصر</p>
                   </div>
                 </div>

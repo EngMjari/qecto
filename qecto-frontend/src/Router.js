@@ -1,3 +1,4 @@
+// Router.js
 import React, { useContext, useState, useEffect } from "react";
 import {
   Routes,
@@ -6,12 +7,12 @@ import {
   useLocation,
   useNavigate,
 } from "react-router-dom";
-import { AuthContext } from "./Context/AuthContext";
+import { AuthContext } from "./Contexts/AuthContext";
 import Login from "./Pages/Auth/Login";
 import Dashboard from "./Pages/Dashboard/Dashboard";
-import Home from "./Pages/Home";
-import About from "./Pages/About";
-import Contact from "./Pages/Contact";
+import Home from "./Pages/Home/Home";
+import About from "./Pages/About/About";
+import Contact from "./Pages/Contact/Contact";
 import SuperAdminPanel from "./Pages/SuperAdminPanel/SuperAdminPanel";
 import AdminPanel from "./Pages/AdminPanel/AdminPanel";
 import CreateRequest from "./Pages/Requests/CreateRequest";
@@ -26,12 +27,18 @@ import RequestPage from "./Pages/Requests/RequestPage";
 import Header from "./Components/Layouts/Header";
 import Footer from "./Components/Layouts/Footer";
 import MobileBottomNav from "./Components/Layouts/MobileBottomNav";
+
+// ✅ استفاده از ToastContainer و toast از react-toastify
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 import {
   HomeIcon,
   InfoIcon,
   PhoneIcon,
   UserIcon,
   SettingsIcon,
+  LucideLogIn,
 } from "lucide-react";
 
 function ProtectedRoute({
@@ -58,9 +65,8 @@ function Router() {
   const { isAuthenticated, userRole, logout, userProfile } =
     useContext(AuthContext);
   const [drawerOpen, setDrawerOpen] = useState(false);
-
-  // وضعیت موبایل بر اساس عرض صفحه
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+
   useEffect(() => {
     function handleResize() {
       setIsMobile(window.innerWidth < 1024);
@@ -69,14 +75,23 @@ function Router() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // برای هر نقش، لینک‌ها با آیکون:
+  // ✅ تابع برای ارسال Toast به صفحات
+  const showToast = (message, type = "success") => {
+    if (type === "error") {
+      toast.error(message);
+    } else {
+      toast.success(message);
+    }
+  };
+
   const guestLinks = [
     { name: "خانه", page: "home", link: "/", Icon: HomeIcon },
     { name: "درباره ما", page: "about", link: "/about", Icon: InfoIcon },
     { name: "تماس با ما", page: "contact", link: "/contact", Icon: PhoneIcon },
+    { name: "ورود", page: "login", link: "/login", Icon: LucideLogIn },
   ];
   const userLinks = [
-    ...guestLinks,
+    ...guestLinks.filter((link) => link.page !== "login"),
     { name: "پنل کاربری", page: "user", link: "/dashboard", Icon: UserIcon },
   ];
   const adminLinks = [
@@ -97,7 +112,6 @@ function Router() {
   if (userRole === "admin") navLinks = adminLinks;
   if (userRole === "superadmin") navLinks = superAdminLinks;
 
-  // کنترل صفحه فعال و ناوبری موبایل
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -113,27 +127,41 @@ function Router() {
 
   return (
     <>
-      {/* فقط در حالت دسکتاپ هدر و فوتر را نمایش بده */}
+      {/* ✅ نمایش ToastContainer در همه صفحات */}
+      <ToastContainer
+        position="top-center"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
+
       {!isMobile && (
-        <>
-          <Header
-            role={userRole}
-            isAuthenticated={isAuthenticated}
-            drawerOpen={drawerOpen}
-            setDrawerOpen={setDrawerOpen}
-            userProfile={userProfile}
-            logout={logout}
-            navLinks={navLinks}
-          />
-        </>
+        <Header
+          role={userRole}
+          isAuthenticated={isAuthenticated}
+          drawerOpen={drawerOpen}
+          setDrawerOpen={setDrawerOpen}
+          userProfile={userProfile}
+          logout={logout}
+          navLinks={navLinks}
+        />
       )}
 
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/request" element={<CreateRequest />} />
+        <Route path="/" element={<Home showToast={showToast} />} />
+        <Route path="/login" element={<Login showToast={showToast} />} />
+        <Route path="/about" element={<About showToast={showToast} />} />
+        <Route path="/contact" element={<Contact showToast={showToast} />} />
+        <Route
+          path="/request"
+          element={<CreateRequest showToast={showToast} />}
+        />
         <Route
           path="/tickets/new"
           element={
@@ -141,9 +169,9 @@ function Router() {
               isAuthenticated={isAuthenticated}
               userRole={userRole}
               allowedRoles={["user", "admin", "superadmin"]}
-              onlyAuth={true}
+              onlyAuth
             >
-              <NewTicket />
+              <NewTicket showToast={showToast} />
             </ProtectedRoute>
           }
         />
@@ -154,9 +182,9 @@ function Router() {
               isAuthenticated={isAuthenticated}
               userRole={userRole}
               allowedRoles={["user", "admin", "superadmin"]}
-              onlyAuth={true}
+              onlyAuth
             >
-              <TicketSession />
+              <TicketSession showToast={showToast} />
             </ProtectedRoute>
           }
         />
@@ -168,7 +196,7 @@ function Router() {
               userRole={userRole}
               allowedRoles={["user", "admin", "superadmin"]}
             >
-              <ProjectsList />
+              <ProjectsList showToast={showToast} />
             </ProtectedRoute>
           }
         />
@@ -180,7 +208,7 @@ function Router() {
               userRole={userRole}
               allowedRoles={["user", "admin", "superadmin"]}
             >
-              <ProjectDetails />
+              <ProjectDetails showToast={showToast} />
             </ProtectedRoute>
           }
         />
@@ -192,7 +220,7 @@ function Router() {
               userRole={userRole}
               allowedRoles={["user"]}
             >
-              <Dashboard />
+              <Dashboard showToast={showToast} />
             </ProtectedRoute>
           }
         />
@@ -204,7 +232,7 @@ function Router() {
               userRole={userRole}
               allowedRoles={["admin"]}
             >
-              <AdminPanel />
+              <AdminPanel showToast={showToast} />
             </ProtectedRoute>
           }
         />
@@ -216,7 +244,7 @@ function Router() {
               userRole={userRole}
               allowedRoles={["user"]}
             >
-              <RequestList />
+              <RequestList showToast={showToast} />
             </ProtectedRoute>
           }
         />
@@ -228,7 +256,7 @@ function Router() {
               userRole={userRole}
               allowedRoles={["user"]}
             >
-              <RequestPage />
+              <RequestPage showToast={showToast} />
             </ProtectedRoute>
           }
         />
@@ -240,7 +268,7 @@ function Router() {
               userRole={userRole}
               allowedRoles={["superadmin"]}
             >
-              <SuperAdminPanel />
+              <SuperAdminPanel showToast={showToast} />
             </ProtectedRoute>
           }
         />
@@ -248,7 +276,6 @@ function Router() {
         <Route path="*" element={<NotFound />} />
       </Routes>
 
-      {/* در حالت موبایل فقط ناوبری پایین موبایل را نمایش بده */}
       {isMobile ? (
         <MobileBottomNav
           activePage={activePage}
