@@ -2,66 +2,53 @@ import React, { useState, useContext, useEffect } from "react";
 import { AuthContext } from "../../Contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import logo from "../../assets/images/logo.png";
-import "../../Styles/Login.css";
 import axiosInstance from "../../utils/axiosInstance";
 
-export default function Login() {
+export default function Login({ showToast }) {
   const [phone, setPhone] = useState("");
-  const [error, setError] = useState(false);
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState(1);
+  const [error, setError] = useState(false);
   const [message, setMessage] = useState("");
   const [timer, setTimer] = useState(0);
-  const { login } = useContext(AuthContext);
+  const { login, userRole } = useContext(AuthContext);
   const navigate = useNavigate();
-  const { isAuthenticated, userRole } = useContext(AuthContext);
 
-  const validatePhone = (value) => {
-    // شماره موبایل باید 11 رقم و با 09 شروع بشه
-    return /^09\d{9}$/.test(value);
-  };
+  const validatePhone = (value) => /^09\d{9}$/.test(value);
 
-  const handleChange = (e) => {
-    setPhone(e.target.value); // آزاد بذار تایپ کنه
-    setError(false); // وقتی تایپ میکنه خطا رو پاک کن
+  const handlePhoneChange = (e) => {
+    setPhone(e.target.value);
+    setError(false);
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!validatePhone(phone)) {
       setError(true);
-    } else {
-      setError(false);
-      if (step === 1) {
-        sendOTP();
-      } else {
-        verifyOTP();
-      }
+      showToast("شماره موبایل معتبر نیست", "error");
+      return;
     }
+    setError(false);
+    step === 1 ? sendOTP() : verifyOTP();
   };
 
   useEffect(() => {
     if (step === 2 && timer > 0) {
-      const countdown = setInterval(() => {
-        setTimer((prev) => prev - 1);
-      }, 1000);
+      const countdown = setInterval(() => setTimer((prev) => prev - 1), 1000);
       return () => clearInterval(countdown);
     }
-    if (isAuthenticated) {
-      if (userRole === "superadmin") navigate("/super-admin-panel");
-      else if (userRole === "admin") navigate("/admin-panel");
-      else navigate("/dashboard");
-    }
-  }, [step, timer, isAuthenticated, userRole, navigate]);
+  }, [step, timer]);
 
   const sendOTP = async () => {
     try {
       await axiosInstance.post(`/api/send-otp/`, { phone });
       setStep(2);
-      setMessage("کد تأیید به " + phone + " ارسال شد");
+      setMessage(`کد تأیید به ${phone} ارسال شد`);
+      showToast(`کد تأیید به ${phone} ارسال شد`);
       setTimer(120);
     } catch {
-      setMessage("خطا در ارسال کد.");
+      showToast("خطا در ارسال کد", "error");
+      setMessage("خطا در ارسال کد");
     }
   };
 
@@ -73,77 +60,60 @@ export default function Login() {
       });
       const { access, refresh } = response.data;
       login(access, refresh);
+      showToast("ورود موفق!");
       setMessage("ورود موفق!");
       if (userRole === "superadmin") navigate("/super-admin-panel");
       else if (userRole === "admin") navigate("/admin-panel");
-      else navigate("/dashboard");
-    } catch (error) {
-      setMessage("کد نادرست یا منقضی شده است.");
+      else navigate("/");
+    } catch {
+      showToast("کد نادرست یا منقضی شده است");
+      setMessage("کد نادرست یا منقضی شده است");
     }
   };
 
   return (
-    <div
-      className="d-flex justify-content-center align-items-center mt-5"
-      style={{ fontFamily: "Vazirmatn, sans-serif" }}
-    >
-      <div
-        className="shadow p-4 text-center"
-        style={{
-          width: "100%",
-          maxWidth: "420px",
-          borderRadius: "20px",
-          background: "linear-gradient(to right, #e0eafc, #cfdef3)",
-          color: "#333",
-        }}
-      >
-        <img src={logo} alt="لوگو" style={{ width: 60, marginBottom: 15 }} />
-        <h4 className="mb-4 fw-bold">ورود به حساب کاربری</h4>
+    <div className="page-content container mx-auto flex justify-center items-center min-h-[calc(100vh-160px)] py-4 text-right font-sans">
+      <div className="bg-gradient-to-r from-blue-100 to-indigo-100 shadow-lg p-6 rounded-xl w-full max-w-sm text-gray-800">
+        <img
+          src={logo}
+          alt="لوگو"
+          className="w-14 mx-auto mb-4 animate-bounce"
+        />
+        <h4 className="mb-4 text-xl font-bold text-gray-900 text-center">
+          ورود به حساب کاربری
+        </h4>
 
-        <form onSubmit={handleSubmit} noValidate>
+        <form onSubmit={handleSubmit} noValidate className="space-y-6">
           {step === 1 ? (
             <>
-              <div
-                className="form-group mb-3 text-end"
-                style={{ position: "relative" }}
-              >
+              <div className="relative z-0 w-full group">
                 <input
                   type="tel"
                   id="phone"
                   value={phone}
-                  onChange={handleChange}
+                  onChange={handlePhoneChange}
                   maxLength={11}
-                  className={`form-control ${error ? "is-invalid" : ""}`}
+                  className={`peer block w-full appearance-none border-b-2 bg-transparent px-0 pt-4 pb-1 text-right text-sm text-gray-900 focus:border-orange-500 focus:outline-none ${
+                    error ? "border-red-500" : "border-gray-300"
+                  }`}
+                  placeholder=" "
                   required
                 />
                 <label
                   htmlFor="phone"
-                  className={`floating-label ${phone ? "filled" : ""}`}
+                  className="absolute right-0 top-1 text-sm text-gray-500 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-focus:top-1 peer-focus:text-sm peer-focus:text-orange-500"
                 >
-                  <i
-                    className="bi bi-phone"
-                    style={{
-                      color: "#f39c12",
-                      marginRight: 0,
-                      marginLeft: "8px",
-                      verticalAlign: "middle",
-                      transition: "all 0.3s ease",
-                    }}
-                  ></i>
                   شماره موبایل
                 </label>
                 {error && (
-                  <div
-                    className="invalid-feedback"
-                    style={{ textAlign: "right" }}
-                  >
-                    شماره موبایل صحیح نیست
-                  </div>
+                  <p className="text-red-500 text-sm mt-1 text-right">
+                    شماره موبایل معتبر نیست
+                  </p>
                 )}
               </div>
               <button
                 type="submit"
-                className="btn btn-outline-danger w-100 mt-2"
+                className="w-full py-2 rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={!phone.trim()}
               >
                 ارسال کد تأیید
@@ -151,115 +121,63 @@ export default function Login() {
             </>
           ) : (
             <>
-              <div
-                className="form-group mb-3 text-end"
-                style={{ position: "relative" }}
-              >
+              <div className="relative z-0 w-full group">
                 <input
                   type="tel"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
                   id="otp"
-                  className="form-control"
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
-                  style={{ direction: "rtl" }}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  className="peer block w-full appearance-none border-b-2 bg-transparent px-0 pt-4 pb-1 text-right text-sm text-gray-900 focus:border-green-500 focus:outline-none border-gray-300"
+                  placeholder=" "
                   required
                 />
                 <label
                   htmlFor="otp"
-                  className={`floating-label ${otp ? "filled" : ""}`}
+                  className="absolute right-0 top-1 text-sm text-gray-500 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-focus:top-1 peer-focus:text-sm peer-focus:text-green-500"
                 >
-                  <i
-                    className="bi bi-shield-lock"
-                    style={{
-                      color: "#f39c12",
-                      marginRight: 0,
-                      marginLeft: "8px",
-                      verticalAlign: "middle",
-                      transition: "all 0.3s ease",
-                    }}
-                  ></i>
                   کد تأیید
                 </label>
               </div>
+              {message && (
+                <p className="text-blue-700 mt-3 text-center font-bold">
+                  {message}
+                </p>
+              )}
               <button
                 type="submit"
-                className="btn btn-outline-success col-11 mx-auto mb-2"
+                className="w-full py-2 rounded-lg bg-green-400 text-white hover:bg-green-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={!otp.trim()}
               >
                 تأیید و ورود
               </button>
               <button
-                className="btn btn-outline-secondary col-11 mx-auto mb-2"
-                onClick={sendOTP}
-                disabled={timer > 0}
                 type="button"
+                onClick={sendOTP}
+                className="w-full py-2 rounded-lg bg-gray-400 text-black hover:bg-gray-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={timer > 0}
               >
                 {timer > 0 ? `ارسال مجدد تا ${timer} ثانیه` : "ارسال مجدد کد"}
               </button>
-              {message && (
-                <p className="mt-3 text-primary fw-bold text-center">
-                  {message}
-                </p>
+              {timer > 0 && (
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-teal-500 h-2 rounded-full transition-all duration-1000"
+                    style={{ width: `${(timer / 120) * 100}%` }}
+                  />
+                </div>
               )}
               <button
-                className="btn btn-outline-info col-11 mx-auto mb-2"
                 type="button"
                 onClick={() => setStep(1)}
+                className="w-full py-2 rounded-lg bg-orange-400 text-gray-800 hover:bg-orange-600 transition"
               >
                 تغییر شماره موبایل
               </button>
             </>
           )}
         </form>
-
-        <style>{`
-          .form-group {
-            margin-bottom: 1.5rem;
-          }
-          input.form-control {
-            border-radius: 10px;
-            padding: 1rem 3rem 1rem 1rem;
-            font-size: 1.1rem;
-          }
-          label.floating-label {
-            position: absolute;
-            top: 50%;
-            right: 3rem;
-            transform: translateY(-50%);
-            color: #999;
-            font-weight: 500;
-            cursor: text;
-            display: flex;
-            align-items: center;
-            transition: all 0.3s ease;
-            user-select: none;
-            pointer-events: none;
-            font-size: 1rem;
-          }
-          input.form-control:focus + label.floating-label,
-          label.floating-label.filled {
-            top: 0.3rem;
-            right: 2.5rem;
-            font-size: 0.75rem;
-            color: #f39c12;
-            pointer-events: auto;
-          }
-          input.form-control:focus + label.floating-label i,
-          label.floating-label.filled i {
-            color: #f39c12;
-            transform: translateY(-3px);
-          }
-          .is-invalid {
-            border-color: #dc3545;
-            padding-right: calc(1.5em + 0.75rem);
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23dc3545' viewBox='0 0 12 12'%3e%3cpath d='M4.646 4.646a.5.5 0 0 1 .708 0L6 5.293l.646-.647a.5.5 0 0 1 .708.708L6.707 6l.647.646a.5.5 0 0 1-.708.708L6 6.707l-.646.647a.5.5 0 0 1-.708-.708L5.293 6 4.646 5.354a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
-            background-repeat: no-repeat;
-            background-position: right calc(0.375em + 0.1875rem) center;
-            background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
-          }
-        `}</style>
       </div>
     </div>
   );

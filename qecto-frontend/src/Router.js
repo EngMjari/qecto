@@ -1,4 +1,3 @@
-// Router.js
 import React, { useContext, useState, useEffect } from "react";
 import {
   Routes,
@@ -27,8 +26,8 @@ import RequestPage from "./Pages/Requests/RequestPage";
 import Header from "./Components/Layouts/Header";
 import Footer from "./Components/Layouts/Footer";
 import MobileBottomNav from "./Components/Layouts/MobileBottomNav";
+import MobileTopNav from "./Components/Layouts/MobileTopNav";
 
-// ✅ استفاده از ToastContainer و toast از react-toastify
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -75,7 +74,6 @@ function Router() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // ✅ تابع برای ارسال Toast به صفحات
   const showToast = (message, type = "success") => {
     if (type === "error") {
       toast.error(message);
@@ -84,14 +82,21 @@ function Router() {
     }
   };
 
-  const guestLinks = [
+  // لینک‌های نسخه دسکتاپ (بدون ورود)
+  const desktopGuestLinks = [
     { name: "خانه", page: "home", link: "/", Icon: HomeIcon },
     { name: "درباره ما", page: "about", link: "/about", Icon: InfoIcon },
     { name: "تماس با ما", page: "contact", link: "/contact", Icon: PhoneIcon },
+  ];
+
+  // لینک‌های نسخه موبایل (با ورود)
+  const mobileGuestLinks = [
+    ...desktopGuestLinks,
     { name: "ورود", page: "login", link: "/login", Icon: LucideLogIn },
   ];
+
   const userLinks = [
-    ...guestLinks.filter((link) => link.page !== "login"),
+    ...desktopGuestLinks,
     { name: "پنل کاربری", page: "user", link: "/dashboard", Icon: UserIcon },
   ];
   const adminLinks = [
@@ -107,7 +112,8 @@ function Router() {
       Icon: SettingsIcon,
     },
   ];
-  let navLinks = guestLinks;
+
+  let navLinks = isMobile ? mobileGuestLinks : desktopGuestLinks;
   if (userRole === "user") navLinks = userLinks;
   if (userRole === "admin") navLinks = adminLinks;
   if (userRole === "superadmin") navLinks = superAdminLinks;
@@ -127,18 +133,18 @@ function Router() {
 
   return (
     <>
-      {/* ✅ نمایش ToastContainer در همه صفحات */}
       <ToastContainer
         position="top-center"
         autoClose={3000}
         hideProgressBar={false}
         newestOnTop={false}
+        style={{ zIndex: 1100 }}
         closeOnClick
         rtl
         pauseOnFocusLoss
         draggable
         pauseOnHover
-        theme="light"
+        theme="dark"
       />
 
       {!isMobile && (
@@ -150,6 +156,14 @@ function Router() {
           userProfile={userProfile}
           logout={logout}
           navLinks={navLinks}
+        />
+      )}
+
+      {isMobile && (
+        <MobileTopNav
+          isLoggedIn={isAuthenticated}
+          onLogout={logout}
+          logoSrc="/path/to/your/logo.png"
         />
       )}
 

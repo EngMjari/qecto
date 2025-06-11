@@ -51,6 +51,7 @@ a {
 
 @media (max-width: 1024px) {
   .page-content {
-    margin-top: 0;
+    margin-top: 64px;
+    margin-bottom: 96px;
   }
 }

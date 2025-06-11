@@ -76,12 +76,11 @@ const isInsidePolygon = (latlng) => {
 const LocationMarker = ({ onLocationChange, lat: propLat, lng: propLng }) => {
   const mapRef = useRef(null);
   const markerRef = useRef(null);
+  const userMarkerRef = useRef(null);
 
-  // مقدار پیش‌فرض به مختصات شما تغییر داده شده
-  const [lat, setLat] = useState(propLat ?? 36.726217);
-  const [lng, setLng] = useState(propLng ?? 51.104315);
+  const [lat, setLat] = useState(propLat ?? 36.726212);
+  const [lng, setLng] = useState(propLng ?? 51.104449);
 
-  // بروزرسانی وقتی props تغییر کند
   useEffect(() => {
     if (
       propLat !== undefined &&
@@ -105,8 +104,10 @@ const LocationMarker = ({ onLocationChange, lat: propLat, lng: propLng }) => {
 
     mapRef.current = L.map("map").setView(initialLatLng, 10);
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "&copy; OpenStreetMap contributors",
+    L.tileLayer("https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}", {
+      attribution: "© Google Maps",
+      subdomains: ["0", "1", "2", "3"],
+      maxZoom: 20,
     }).addTo(mapRef.current);
 
     markerRef.current = L.marker(initialLatLng, { draggable: true }).addTo(
@@ -115,7 +116,6 @@ const LocationMarker = ({ onLocationChange, lat: propLat, lng: propLng }) => {
 
     markerRef.current.on("dragend", () => {
       const pos = markerRef.current.getLatLng();
-
       if (isInsidePolygon(pos)) {
         setLat(pos.lat.toFixed(6));
         setLng(pos.lng.toFixed(6));
@@ -131,11 +131,15 @@ const LocationMarker = ({ onLocationChange, lat: propLat, lng: propLng }) => {
         markerRef.current.setLatLng(e.latlng);
         setLat(e.latlng.lat.toFixed(6));
         setLng(e.latlng.lng.toFixed(6));
-        onLocationChange && onLocationChange({ lat: e.latlng.lat, lng: e.latlng.lng });
+        onLocationChange &&
+          onLocationChange({ lat: e.latlng.lat, lng: e.latlng.lng });
       } else {
         toast.error("موقعیت انتخاب شده خارج از محدوده مجاز است.");
       }
     });
+
+    // 👇 نمایش خودکار موقعیت فعلی کاربر
+    showUserLocation();
 
     return () => {
       mapRef.current.remove();
@@ -161,28 +165,80 @@ const LocationMarker = ({ onLocationChange, lat: propLat, lng: propLng }) => {
     }
   };
 
+  const showUserLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("موقعیت مکانی توسط مرورگر پشتیبانی نمی‌شود.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const latlng = L.latLng(latitude, longitude);
+
+        // اضافه یا بروزرسانی مارکر کاربر
+        if (userMarkerRef.current) {
+          userMarkerRef.current.setLatLng(latlng);
+        } else {
+          userMarkerRef.current = L.circleMarker(latlng, {
+            radius: 8,
+            color: "#0d6efd",
+            fillColor: "#0d6efd",
+            fillOpacity: 0.8,
+          }).addTo(mapRef.current);
+        }
+
+        mapRef.current.setView(latlng, 13);
+      },
+      () => {
+        toast.error("دریافت موقعیت مکانی ناموفق بود.");
+      }
+    );
+  };
+
   return (
     <div>
-      <div className="mb-3 d-flex gap-2 align-items-center">
-        <input
-          type="number"
-          step="0.000001"
-          className="form-control"
-          value={lat}
-          onChange={(e) => setLat(e.target.value)}
-          placeholder="عرض جغرافیایی (lat)"
-        />
-        <input
-          type="number"
-          step="0.000001"
-          className="form-control"
-          value={lng}
-          onChange={(e) => setLng(e.target.value)}
-          placeholder="طول جغرافیایی (lng)"
-        />
-        <button className="btn btn-primary" onClick={handleManualChange}>
-          تنظیم مارکر
-        </button>
+      <div className="mb-3 gap-2 align-items-center ">
+        <div className="flex gap-3">
+          <div className="form-group w-1/2">
+            <label htmlFor="lat">عرض جغرافیایی φ:</label>
+            <input
+              type="number"
+              step="0.000001"
+              className="form-control"
+              value={lat}
+              onChange={(e) => setLat(e.target.value)}
+              placeholder="عرض جغرافیایی (lat)"
+              name="lat"
+            />
+          </div>
+          <div className="form-group  w-1/2">
+            <label htmlFor="lng">طول جغرافیایی λ:</label>
+            <input
+              type="number"
+              step="0.000001"
+              className="form-control"
+              value={lng}
+              onChange={(e) => setLng(e.target.value)}
+              placeholder="طول جغرافیایی (lng)"
+              name="lng"
+            />
+          </div>
+        </div>
+        <div className="flex gap-3 py-2">
+          <button
+            className="btn btn-primary w-1/2"
+            onClick={handleManualChange}
+          >
+            تنظیم مارکر
+          </button>
+          <button
+            className="btn btn-outline-info w-1/2"
+            onClick={showUserLocation}
+          >
+            نمایش موقعیت من
+          </button>
+        </div>
       </div>
 
       <div

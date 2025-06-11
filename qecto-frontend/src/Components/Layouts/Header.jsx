@@ -45,14 +45,14 @@ export default function Header({ isAuthenticated, role, logout, navLinks }) {
           ? "bg-dark opacity-95 shadow-md backdrop-blur-sm"
           : "bg-dark bg-opacity-85"
       )}
-      style={{ direction: "rtl" }}
+      style={{ direction: "rtl", zIndex: 1001 }}
     >
       <div className="container mx-auto px-6 flex justify-between items-center h-20">
         {/* لوگو سمت راست */}
         <div className="flex-1 flex justify-start">
           <Link to="/" className="flex items-center cursor-pointer">
             <img
-              src={siteConfig.logo_url}
+              src={siteConfig?.logo_url || undefined}
               alt="لوگو ککتوسازهیرکاسب"
               className="h-14 w-auto"
             />

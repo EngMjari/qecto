@@ -30,7 +30,7 @@ const CreateRequest = () => {
   }
 
   return (
-    <div className="container-fluid py-4">
+    <div className="container-fluid py-4 page-content">
       <div className="row">
         {/* فرم‌ها سمت راست */}
         <div className="col-lg-6">
@@ -61,7 +61,7 @@ const CreateRequest = () => {
           )}
         </div>
         {/* نقشه سمت چپ */}
-        <div className="col-lg-6 mb-4">
+        <div className="col-lg-6 mb-4 p-4">
           <LocationMarker onLocationChange={setLocation} />
         </div>
       </div>

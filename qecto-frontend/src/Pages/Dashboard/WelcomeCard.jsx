@@ -1,149 +1,54 @@
 import React from "react";
 import { FaPlus, FaEnvelope } from "react-icons/fa";
 import { Link } from "react-router-dom";
-import bgImg from "../../assets/images/background.png"; // مسیر را با توجه به ساختار پروژه تنظیم کن
+import bgImg from "../../assets/images/background.png";
 
 export default function WelcomeCard() {
   return (
-    <div className="welcome-card-pattern">
-      <h2 className="welcome-title-pattern">خوش آمدید!</h2>
-      <p className="welcome-desc-pattern">
+    <div
+      className="relative flex flex-col items-center rounded-3xl bg-white bg-left bg-no-repeat bg-contain shadow-[0_8px_32px_rgba(255,87,0,0.2),0_1.5px_8px_rgba(37,99,235,0.13)] p-8 sm:p-10 mb-8 min-h-[220px] overflow-hidden text-gray-900"
+      style={{ backgroundImage: `url(${bgImg})` }}
+    >
+      <h2 className="text-center text-2xl sm:text-3xl font-bold text-orange-500 mb-2 z-10">
+        خوش آمدید!
+      </h2>
+      <p className="text-center text-base sm:text-lg text-gray-500 mb-6 z-10">
         از طریق دکمه‌های زیر می‌توانید سریع شروع کنید.
       </p>
-      <div className="welcome-btns-pattern">
+      <div className="flex flex-col sm:flex-row gap-4 sm:gap-5 w-full sm:w-auto justify-center z-10">
         <GlassButton
           to="/request"
-          color="#ff5700"
+          color="orange"
           icon={<FaPlus />}
           text="ثبت درخواست جدید"
         />
         <GlassButton
           to="/tickets/new"
-          color="#2563eb"
+          color="blue"
           icon={<FaEnvelope />}
           text="ارسال تیکت جدید"
         />
       </div>
-      <style>
-        {`
-        .welcome-card-pattern {
-          border-radius: 22px;
-          background: #fff url('${bgImg}') left/contain no-repeat;
-          box-shadow: 0 8px 32px 0 #ff570033, 0 1.5px 8px #2563eb22;
-          padding: 38px 32px 30px 32px;
-          margin-bottom: 32px;
-          color: #002a3a;
-          position: relative;
-          overflow: hidden;
-          min-height: 220px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-        }
-        .welcome-title-pattern {
-          color: #ff5700;
-          font-weight: bold;
-          font-size: 2rem;
-          margin-bottom: 10px;
-          z-index: 1;
-          position: relative;
-          text-align: center;
-        }
-        .welcome-desc-pattern {
-          font-size: 1.08rem;
-          color: #64748b;
-          margin-bottom: 28px;
-          z-index: 1;
-          position: relative;
-          text-align: center;
-        }
-        .welcome-btns-pattern {
-          display: flex;
-          gap: 18px;
-          flex-wrap: wrap;
-          z-index: 1;
-          position: relative;
-          justify-content: center;
-        }
-        @media (max-width: 600px) {
-          .welcome-card-pattern {
-            padding: 22px 8px 18px 8px;
-            min-height: 150px;
-          }
-          .welcome-title-pattern {
-            font-size: 1.3rem;
-          }
-          .welcome-desc-pattern {
-            font-size: 1rem;
-          }
-          .welcome-btns-pattern {
-            flex-direction: column;
-            gap: 12px;
-            width: 100%;
-            align-items: stretch;
-          }
-        }
-        `}
-      </style>
     </div>
   );
 }
 
-// دکمه شیشه‌ای مدرن
 function GlassButton({ to, color, icon, text }) {
+  const colorClasses = {
+    orange:
+      "border-orange-500 text-orange-500 hover:bg-orange-500/10 hover:text-gray-700",
+    blue: "border-blue-600 text-blue-600 hover:bg-blue-600/10 hover:text-gray-700",
+  };
+
   return (
     <Link
       to={to}
-      className="glass-btn-simple"
-      style={{
-        border: `2px solid ${color}`,
-        color,
-        background: "rgba(255,255,255,0.55)",
-        boxShadow: `0 2px 16px ${color}22`,
-      }}
+      className={`flex items-center justify-center gap-2 font-bold text-base sm:text-lg border-2 rounded-xl px-5 py-3 min-w-[170px] bg-white/55 shadow-[0_2px_16px_rgba(0,0,0,0.1)] backdrop-blur-sm transition-all duration-200 ease-in-out hover:shadow-[0_6px_24px_rgba(0,0,0,0.2)] hover:-translate-y-0.5 hover:scale-105 ${colorClasses[color]}`}
     >
-      <span className="glass-btn-icon-simple">{icon}</span>
+      <span className="text-xl transition-transform duration-200 group-hover:-rotate-12 group-hover:scale-125">
+        {icon}
+      </span>
       {text}
-      <style>
-        {`
-        .glass-btn-simple {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          font-weight: bold;
-          font-size: 1.07rem;
-          border-radius: 14px;
-          padding: 14px 22px;
-          min-width: 170px;
-          text-decoration: none;
-          transition: 
-            box-shadow 0.25s, 
-            transform 0.18s, 
-            background 0.2s, 
-            color 0.2s, 
-            border-color 0.2s;
-          backdrop-filter: blur(2.5px);
-          position: relative;
-          overflow: hidden;
-          cursor: pointer;
-          justify-content: center;
-        }
-        .glass-btn-simple:hover {
-          background: ${color}11;
-          color: #fff;
-          border-color: ${color};
-          box-shadow: 0 6px 24px ${color}33;
-          transform: translateY(-2px) scale(1.045);
-        }
-        .glass-btn-icon-simple {
-          font-size: 1.25em;
-          transition: transform 0.25s cubic-bezier(.4,2,.6,1);
-        }
-        .glass-btn-simple:hover .glass-btn-icon-simple {
-          transform: rotate(-18deg) scale(1.18);
-        }
-        `}
-      </style>
     </Link>
   );
 }

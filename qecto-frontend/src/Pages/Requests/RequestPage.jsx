@@ -86,7 +86,7 @@ function RequestPage() {
   return (
     <div
       dir="rtl"
-      className="bg-gray-100 min-h-screen font-sans"
+      className="bg-gray-100 min-h-screen font-sans page-content"
       style={{ fontFamily: "Vazirmatn, sans-serif" }}
     >
       <div className="bg-gradient-to-b from-blue-600 to-blue-800 h-48 w-full absolute top-0 right-0"></div>

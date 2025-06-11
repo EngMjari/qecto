@@ -15,9 +15,11 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-right">
           {/* اطلاعات سایت */}
           <div>
-            <h3 className="text-lg font-bold mb-4">{siteConfig.site_name}</h3>
+            <h3 className="text-lg font-bold mb-4">
+              {siteConfig?.site_name || "اسم سایت"}
+            </h3>
             <p className="text-gray-400 text-wrap text-justify">
-              {siteConfig.description}
+              {siteConfig?.description}
             </p>
           </div>
 
@@ -49,9 +51,9 @@ const Footer = () => {
           <div>
             <h3 className="text-lg font-bold mb-4">تماس با ما</h3>
             <ul className="text-gray-400 space-y-2">
-              <li className="text-wrap">{siteConfig.address}</li>
-              <li>تلفن: {siteConfig.phone}</li>
-              <li>ایمیل: {siteConfig.email}</li>
+              <li className="text-wrap">{siteConfig?.address}</li>
+              <li>تلفن: {siteConfig?.phone}</li>
+              <li>ایمیل: {siteConfig?.email}</li>
             </ul>
           </div>
         </div>
@@ -60,7 +62,7 @@ const Footer = () => {
           <p>
             &copy; {new Date().getFullYear()}{" "}
             <Link className="text-reset" to={"/"}>
-              {siteConfig.site_name}
+              {siteConfig?.site_name || "اسم سایت"}
             </Link>
             . تمام حقوق محفوظ است.
           </p>

@@ -101,7 +101,7 @@ export default function LoginModal({ isOpen, onClose }) {
               <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-right align-middle shadow-2xl transition-all relative">
                 {/* لوگو و دکمه بستن */}
                 <div className="flex items-center justify-between mb-6">
-                  <img src={siteConfig.logo_url} alt="لوگو" className="w-14" />
+                  <img src={siteConfig?.logo_url} alt="لوگو" className="w-14" />
                   <h4 className="text-lg font-bold text-center text-gray-800 align-middle transition">
                     ورود به حساب کاربری
                   </h4>
