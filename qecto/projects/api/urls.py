@@ -1,13 +1,10 @@
-# projects/api/urls.py :
-from django.urls import path
-from .views import (AllProjectView, CreateProjectRequestAPIView,
-                    ProjectDetailAPIView, DashboardStatsAPIView,
-                    )
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import ProjectsViewSet
+
+router = DefaultRouter()
+router.register(r'', ProjectsViewSet, basename='projects')
 
 urlpatterns = [
-    path('', AllProjectView.as_view(), name='my-projects'),
-    path('create/', CreateProjectRequestAPIView.as_view(), name='create-project'),
-    path('<int:pk>/', ProjectDetailAPIView.as_view(), name='project-detail'),
-    path('dashboard/', DashboardStatsAPIView.as_view(), name='dashboard-status'),
-
+    path('', include(router.urls)),
 ]

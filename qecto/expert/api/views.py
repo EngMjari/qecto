@@ -1,124 +1,68 @@
-# expert/api/views.py : 
-from rest_framework.parsers import MultiPartParser, FormParser
-from rest_framework.views import APIView
+# expert/api/views.py
+from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
-from .serializers import ExpertEvaluationProjectCreateSerializer
-from django.http import FileResponse, Http404
-from expert.models import ExpertAttachment
-import json
-import os
-import io
+from rest_framework.parsers import MultiPartParser, FormParser
+from django.shortcuts import get_object_or_404
+from projects.models import Project
+from expert.models import ExpertEvaluationRequest
+from expert.api.serializers import ExpertEvaluationRequestSerializer
 
 
-class ExpertProjectRequestAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+class ExpertEvaluationRequestViewSet(viewsets.ViewSet):
+    permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
 
-    def post(self, request):
-        data = request.data.copy()
-        print(request.FILES)
-        print(request.data.getlist('attachments'))
+    def list(self, request):
+        user = request.user
+        queryset = ExpertEvaluationRequest.objects.filter(project__owner=user)
+        serializer = ExpertEvaluationRequestSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-        # Parse location from stringified JSON if provided
-        location_raw = data.get('location')
-        if location_raw:
+    def retrieve(self, request, pk=None):
+        user = request.user
+        expert_request = get_object_or_404(
+            ExpertEvaluationRequest, pk=pk, project__owner=user)
+        serializer = ExpertEvaluationRequestSerializer(expert_request)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def create(self, request):
+        user = request.user
+        data = request.data
+
+        project_id = data.get("project")
+        project_name = data.get("project_name")
+
+        location = data.get("location")
+        if not location:
+            return Response({"detail": "location is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        description = data.get("description", "")
+        status_field = data.get("status", "pending")
+
+        # بررسی پروژه انتخاب شده یا ایجاد پروژه جدید
+        if project_id:
             try:
-                location = json.loads(location_raw)
-                data['location_lat'] = location.get('lat')
-                data['location_lng'] = location.get('lng')
-            except json.JSONDecodeError:
-                return Response({'error': 'موقعیت جغرافیایی نامعتبر است'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Convert QueryDict to plain dict
-        simple_data = {key: data.get(key) for key in data.keys()}
-
-        # Add file attachments
-        files = request.FILES.getlist('attachments')
-        simple_data['attachments'] = files
-
-        serializer = ExpertEvaluationProjectCreateSerializer(data=simple_data, context={'request': request})
-
-        if serializer.is_valid():
-            expert_project = serializer.save()
-            return Response({
-                'message': 'درخواست کارشناسی ثبت شد',
-                'project_id': expert_project.project.id,
-                'expert_project_id': expert_project.id,
-                'uploaded_files': [f.name for f in files],
-            }, status=status.HTTP_201_CREATED)
+                project = Project.objects.get(id=project_id, owner=user)
+            except Project.DoesNotExist:
+                return Response({"detail": "Project not found or not owned by user."}, status=status.HTTP_404_NOT_FOUND)
         else:
-            print("Serializer errors:", serializer.errors)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            if not project_name:
+                return Response({"detail": "project_name is required when no project selected."}, status=status.HTTP_400_BAD_REQUEST)
+            project = Project.objects.create(name=project_name, owner=user)
 
+        # ساخت درخواست ارزیابی تخصصی
+        expert_request = ExpertEvaluationRequest.objects.create(
+            project=project,
+            location=location,
+            description=description,
+            status=status_field,
+            assigned_admin=None,
+        )
 
-class ExpertAttachmentPreviewView(APIView):
-    permission_classes = [IsAuthenticated]
+        # ذخیره فایل‌ها
+        files = request.FILES.getlist('files')
+        for f in files:
+            expert_request.files.create(file=f)
 
-    def get(self, request, pk):
-        try:
-            attachment = ExpertAttachment.objects.get(pk=pk)
-        except ExpertAttachment.DoesNotExist:
-            raise Http404
-
-        ext = os.path.splitext(attachment.file.name)[-1].lower().replace('.', '')
-
-        # اگر عکس است، همان را برگردان
-        if ext in ["jpg", "jpeg", "png", "gif", "bmp", "webp"]:
-            return FileResponse(attachment.file, content_type=f"image/{ext}")
-
-        # اگر PDF است، صفحه اول را به عکس تبدیل کن
-        if ext == "pdf":
-            try:
-                from pdf2image import convert_from_path
-                images = convert_from_path(attachment.file.path, first_page=1, last_page=1)
-                img_io = io.BytesIO()
-                images[0].save(img_io, format='PNG')
-                img_io.seek(0)
-                return FileResponse(img_io, content_type="image/png")
-            except Exception as e:
-                return Response({"error": "خطا در تبدیل PDF به عکس"}, status=400)
-
-        # اگر اکسل است، یک عکس placeholder برگردان
-        if ext in ["xls", "xlsx"]:
-            from django.conf import settings
-            placeholder_path = os.path.join(settings.BASE_DIR, "static/excel_placeholder.png")
-            return FileResponse(open(placeholder_path, "rb"), content_type="image/png")
-
-        # اگر dxf بود، با استفاده از ezdxf و matplotlib رسم کن
-        if ext == "dxf":
-            try:
-                import ezdxf
-                import matplotlib.pyplot as plt
-                from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-
-                doc = ezdxf.readfile(attachment.file.path)
-                msp = doc.modelspace()
-
-                fig = plt.figure(figsize=(8, 8))
-                ax = fig.add_subplot(111)
-                for e in msp:
-                    if e.dxftype() == 'LINE':
-                        start = e.dxf.start
-                        end = e.dxf.end
-                        ax.plot([start[0], end[0]], [start[1], end[1]], color='black')
-                ax.axis('equal')
-                ax.axis('off')
-
-                img_io = io.BytesIO()
-                plt.savefig(img_io, format='png', bbox_inches='tight', pad_inches=0)
-                plt.close(fig)
-                img_io.seek(0)
-                return FileResponse(img_io, content_type="image/png")
-            except Exception as e:
-                return Response({"error": "خطا در تبدیل DXF به عکس"}, status=400)
-
-        # اگر dwg بود، placeholder
-        if ext == "dwg":
-            from django.conf import settings
-            placeholder_path = os.path.join(settings.BASE_DIR, "static/dwg_placeholder.png")
-            return FileResponse(open(placeholder_path, "rb"), content_type="image/png")
-
-        # سایر فرمت‌ها پشتیبانی نمی‌شود
-        return Response({"error": "پیش‌نمایش این فرمت پشتیبانی نمی‌شود."}, status=400)
+        serializer = ExpertEvaluationRequestSerializer(expert_request)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

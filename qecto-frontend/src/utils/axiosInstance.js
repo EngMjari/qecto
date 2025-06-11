@@ -1,9 +1,9 @@
 // src/utils/axiosInstance.js
 import axios from "axios";
+const baseURL = "http://192.168.1.101:8000";
 
 const axiosInstance = axios.create({
-  baseURL: "http://192.168.1.101:8000",
-  // baseURL: "http://192.168.1.3:8000",
+  baseURL,
   withCredentials: true,
 });
 
@@ -32,10 +32,9 @@ axiosInstance.interceptors.response.use(
 
       if (refresh) {
         try {
-          const response = await axios.post(
-            "http://127.0.0.1:8000/api/token/refresh/",
-            { refresh }
-          );
+          const response = await axios.post(`${baseURL}/api/token/refresh/`, {
+            refresh,
+          });
           const newAccessToken = response.data.access;
           localStorage.setItem("access", newAccessToken);
 

@@ -1,8 +1,12 @@
-from django.urls import path
-from .views import ExpertProjectRequestAPIView, ExpertAttachmentPreviewView
+# expert/api/urls.py
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import ExpertEvaluationRequestViewSet
+
+router = DefaultRouter()
+router.register(r'requests', ExpertEvaluationRequestViewSet,
+                basename='expert-request')
 
 urlpatterns = [
-    path('request/', ExpertProjectRequestAPIView.as_view(), name='expert-request'),
-    path('attachments/<int:pk>/preview/',
-         ExpertAttachmentPreviewView.as_view(), name='expert-attachment-preview'),
+    path('', include(router.urls)),
 ]

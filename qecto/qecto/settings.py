@@ -50,14 +50,20 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'core.apps.CoreConfig',
+    # All Projects:
     'projects.apps.ProjectsConfig',
+    # Requests:
     'survey.apps.SurveyConfig',
+    'expert.apps.ExpertConfig',
     'supervision.apps.SupervisionConfig',
     'execution.apps.ExecutionConfig',
-    'document.apps.DocumentConfig',
+    'registration.apps.RegistrationConfig',
+    # Tickets:
     'tickets.apps.TicketsConfig',
-    'expert.apps.ExpertConfig',
+    # General Site Config Api
     'siteconfig.apps.SiteconfigConfig',
+    # Files and Attachments:
+    'attachments.apps.AttachmentsConfig',
 
 
 ]

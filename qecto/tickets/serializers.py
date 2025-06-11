@@ -1,93 +1,122 @@
 from rest_framework import serializers
-from .models import TicketSession, TicketMessage, TicketMessageFile
-from survey.models import SurveyProject
-from expert.models import ExpertEvaluationProject
-
-
-class TicketMessageFileSerializer(serializers.ModelSerializer):
-    file_extension = serializers.SerializerMethodField()
-    readable_file_size = serializers.SerializerMethodField()
-
-    class Meta:
-        model = TicketMessageFile
-        fields = ['id', 'file', 'uploaded_at', 'file_extension',
-                  'file_size', 'custom_name', 'readable_file_size']
-        read_only_fields = ['id', 'uploaded_at', 'file_extension',
-                            'file_size', 'custom_name', 'readable_file_size']
-
-    def get_file_extension(self, obj):
-        return obj.file_extension()
-
-    def get_readable_file_size(self, obj):
-        return obj.readable_file_size()
-
-
-class SessionSerializer(serializers.ModelSerializer):
-    user_phone = serializers.SerializerMethodField()
-    assigned_admin_phone = serializers.SerializerMethodField()
-
-    # اضافه کن این خط را برای پنهان کردن فیلد user از ورودی کلاینت
-    user = serializers.PrimaryKeyRelatedField(read_only=True)
-
-    class Meta:
-        model = TicketSession
-        fields = [
-            'id', 'title', 'session_type', 'survey_request', 'evaluation_request',
-            'user', 'user_phone', 'assigned_admin', 'assigned_admin_phone',
-            'status', 'reply_status', 'last_message_by', 'closed_reason',
-            'created_at', 'updated_at'
-        ]
-        read_only_fields = ['id', 'created_at', 'updated_at',
-                            'messages', 'user_phone', 'assigned_admin_phone', 'user']
-
-    def get_user_phone(self, obj):
-        if obj.user:
-            return getattr(obj.user, 'phone_number', str(obj.user))
-        return None
-
-    def get_assigned_admin_phone(self, obj):
-        if obj.assigned_admin:
-            return getattr(obj.assigned_admin, 'phone_number', str(obj.assigned_admin))
-        return None
+from django.contrib.contenttypes.models import ContentType
+from .models import TicketSession, TicketMessage
+from attachments.models import Attachment
+from attachments.serializers import AttachmentSerializer
 
 
 class TicketMessageSerializer(serializers.ModelSerializer):
-    files = TicketMessageFileSerializer(many=True, read_only=True)
-    sender_phone = serializers.SerializerMethodField()
-    # برای جلوگیری از حلقه‌ی تو در تو
-    session = SessionSerializer(read_only=True)
+    attachments = AttachmentSerializer(many=True, read_only=True)
+    sender = serializers.SerializerMethodField()
 
     class Meta:
         model = TicketMessage
-        fields = ['id', 'session', 'sender_user', 'sender_admin',
-                  'sender_phone', 'content', 'created_at', 'files']
-        read_only_fields = ['id', 'created_at',
-                            'sender_phone', 'sender_user', 'sender_admin']
+        fields = ['id', 'message', 'created_at', 'attachments', 'sender']
 
-    def get_sender_phone(self, obj):
-        if obj.sender_user:
-            return getattr(obj.sender_user, 'phone_number', str(obj.sender_user))
-        elif obj.sender_admin:
-            return getattr(obj.sender_admin, 'phone_number', str(obj.sender_admin))
-        return "مهمان"
+    def get_sender(self, obj):
+        return {
+            "id": obj.sender.id,
+            "username": obj.sender.get_username(),
+        }
 
 
 class TicketSessionSerializer(serializers.ModelSerializer):
-    survey_request = serializers.PrimaryKeyRelatedField(
-        queryset=SurveyProject.objects.all(), required=False, allow_null=True
-    )
-    evaluation_request = serializers.PrimaryKeyRelatedField(
-        queryset=ExpertEvaluationProject.objects.all(), required=False, allow_null=True
-    )
-    tickets = serializers.SerializerMethodField()
+    messages = TicketMessageSerializer(many=True, read_only=True)
+    user = serializers.SerializerMethodField()
+    assigned_admin = serializers.SerializerMethodField()
+    related_request = serializers.SerializerMethodField()
 
     class Meta:
         model = TicketSession
         fields = [
-            'id', 'title', 'session_type', 'status',
-            'survey_request', 'evaluation_request', 'tickets'
+            'id', 'title', 'session_type', 'status', 'reply_status', 'last_message_by',
+            'closed_reason', 'created_at', 'updated_at', 'user', 'assigned_admin',
+            'related_request', 'messages'
         ]
 
-    def get_tickets(self, obj):
-        messages = obj.messages.order_by('created_at')
-        return TicketMessageSerializer(messages, many=True).data
+    def get_user(self, obj):
+        return {
+            "id": obj.user.id,
+            "username": obj.user.get_username(),
+        }
+
+    def get_assigned_admin(self, obj):
+        if obj.assigned_admin:
+            return {
+                "id": obj.assigned_admin.id,
+                "username": obj.assigned_admin.get_username(),
+            }
+        return None
+
+    def get_related_request(self, obj):
+        if obj.related_request:
+            return {
+                "id": obj.object_id,
+                "type": obj.content_type.model,  # e.g. "surveyrequest"
+                "app_label": obj.content_type.app_label,
+                # readable string representation
+                "str": str(obj.related_request)
+            }
+        return None
+
+
+class CreateTicketMessageSerializer(serializers.ModelSerializer):
+    attachments = serializers.ListField(
+        child=serializers.FileField(), required=False, write_only=True
+    )
+
+    class Meta:
+        model = TicketMessage
+        fields = ['message', 'attachments']
+
+    def create(self, validated_data):
+        attachments_data = validated_data.pop('attachments', [])
+        message = TicketMessage.objects.create(**validated_data)
+        for file in attachments_data:
+            Attachment.objects.create(
+                content_object=message,
+                file=file
+            )
+        return message
+
+
+class CreateTicketSessionSerializer(serializers.ModelSerializer):
+    initial_message = CreateTicketMessageSerializer(write_only=True)
+    content_type = serializers.CharField(write_only=True)
+    object_id = serializers.IntegerField(write_only=True)
+
+    class Meta:
+        model = TicketSession
+        fields = [
+            'title', 'session_type', 'content_type', 'object_id',
+            'initial_message'
+        ]
+
+    def validate_content_type(self, value):
+        try:
+            return ContentType.objects.get(model=value.lower())
+        except ContentType.DoesNotExist:
+            raise serializers.ValidationError("Invalid content type.")
+
+    def create(self, validated_data):
+        initial_message_data = validated_data.pop('initial_message')
+        content_type = validated_data.pop('content_type')
+        object_id = validated_data.pop('object_id')
+        user = self.context['request'].user
+
+        ticket_session = TicketSession.objects.create(
+            user=user,
+            content_type=content_type,
+            object_id=object_id,
+            **validated_data
+        )
+
+        initial_message_serializer = CreateTicketMessageSerializer(
+            data=initial_message_data)
+        initial_message_serializer.is_valid(raise_exception=True)
+        initial_message_serializer.save(
+            ticket=ticket_session,
+            sender=user
+        )
+
+        return ticket_session

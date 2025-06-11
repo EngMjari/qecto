@@ -1,8 +1,11 @@
-from django.urls import path
-from .views import SurveyProjectRequestAPIView, SurveyAttachmentPreviewView
+# survey/api/urls.py
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import SurveyRequestViewSet
+
+router = DefaultRouter()
+router.register(r'requests', SurveyRequestViewSet, basename='survey-request')
 
 urlpatterns = [
-    path('request/', SurveyProjectRequestAPIView.as_view(), name='survey-request'),
-    path('attachments/<int:pk>/preview/',
-         SurveyAttachmentPreviewView.as_view(), name='survey-attachment-preview'),
+    path('', include(router.urls)),
 ]

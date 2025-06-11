@@ -1,104 +1,69 @@
-# Expert/api/serializers.py :
 from rest_framework import serializers
-from expert.models import ExpertEvaluationProject, ExpertAttachment
-from django.contrib.auth import get_user_model
-from projects.models import Project, ProjectType, ProjectStatus
+from expert.models import ExpertEvaluationRequest
+from projects.api.serializers import ProjectNestedSerializer
+from projects.models import Project
 
-User = get_user_model()
 
-# --- سریالایزر فایل‌های پیوست کارشناسی ---
-
- 
-class ExpertAttachmentSerializer(serializers.ModelSerializer):
-    file_extension = serializers.SerializerMethodField()
-    readable_file_size = serializers.SerializerMethodField()
+class ExpertEvaluationRequestSerializer(serializers.ModelSerializer):
+    project = ProjectNestedSerializer(read_only=True)
+    attachments_count = serializers.IntegerField(
+        source='attachments.count', read_only=True)
 
     class Meta:
-        model = ExpertAttachment
-        fields = ['id', 'file', 'uploaded_at', 'file_extension', 'file_size', 'readable_file_size']
-
-    def get_file_extension(self, obj):
-        return obj.file_extension() if hasattr(obj, 'file_extension') else obj.file.name.split('.')[-1].lower()
-
-    def get_readable_file_size(self, obj):
-        return obj.readable_file_size() if hasattr(obj, 'readable_file_size') else obj.file.size
-
-
-# --- سریالایزر پروژه کارشناسی (نمایش) ---
-class ExpertEvaluationProjectSerializer(serializers.ModelSerializer):
-    attachments = ExpertAttachmentSerializer(many=True, read_only=True)
-    project = serializers.SerializerMethodField()
-    request_type = serializers.SerializerMethodField()
-
-    class Meta:
-        model = ExpertEvaluationProject
+        model = ExpertEvaluationRequest
         fields = [
-            'id', 'project', 'property_type', 'main_parcel_number', 'area', 'sub_parcel_number',
-            'location_lat', 'location_lng', 'description', 'created_at', 'attachments', 'status', 'request_type'
+            'id',
+            'project',
+            'area',
+            'property_type',
+            'main_parcel_number',
+            'sub_parcel_number',
+            'status',
+            'location_lat',
+            'location_lng',
+            'description',
+            'created_at',
+            'attachments_count',
         ]
-        read_only_fields = ['project', 'created_at']
-
-    def get_project(self, obj):
-        from projects.api.serializers import ProjectDataSerializer  # ایمپورت تنبل
-        return ProjectDataSerializer(obj.project).data
-
-    def get_request_type(self, obj):
-        return 'expert'
 
 
-# --- سریالایزر ایجاد پروژه کارشناسی (فرانت‌اند فرم ارسال) ---
-class ExpertEvaluationProjectCreateSerializer(serializers.ModelSerializer):
-    attachments = serializers.ListField(
-        child=serializers.FileField(),
-        allow_empty=True,
-        required=False,
-        write_only=True
-    )
-    title = serializers.CharField(max_length=200, write_only=True)
+class ExpertEvaluationRequestCreateSerializer(serializers.ModelSerializer):
+    project = serializers.PrimaryKeyRelatedField(
+        queryset=Project.objects.all())
 
     class Meta:
-        model = ExpertEvaluationProject
+        model = ExpertEvaluationRequest
         fields = [
-            'title', 'description', 'property_type',
-            'main_parcel_number', 'sub_parcel_number',
-            'location_lat', 'location_lng', 'attachments'
+            'project',
+            'area',
+            'property_type',
+            'main_parcel_number',
+            'sub_parcel_number',
+            'location_lat',
+            'location_lng',
+            'description',
+            'status',
         ]
+        read_only_fields = ['status']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')
+        user = request.user if request else None
+        if user and not user.is_staff:
+            self.fields['project'].queryset = user.projects.filter(
+                expert_evaluation__isnull=True)
+        else:
+            from projects.models import Project
+            self.fields['project'].queryset = Project.objects.filter(
+                expert_evaluation__isnull=True)
+
+    def validate_project(self, value):
+        if ExpertEvaluationRequest.objects.filter(project=value).exists():
+            raise serializers.ValidationError(
+                "این پروژه قبلاً درخواست کارشناسی دارد.")
+        return value
 
     def create(self, validated_data):
-        request = self.context.get('request')
-        print("FILES in context:",
-              request.FILES if request else "No request in context")
-        attachments = request.FILES.getlist('attachments')
-        print("FILES RECEIVED in create:", attachments)
-        user = request.user if request else None
-
-        # دریافت فایل‌ها و حذف از validated_data
-        attachments = validated_data.pop('attachments', [])
-        title = validated_data.pop('title', '')
-
-        # ایجاد پروژه پایه
-        project = Project.objects.create(
-            title=title,
-            description=validated_data.get('description', ''),
-            owner=user,
-            created_by=user,
-            project_type=ProjectType.Expert,
-            status=ProjectStatus.PENDING,
-        )
-
-        # ایجاد پروژه کارشناسی
-        expert_project = ExpertEvaluationProject.objects.create(
-            project=project,
-            **validated_data
-        )
-
-        # ذخیره فایل‌های پیوست
-        for file in attachments:
-            ExpertAttachment.objects.create(
-                project=expert_project,
-                file=file,
-                uploaded_by=user,
-                title=file.name
-            )
-
-        return expert_project
+        validated_data['status'] = 'pending'
+        return super().create(validated_data)

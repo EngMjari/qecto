@@ -1,119 +1,74 @@
 from rest_framework import generics, permissions
-from rest_framework.views import APIView
-from rest_framework.parsers import MultiPartParser, FormParser
-from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
-from django.db import models
-from rest_framework.exceptions import NotFound
+from .models import TicketSession
+from .serializers import (
+    TicketSessionSerializer, CreateTicketSessionSerializer,
+    CreateTicketMessageSerializer
+)
 
-from .models import TicketSession, TicketMessage, TicketMessageFile
-from .serializers import TicketSessionSerializer, TicketMessageSerializer, TicketMessageFileSerializer
-from .permissions import IsTicketOwnerOrAdmin  # حتما تعریف کن
+
+class IsAdminOrOwner(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        # ادمین اجازه دارد همه را ببیند
+        if request.user.is_staff:
+            return True
+        # کاربر فقط تیکت خودش را ببیند
+        return obj.user == request.user
 
 
 class TicketSessionListCreateAPIView(generics.ListCreateAPIView):
-    serializer_class = TicketSessionSerializer
-    permission_classes = [permissions.IsAuthenticated, IsTicketOwnerOrAdmin]
+    """
+    لیست تیکت‌ها برای کاربر یا ادمین و ایجاد تیکت جدید
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return CreateTicketSessionSerializer
+        return TicketSessionSerializer
 
     def get_queryset(self):
         user = self.request.user
-        queryset = TicketSession.objects.filter(user=user)
-        survey_request_id = self.request.query_params.get('survey_request')
-        evaluation_request_id = self.request.query_params.get(
-            'evaluation_request')
-
-        # فقط سشن‌هایی که به یک درخواست خاص وصل‌اند را نمایش بده
-        if survey_request_id:
-            queryset = queryset.filter(survey_request_id=survey_request_id)
-        elif evaluation_request_id:
-            queryset = queryset.filter(
-                evaluation_request_id=evaluation_request_id)
+        if user.is_staff:
+            # ادمین همه تیکت‌ها را می‌بیند
+            return TicketSession.objects.all()
         else:
-            # اگر هیچ پارامتری نبود، هیچ سشنی برنگردان
-            queryset = queryset.none()
-
-        return queryset
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)  # اصلاح
+            # کاربر فقط تیکت‌های خودش
+            return TicketSession.objects.filter(user=user)
 
 
-class TicketSessionRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
+class TicketSessionRetrieveAPIView(generics.RetrieveAPIView):
+    """
+    گرفتن جزئیات یک تیکت به همراه پیام‌ها
+    """
     serializer_class = TicketSessionSerializer
-    permission_classes = [permissions.IsAuthenticated, IsTicketOwnerOrAdmin]
+    permission_classes = [permissions.IsAuthenticated, IsAdminOrOwner]
     queryset = TicketSession.objects.all()
 
-    def get_object(self):
-        try:
-            return super().get_object()
-        except TicketSession.DoesNotExist:
-            raise NotFound("سشن مورد نظر پیدا نشد")
 
-    def perform_update(self, serializer):
-        user = self.request.user
-        if not (user.is_staff or user.is_superuser):
-            raise PermissionDenied("فقط ادمین می‌تواند سشن را ویرایش کند")
-        serializer.save()
-
-
-class TicketMessageListCreateAPIView(generics.ListCreateAPIView):
-    serializer_class = TicketMessageSerializer
+class TicketMessageCreateAPIView(generics.CreateAPIView):
+    """
+    ارسال پیام جدید در تیکت (ادمین یا کاربر)
+    """
+    serializer_class = CreateTicketMessageSerializer
     permission_classes = [permissions.IsAuthenticated]
-
-    def get_session(self):
-        session_id = self.kwargs.get('session_id')
-        try:
-            return TicketSession.objects.get(id=session_id)
-        except TicketSession.DoesNotExist:
-            raise NotFound("سشن مورد نظر پیدا نشد.")
-
-    def get_queryset(self):
-        session = self.get_session()
-        user = self.request.user
-
-        if user.is_superuser:
-            return TicketMessage.objects.filter(session=session)
-
-        elif user.is_staff:
-            if session.assigned_admin == user or (session.survey_request is None and session.evaluation_request is None):
-                return TicketMessage.objects.filter(session=session)
-            else:
-                return TicketMessage.objects.none()
-
-        else:
-            if session.user == user:
-                return TicketMessage.objects.filter(session=session)
-            else:
-                return TicketMessage.objects.none()
 
     def perform_create(self, serializer):
-        session = self.get_session()
+        session_id = self.kwargs['session_id']
         user = self.request.user
+        try:
+            session = TicketSession.objects.get(id=session_id)
+        except TicketSession.DoesNotExist:
+            raise PermissionDenied("تیکت مورد نظر وجود ندارد")
 
-        if session.status != 'open':
+        # بررسی دسترسی: کاربر فقط تیکت خودش، ادمین همه را
+        if not (user.is_staff or session.user == user):
             raise PermissionDenied(
-                "سشن بسته شده و امکان ارسال پیام وجود ندارد.")
+                "شما اجازه ارسال پیام در این تیکت را ندارید.")
 
-        if user.is_staff:
-            serializer.save(session=session, sender_admin=user)
-        else:
-            serializer.save(session=session, sender_user=user)
+        # تعیین فرستنده (ادمین یا کاربر)
+        sender_user = user if not user.is_staff else None
+        sender_admin = user if user.is_staff else None
 
-
-class TicketMessageFileUploadAPIView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser]
-
-    def post(self, request, message_id):
-        message = TicketMessage.objects.get(id=message_id)
-        user = request.user
-        if not (message.sender_user == user or message.sender_admin == user):
-            return Response({"detail": "فقط فرستنده پیام اجازه آپلود دارد."}, status=403)
-
-        files = request.FILES.getlist('files')
-        created_files = []
-        for f in files:
-            tmf = TicketMessageFile.objects.create(message=message, file=f)
-            created_files.append(tmf)
-        serializer = TicketMessageFileSerializer(created_files, many=True)
-        return Response(serializer.data)
+        serializer.save(session=session, sender_user=sender_user,
+                        sender_admin=sender_admin)
