@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { fetchSurveyAttachmentPreview } from "../../api/projectsApi";
+import { fetchSurveyAttachmentPreview } from "../../api";
 
 function getFileUrl(file) {
   if (!file.file) return "#";

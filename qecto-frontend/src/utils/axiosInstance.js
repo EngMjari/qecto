@@ -1,10 +1,11 @@
 // src/utils/axiosInstance.js
 import axios from "axios";
-const baseURL = "http://192.168.1.101:8000";
+
+const BASE_URL = "http://192.168.1.101:8000";
 
 const axiosInstance = axios.create({
-  baseURL,
-  withCredentials: true,
+  baseURL: BASE_URL,
+  withCredentials: false, // غیرفعال کردن کوکی‌ها برای JWT
 });
 
 // درخواست‌ها هدر Authorization را اضافه می‌کنند
@@ -25,36 +26,27 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // اگر خطای 401 و اولین بار رفرش کردن توکن است
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       const refresh = localStorage.getItem("refresh");
 
       if (refresh) {
         try {
-          const response = await axios.post(`${baseURL}/api/token/refresh/`, {
+          const response = await axios.post(`${BASE_URL}/api/token/refresh/`, {
             refresh,
           });
           const newAccessToken = response.data.access;
           localStorage.setItem("access", newAccessToken);
 
-          // هدر درخواست اصلی را به توکن جدید آپدیت کن
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-
-          // دوباره درخواست اصلی را ارسال کن
           return axiosInstance(originalRequest);
         } catch (refreshError) {
-          // اگر رفرش توکن هم خطا داشت، مثلا توکن‌ها منقضی شده‌اند
           localStorage.removeItem("access");
           localStorage.removeItem("refresh");
-
-          // اینجا می‌تونی event یا callback تعریف کنی که به Context اطلاع بده کاربر باید لاگ‌اوت شود
           window.dispatchEvent(new Event("logout"));
-
           return Promise.reject(refreshError);
         }
       } else {
-        // اگر توکن رفرش نبود، لاگ‌اوت کن
         window.dispatchEvent(new Event("logout"));
       }
     }

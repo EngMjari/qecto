@@ -1,6 +1,6 @@
 import React, { useContext } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { siteInfo, footerLinks } from "../../config/siteConfig";
+import { footerLinks } from "../../config/siteConfig";
 import { SiteConfigContext } from "Contexts/SiteConfigContext";
 const Footer = () => {
   const { siteConfig } = useContext(SiteConfigContext);

@@ -5,11 +5,11 @@ import ProjectDescription from "./ProjectDescription";
 import MapView from "./MapView";
 import TabsManager from "./TabsManager";
 import PreviewModal from "./PreviewModal";
-import { fetchRequestDetails } from "../../api/projectsApi";
+import { fetchRequestDetails } from "../../api";
 import {
   getTicketSessionsBySurveyRequest,
   getTicketSessionsByEvaluationRequest,
-} from "../../api/ticketsApi";
+} from "../../api";
 
 function RequestPage() {
   const { id } = useParams();

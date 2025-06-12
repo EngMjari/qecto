@@ -1,41 +1,26 @@
+// src/api/projectsApi.js
 import axiosInstance from "../utils/axiosInstance";
-
-// گرفتن لیست پروژه‌ها (صفحه‌بندی شده)
-export const fetchProjects = (params) => {
-  // params مثل { page: 1 } می‌تونه باشه برای صفحه‌بندی
-  return axiosInstance.get("/api/projects/", { params });
+import API_ENDPOINTS from "./apiEndpoints";
+// گرفتن لیست پروژه‌ها به همراه درخواست‌های مرتبط (براساس سطح دسترسی کاربر)
+export const fetchProjects = async () => {
+  try {
+    const response = await axiosInstance.get("/api/projects/");
+    return response.data;
+  } catch (error) {
+    console.error("خطا در دریافت پروژه‌ها:", error);
+    throw error;
+  }
 };
 
-// گرفتن جزئیات یک پروژه خاص
-export const fetchProjectDetails = (id) => {
-  return axiosInstance.get(`/api/projects/${id}/`);
-};
-
-// ارسال درخواست ساخت پروژه جدید
-export const createProjectRequest = (data) => {
-  return axiosInstance.post("/api/projects/create/", data);
-};
-
-// گرفتن آمار داشبورد پروژه‌ها
-export const fetchDashboardStats = () => {
-  return axiosInstance.get("/api/projects/dashboard/");
-};
-
-// گرفتن تمام داده‌های داشبورد (کاربر، پروژه‌ها، درخواست‌ها، تیکت‌ها و ...)
-export const fetchAllData = () => {
-  return axiosInstance.get("/api/data/");
-};
-
-export const fetchAllRequests = (params = {}) => {
-  return axiosInstance.get("/api/requests/", { params });
-};
-
-export const fetchRequestDetails = (uuid) => {
-  return axiosInstance.get(`/api/requests/${uuid}/`);
-};
-
-export const fetchSurveyAttachmentPreview = (attachmentId) => {
-  return axiosInstance.get(`/api/survey/attachments/${attachmentId}/preview/`, {
-    responseType: "blob", // چون خروجی تصویر است
-  });
+// گرفتن جزئیات یک پروژه خاص همراه با درخواست‌های مرتبط آن
+export const fetchProjectById = async (projectId) => {
+  try {
+    const response = await axiosInstance.get(
+      API_ENDPOINTS.PROJECTS.DETAIL,
+      projectId
+    );
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
 };

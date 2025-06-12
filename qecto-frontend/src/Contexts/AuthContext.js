@@ -1,10 +1,14 @@
-// Contexts/AuthContext.js:
+// src/Contexts/AuthContext.js
 import React, { createContext, useState, useEffect } from "react";
-import axiosInstance from "../utils/axiosInstance"; // دقت کن axiosInstance ایمپورت شده
 import { useNavigate } from "react-router-dom";
-import LoadingScreen from "../Pages/LoadingScreen/LoadingScreen"; // اصلاح آدرس ایمپورت
+import LoadingScreen from "../Pages/LoadingScreen/LoadingScreen";
+import { fetchUserInfo, logout as logoutApi } from "../api/authApi"; // ✅ ایمپورت تابع جدید
 
 export const AuthContext = createContext();
+const BASE_URL =
+  import.meta.env?.VITE_API_BASE_URL ||
+  process.env.REACT_APP_API_BASE_URL ||
+  "https://192.168.1.101:8000";
 
 export function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -17,12 +21,11 @@ export function AuthProvider({ children }) {
     const token = localStorage.getItem("access");
     if (token) {
       setIsAuthenticated(true);
-      fetchUserProfile();
+      loadUserProfile();
     } else {
       setLoadingProfile(false);
     }
 
-    // گوش دادن به رویداد لاگ‌اوت که از axiosInstance می‌آید
     function handleLogout() {
       logout();
     }
@@ -33,17 +36,16 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  const fetchUserProfile = async () => {
+  const loadUserProfile = async () => {
     setLoadingProfile(true);
     try {
-      const response = await axiosInstance.get("/api/user-info/");
-      const user = response.data;
+      const user = await fetchUserInfo();
       setUserProfile({
-        image: user.image
-          ? user.image.startsWith("http")
-            ? user.image
-            : `${axiosInstance.defaults.baseURL}${user.image}`
-          : `${axiosInstance.defaults.baseURL}/media/profile_images/default.png`,
+        image: user.profile_image?.startsWith("http")
+          ? user.profile_image
+          : `${BASE_URL}${
+              user.profile_image || "/media/profile_images/default.png"
+            }`,
         name: user.full_name,
       });
 
@@ -51,10 +53,8 @@ export function AuthProvider({ children }) {
       else if (user.is_staff) setUserRole("admin");
       else setUserRole("user");
     } catch (error) {
-      console.log("خطا در دریافت اطلاعات کاربر:", error);
-      if (error.response?.status === 401) {
-        logout();
-      }
+      console.error("خطا در دریافت اطلاعات کاربر:", error);
+      if (error.response?.status === 401) logout();
     } finally {
       setLoadingProfile(false);
     }
@@ -64,12 +64,11 @@ export function AuthProvider({ children }) {
     localStorage.setItem("access", access);
     localStorage.setItem("refresh", refresh);
     setIsAuthenticated(true);
-    await fetchUserProfile();
+    await loadUserProfile();
   };
 
   const logout = () => {
-    localStorage.removeItem("access");
-    localStorage.removeItem("refresh");
+    logoutApi();
     setIsAuthenticated(false);
     setUserProfile(null);
     setUserRole(null);
@@ -77,7 +76,6 @@ export function AuthProvider({ children }) {
     navigate("/");
   };
 
-  // اگر در حال لودینگ هستیم لودینگ نمایش بده، وگرنه children رو رندر کن
   if (loadingProfile) {
     return <LoadingScreen />;
   }

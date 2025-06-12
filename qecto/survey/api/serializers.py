@@ -4,6 +4,8 @@ from survey.models import SurveyRequest
 from projects.api.serializers import ProjectNestedSerializer
 from core.serializers import UserSerializer
 from projects.models import Project
+from attachments.serializers import AttachmentSerializer
+from attachments.models import Attachment
 
 
 class SurveyRequestSerializer(serializers.ModelSerializer):
@@ -11,67 +13,92 @@ class SurveyRequestSerializer(serializers.ModelSerializer):
     assigned_admin = UserSerializer(read_only=True)
     attachments_count = serializers.IntegerField(
         source='attachments.count', read_only=True)
+    attachments = AttachmentSerializer(many=True, read_only=True)
 
     class Meta:
         model = SurveyRequest
         fields = [
-            'id',
-            'project',
-            'assigned_admin',
-            'description',
-            'area',
-            'main_parcel_number',
-            'sub_parcel_number',
-            'property_type',
-            'location_lat',
-            'location_lng',
-            'created_at',
-            'updated_at',
-            'status',
-            'attachments_count',
+            'id', 'project', 'assigned_admin', 'description', 'area',
+            'building_area', 'main_parcel_number', 'sub_parcel_number',
+            'property_type', 'location_lat', 'location_lng',
+            'created_at', 'updated_at', 'status', 'attachments_count',
+            'attachments'
         ]
 
 
 class SurveyRequestCreateSerializer(serializers.ModelSerializer):
     project = serializers.PrimaryKeyRelatedField(
-        queryset=Project.objects.all())
+        queryset=Project.objects.all(), required=False, allow_null=True)
+    project_name = serializers.CharField(
+        max_length=255, required=False, allow_blank=True)
+    building_area = serializers.FloatField(required=False, allow_null=True)
+    main_parcel_number = serializers.IntegerField(
+        required=False, allow_null=True)
+    sub_parcel_number = serializers.IntegerField(
+        required=False, allow_null=True)
+    attachments = serializers.ListField(
+        child=serializers.FileField(), required=False, write_only=True)
+    titles = serializers.ListField(
+        child=serializers.CharField(max_length=255, allow_blank=True),
+        required=False, write_only=True)
+    location_lat = serializers.FloatField(required=True)
+    location_lng = serializers.FloatField(required=True)
 
     class Meta:
         model = SurveyRequest
         fields = [
-            'project',
-            'description',
-            'area',
-            'main_parcel_number',
-            'sub_parcel_number',
-            'property_type',
-            'location_lat',
-            'location_lng',
-            'status',
+            'project', 'project_name', 'description', 'area', 'building_area',
+            'main_parcel_number', 'sub_parcel_number', 'property_type',
+            'location_lat', 'location_lng', 'status', 'attachments', 'titles'
         ]
         read_only_fields = ['status']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # برای اینکه queryset پروژه فقط پروژه‌هایی باشه که هنوز درخواست نقشه برداری ندارند
         request = self.context.get('request')
         user = request.user if request else None
-        qs = None
+        # به‌روزرسانی با related_name
+        qs = Project.objects.filter(survey_request__isnull=True)
         if user and not user.is_staff:
-            # اگر لازم بود می‌تونی اینجا پروژه‌ها رو فیلتر کنی مثلاً فقط پروژه‌های متعلق به خود کاربر
-            qs = user.projects.filter(survey__isnull=True)
-        else:
-            from projects.models import Project
-            qs = Project.objects.filter(survey__isnull=True)
+            qs = qs.filter(owner=user)
         self.fields['project'].queryset = qs
 
-    def validate_project(self, value):
-        if SurveyRequest.objects.filter(project=value).exists():
+    def validate(self, data):
+        project = data.get('project')
+        project_name = data.get('project_name')
+        if not project and not project_name:
+            raise serializers.ValidationError(
+                "project_name is required when no project is selected.")
+        if project and project_name:
+            raise serializers.ValidationError(
+                "Cannot provide both project and project_name.")
+        if project and SurveyRequest.objects.filter(project=project).exists():
             raise serializers.ValidationError(
                 "این پروژه قبلاً درخواست نقشه‌برداری دارد.")
-        return value
+        return data
 
     def create(self, validated_data):
-        # status رو همیشه روی pending بذار
+        request = self.context.get('request')
+        user = request.user
+
+        project = validated_data.pop('project', None)
+        project_name = validated_data.pop('project_name', None)
+        attachments = validated_data.pop('attachments', [])
+        titles = validated_data.pop('titles', [])
+
+        if project_name and not project:
+            project = Project.objects.create(
+                owner=user, title=project_name, created_by=user)
+        elif not project:
+            raise serializers.ValidationError(
+                "A project must be provided or created with project_name.")
+
         validated_data['status'] = 'pending'
-        return super().create(validated_data)
+        survey_request = SurveyRequest.objects.create(
+            project=project, **validated_data)
+
+        for file, title in zip(attachments, titles or []):
+            Attachment.objects.create(
+                survey_request=survey_request, file=file, title=title or '')
+
+        return survey_request

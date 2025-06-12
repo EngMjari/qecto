@@ -2,7 +2,9 @@ import React, { useState } from "react";
 import LocationMarker from "../../Components/Request/LocationMarker";
 import SurveyRequestForm from "../../Components/Request/SurveyRequestForm";
 import ExpertRequestForm from "../../Components/Request/ExpertRequestForm";
-import DeedRegistrationForm from "../../Components/Request/DeedRegistrationForm";
+import ExecutionRequestForm from "Components/Request/ExecutionRequestForm";
+import RegistrationRequestForm from "Components/Request/RegistrationRequestForm";
+import SupervisionRequestForm from "Components/Request/SupervisionRequestForm";
 import { useAuth } from "../../hooks/useAuth";
 
 const CreateRequest = () => {
@@ -46,7 +48,9 @@ const CreateRequest = () => {
             >
               <option value="survey">درخواست نقشه‌برداری</option>
               <option value="expert">درخواست کارشناسی</option>
-              <option value="deed">درخواست ثبت نام سند</option>
+              <option value="registration">درخواست ثبت نام سند</option>
+              <option value="execute">درخواست مجری</option>
+              <option value="supervision">درخواست ناظر</option>
             </select>
           </div>
 
@@ -56,8 +60,14 @@ const CreateRequest = () => {
           {requestType === "expert" && (
             <ExpertRequestForm location={location} user={user} />
           )}
-          {requestType === "deed" && (
-            <DeedRegistrationForm location={location} user={user} />
+          {requestType === "registration" && (
+            <RegistrationRequestForm location={location} user={user} />
+          )}
+          {requestType === "execute" && (
+            <ExecutionRequestForm location={location} user={user} />
+          )}
+          {requestType === "supervision" && (
+            <SupervisionRequestForm location={location} user={user} />
           )}
         </div>
         {/* نقشه سمت چپ */}

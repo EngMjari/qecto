@@ -1,68 +1,43 @@
 # expert/api/views.py
-from rest_framework import viewsets, permissions, status
-from rest_framework.response import Response
+from rest_framework import viewsets, permissions
 from rest_framework.parsers import MultiPartParser, FormParser
-from django.shortcuts import get_object_or_404
-from projects.models import Project
+from rest_framework.exceptions import ValidationError
 from expert.models import ExpertEvaluationRequest
-from expert.api.serializers import ExpertEvaluationRequestSerializer
+from expert.api.serializers import ExpertEvaluationRequestSerializer, ExpertEvaluationRequestCreateSerializer
 
 
-class ExpertEvaluationRequestViewSet(viewsets.ViewSet):
+class ExpertEvaluationRequestViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
+    queryset = ExpertEvaluationRequest.objects.all()
 
-    def list(self, request):
-        user = request.user
-        queryset = ExpertEvaluationRequest.objects.filter(project__owner=user)
-        serializer = ExpertEvaluationRequestSerializer(queryset, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return ExpertEvaluationRequestCreateSerializer
+        return ExpertEvaluationRequestSerializer
 
-    def retrieve(self, request, pk=None):
-        user = request.user
-        expert_request = get_object_or_404(
-            ExpertEvaluationRequest, pk=pk, project__owner=user)
-        serializer = ExpertEvaluationRequestSerializer(expert_request)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_superuser:
+            return ExpertEvaluationRequest.objects.all()
+        elif user.is_staff:
+            return ExpertEvaluationRequest.objects.filter(assigned_admin=user)
+        return ExpertEvaluationRequest.objects.filter(project__owner=user)
 
-    def create(self, request):
-        user = request.user
-        data = request.data
+    def perform_create(self, serializer):
+        # اعتبارسنجی مختصات یا پلاک
+        validated_data = serializer.validated_data
+        location_lat = validated_data.get('location_lat')
+        location_lng = validated_data.get('location_lng')
+        main_parcel_number = validated_data.get('main_parcel_number')
+        sub_parcel_number = validated_data.get('sub_parcel_number')
 
-        project_id = data.get("project")
-        project_name = data.get("project_name")
+        has_location = location_lat is not None and location_lng is not None
+        has_parcel = main_parcel_number is not None and sub_parcel_number is not None
 
-        location = data.get("location")
-        if not location:
-            return Response({"detail": "location is required."}, status=status.HTTP_400_BAD_REQUEST)
+        if not (has_location or has_parcel):
+            raise ValidationError(
+                "باید حداقل یکی از مختصات جغرافیایی یا پلاک‌های ثبتی (اصلی و فرعی) ارائه شود."
+            )
 
-        description = data.get("description", "")
-        status_field = data.get("status", "pending")
-
-        # بررسی پروژه انتخاب شده یا ایجاد پروژه جدید
-        if project_id:
-            try:
-                project = Project.objects.get(id=project_id, owner=user)
-            except Project.DoesNotExist:
-                return Response({"detail": "Project not found or not owned by user."}, status=status.HTTP_404_NOT_FOUND)
-        else:
-            if not project_name:
-                return Response({"detail": "project_name is required when no project selected."}, status=status.HTTP_400_BAD_REQUEST)
-            project = Project.objects.create(name=project_name, owner=user)
-
-        # ساخت درخواست ارزیابی تخصصی
-        expert_request = ExpertEvaluationRequest.objects.create(
-            project=project,
-            location=location,
-            description=description,
-            status=status_field,
-            assigned_admin=None,
-        )
-
-        # ذخیره فایل‌ها
-        files = request.FILES.getlist('files')
-        for f in files:
-            expert_request.files.create(file=f)
-
-        serializer = ExpertEvaluationRequestSerializer(expert_request)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        serializer.save()

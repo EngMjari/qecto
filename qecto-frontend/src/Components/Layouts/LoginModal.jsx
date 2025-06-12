@@ -1,12 +1,11 @@
 import React, { useState, useContext, useEffect } from "react";
 import { AuthContext } from "../../Contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import logo from "../../assets/images/logo.png";
 import axiosInstance from "../../utils/axiosInstance";
 import { Dialog, Transition } from "@headlessui/react";
 import { X } from "lucide-react";
 import { SiteConfigContext } from "Contexts/SiteConfigContext";
-
+import API_ENDPOINTS from "api/apiEndpoints";
 export default function LoginModal({ isOpen, onClose }) {
   const { siteConfig } = useContext(SiteConfigContext);
   const [phone, setPhone] = useState("");
@@ -49,7 +48,7 @@ export default function LoginModal({ isOpen, onClose }) {
 
   const sendOTP = async () => {
     try {
-      await axiosInstance.post(`/api/send-otp/`, { phone });
+      await axiosInstance.post(API_ENDPOINTS.AUTH.OTP, { phone });
       setStep(2);
       setMessage(`کد تأیید به ${phone} ارسال شد`);
       setTimer(120);
@@ -60,7 +59,7 @@ export default function LoginModal({ isOpen, onClose }) {
 
   const verifyOTP = async () => {
     try {
-      const response = await axiosInstance.post(`/api/verify-otp/`, {
+      const response = await axiosInstance.post(API_ENDPOINTS.AUTH.VERIFY, {
         phone,
         otp,
       });

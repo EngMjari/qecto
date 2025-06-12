@@ -1,67 +1,50 @@
-// src/api/ticketsApi.js
 import axiosInstance from "../utils/axiosInstance";
 
-// لیست تمام سشن‌هایی که کاربر مجاز به دیدن آنهاست
-export const getTicketSessions = () => {
-  return axiosInstance.get("/api/tickets/sessions/");
+const BASE_URL = "api/tickets/";
+
+// گرفتن لیست تیکت‌ها (برای کاربر عادی فقط تیکت‌های خودش، برای ادمین همه)
+export const fetchTicketSessions = async () => {
+  try {
+    const response = await axiosInstance.get(BASE_URL);
+    return response.data;
+  } catch (error) {
+    console.error("خطا در دریافت لیست تیکت‌ها:", error);
+    throw error;
+  }
 };
 
-// ایجاد یک سشن جدید
-export const createTicketSession = (data) => {
-  return axiosInstance.post("/api/tickets/sessions/", data);
+// گرفتن جزئیات یک تیکت خاص به همراه پیام‌ها
+export const fetchTicketDetails = async (id) => {
+  try {
+    const response = await axiosInstance.get(`${BASE_URL}${id}/`);
+    return response.data;
+  } catch (error) {
+    console.error("خطا در دریافت جزئیات تیکت:", error);
+    throw error;
+  }
 };
 
-// دریافت جزئیات یک سشن خاص
-export const getTicketSessionById = (id) => {
-  return axiosInstance.get(`/api/tickets/sessions/${id}/`);
+// ایجاد یک تیکت جدید
+export const createTicket = async (ticketData) => {
+  try {
+    const response = await axiosInstance.post(BASE_URL, ticketData);
+    return response.data;
+  } catch (error) {
+    console.error("خطا در ایجاد تیکت:", error);
+    throw error;
+  }
 };
 
-// آپدیت کردن اطلاعات یک سشن (فقط ادمین‌ها یا سوپر یوزر)
-export const updateTicketSession = (id, data) => {
-  return axiosInstance.patch(`/api/tickets/sessions/${id}/`, data);
-};
-
-// گرفتن پیام‌های مربوط به یک سشن
-export const getTicketMessages = (sessionId) => {
-  return axiosInstance.get(`/api/tickets/sessions/${sessionId}/messages/`);
-};
-
-// ارسال پیام جدید در یک سشن
-export const createTicketMessage = (sessionId, data) => {
-  return axiosInstance.post(
-    `/api/tickets/sessions/${sessionId}/messages/`,
-    data
-  );
-};
-
-// آپلود فایل برای یک پیام
-export const uploadMessageFiles = (messageId, files) => {
-  const formData = new FormData();
-  files.forEach((file) => {
-    formData.append("files", file);
-  });
-
-  return axiosInstance.post(
-    `/api/tickets/messages/${messageId}/upload/`,
-    formData,
-    {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    }
-  );
-};
-
-// گرفتن سشن‌های مربوط به یک survey_request
-export const getTicketSessionsBySurveyRequest = (surveyRequestId) => {
-  return axiosInstance.get(
-    `/api/tickets/sessions/?survey_request=${surveyRequestId}`
-  );
-};
-
-// گرفتن سشن‌های مربوط به یک evaluation_request
-export const getTicketSessionsByEvaluationRequest = (evaluationRequestId) => {
-  return axiosInstance.get(
-    `/api/tickets/sessions/?evaluation_request=${evaluationRequestId}`
-  );
+// ارسال پیام جدید به یک تیکت (با شناسه session)
+export const sendTicketMessage = async (sessionId, messageData) => {
+  try {
+    const response = await axiosInstance.post(
+      `${BASE_URL}${sessionId}/messages/`,
+      messageData
+    );
+    return response.data;
+  } catch (error) {
+    console.error("خطا در ارسال پیام:", error);
+    throw error;
+  }
 };

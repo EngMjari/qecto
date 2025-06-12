@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchAllData } from "../../api/projectsApi";
-import { createTicketSession, createTicketMessage } from "../../api/ticketsApi";
+import { fetchAllData } from "../../api";
+import { createTicketSession, createTicketMessage } from "../../api";
 
 function NewTicket() {
   const [title, setTitle] = useState("");

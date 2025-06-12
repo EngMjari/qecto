@@ -5,7 +5,7 @@ import reportWebVitals from "./reportWebVitals";
 import App from "./App";
 import "./Styles/global.css";
 import "./Styles/custom.scss";
-import { fetchSiteConfig } from "./api/siteapi";
+import { fetchSiteConfig } from "./api";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 

@@ -13,7 +13,7 @@ import { IoIosCloseCircleOutline, IoMdSettings } from "react-icons/io";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import WelcomeCard from "./WelcomeCard";
-import { fetchAllData } from "../../api/projectsApi";
+import { fetchProjects } from "../../api";
 
 // Utility functions for status
 const getStatusColor = (status) => {
@@ -60,8 +60,9 @@ export default function Dashboard() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchAllData()
+    fetchProjects()
       .then((response) => {
+        console.log("fetchProjects : ", response.data);
         setData(response.data);
         setLoading(false);
       })
@@ -79,14 +80,14 @@ export default function Dashboard() {
     <div className="font-vazir page-content text-gray-800 bg-gray-50 p-5">
       <WelcomeCard />
       <ProjectInfoCard
-        requests={data.requests.length}
-        requestsList={data.requests}
-        projects={data.projects}
-        tickets={data.latest_messages || []}
+        requests={data?.requests.length}
+        requestsList={data?.requests}
+        projects={data?.projects}
+        tickets={data?.latest_messages || []}
       />
       <SectionGrid
-        recentRequests={data.latest_requests || []}
-        recentTickets={data.latest_messages || []}
+        recentRequests={data?.latest_requests || []}
+        recentTickets={data?.latest_messages || []}
       />
     </div>
   );

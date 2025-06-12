@@ -1,13 +1,18 @@
 import React, { useEffect, useState } from "react";
 import FileUploadTable from "../FileUpload/FileUploadTable";
-import { Form, Button, Alert } from "react-bootstrap";
-import axiosInstance from "../../utils/axiosInstance";
+import { Form, Button, Alert, Spinner } from "react-bootstrap";
+import { createSurveyRequest, fetchProjects } from "../../api";
 
-const propertyTypes = () => [
+const propertyTypes = [
   { value: "", label: "انتخاب کنید..." },
   { value: "field", label: "زمین" },
-  { value: "Building", label: "ساختمان" },
+  { value: "building", label: "ساختمان" },
   { value: "other", label: "سایر" },
+];
+
+const documentStatusOptions = [
+  { value: "no_document", label: "بدون سند" },
+  { value: "has_document", label: "سند دار" },
 ];
 
 function toRad(deg) {
@@ -26,25 +31,29 @@ function haversineDistance(lat1, lng1, lat2, lng2) {
 }
 
 function estimateBaseCost(area) {
-  if (area <= 250) {
-    return 5 / 3 + (area / 250) * (2 / 3);
-  } else if (area <= 1000) {
-    return 7 / 3 + ((area - 250) / 750) * (5 / 3);
-  } else {
-    return 4 + ((area - 1000) / 100) * 0.083;
-  }
+  if (area <= 250) return 5 / 3 + (area / 250) * (2 / 3);
+  if (area <= 1000) return 7 / 3 + ((area - 250) / 750) * (5 / 3);
+  return 4 + ((area - 1000) / 100) * 0.083;
 }
 
 function SurveyRequestForm({ onSubmit, user, location }) {
   const [formData, setFormData] = useState({
+    project: "",
     title: "",
     propertyType: "",
     area: "",
+    buildingArea: "",
     description: "",
     location: null,
     attachments: [],
+    documentStatus: "no_document",
+    mainParcelNumber: "",
+    subParcelNumber: "",
   });
 
+  const [projects, setProjects] = useState([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+  const [loadingSubmit, setLoadingSubmit] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -57,92 +66,140 @@ function SurveyRequestForm({ onSubmit, user, location }) {
     }
   }, [location]);
 
+  useEffect(() => {
+    if (!user) return;
+    setLoadingProjects(true);
+    fetchProjects()
+      .then((data) => {
+        setProjects(data);
+        setLoadingProjects(false);
+        // اگر پروژه‌ها وجود داره، اولین پروژه رو به‌صورت پیش‌فرض انتخاب کن
+        if (data.length > 0) {
+          setFormData((prev) => ({ ...prev, project: data[0].id }));
+        }
+      })
+      .catch(() => {
+        setProjects([]);
+        setLoadingProjects(false);
+      });
+  }, [user]);
+
   const handleFileChange = (update) => {
-    setFormData((prev) => {
-      const newAttachments =
-        typeof update === "function" ? update(prev.attachments) : update;
-      return {
-        ...prev,
-        attachments: newAttachments,
-      };
-    });
+    setFormData((prev) => ({
+      ...prev,
+      attachments:
+        typeof update === "function"
+          ? Array.isArray(update(prev.attachments))
+            ? update(prev.attachments)
+            : []
+          : Array.isArray(update)
+          ? update
+          : [],
+    }));
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    if (name === "project" && value === "new") {
+      setFormData((prev) => ({
+        ...prev,
+        project: value,
+        title: "",
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoadingSubmit(true);
 
+    // اعتبارسنجی‌ها
     if (!formData.location) {
-      setError("لطفاً موقعیت ملک را از روی نقشه انتخاب کنید.");
+      setError("لطفاً موقعیت ملک را انتخاب کنید.");
+      setLoadingSubmit(false);
       return;
     }
     if (!formData.propertyType) {
       setError("لطفاً نوع ملک را انتخاب کنید.");
+      setLoadingSubmit(false);
       return;
     }
     if (!formData.area || Number(formData.area) <= 0) {
-      setError("لطفاً مساحت معتبر وارد کنید.");
+      setError("لطفاً مساحت زمین معتبر وارد کنید.");
+      setLoadingSubmit(false);
       return;
     }
-    if (!formData.title.trim()) {
-      setError("لطفاً عنوان پروژه را وارد کنید.");
+    if (!formData.project && !formData.title.trim()) {
+      setError("لطفاً یک پروژه انتخاب کنید یا عنوان پروژه جدید وارد کنید.");
+      setLoadingSubmit(false);
+      return;
+    }
+    if (formData.project === "new" && !formData.title.trim()) {
+      setError("لطفاً عنوان پروژه جدید را وارد کنید.");
+      setLoadingSubmit(false);
+      return;
+    }
+    if (
+      formData.documentStatus === "has_document" &&
+      (!formData.mainParcelNumber.trim() || !formData.subParcelNumber.trim())
+    ) {
+      setError("لطفاً پلاک ثبتی اصلی و فرعی را وارد کنید.");
+      setLoadingSubmit(false);
       return;
     }
 
     setError(null);
 
+    const payload = {
+      property_type: formData.propertyType,
+      area: Number(formData.area),
+      description: formData.description,
+      location: formData.location,
+      attachments: formData.attachments,
+    };
+
+    if (formData.buildingArea) {
+      payload.building_area = Number(formData.buildingArea);
+    }
+
+    if (formData.project && formData.project !== "new") {
+      payload.project = formData.project;
+    } else {
+      payload.project_name = formData.title.trim();
+    }
+
+    if (formData.documentStatus === "has_document") {
+      payload.main_parcel_number = formData.mainParcelNumber.trim();
+      payload.sub_parcel_number = formData.subParcelNumber.trim();
+    }
+
     try {
-      const formPayload = new FormData();
-      formPayload.append("title", formData.title);
-      formPayload.append("propertyType", formData.propertyType);
-      formPayload.append("area", formData.area);
-      formPayload.append("description", formData.description || "");
-      formPayload.append("location", JSON.stringify(formData.location));
-      if (user && user.id) {
-        formPayload.append("user", user.id);
-      }
-
-      if (Array.isArray(formData.attachments)) {
-        formData.attachments.forEach(({ file, title }) => {
-          formPayload.append("attachments", file);
-          formPayload.append("titles", title);
-        });
-      }
-
-      const response = await axiosInstance.post(
-        `/api/survey/request/`,
-        formPayload
-      );
-      const result = response.data;
-
+      const result = await createSurveyRequest(payload);
       alert("درخواست با موفقیت ارسال شد!");
-
       setFormData({
+        project: projects.length > 0 ? projects[0].id : "",
         title: "",
         propertyType: "",
         area: "",
+        buildingArea: "",
         description: "",
         location: null,
         attachments: [],
+        documentStatus: "no_document",
+        mainParcelNumber: "",
+        subParcelNumber: "",
       });
-
       if (onSubmit) onSubmit(result);
-    } catch (error) {
-      console.error("⚠️ خطا در ارسال:", error);
-
-      // اگر خطای سمت سرور باشه و جزئیات داشته باشه
+    } catch (err) {
       const detail =
-        error.response?.data?.detail ||
-        error.response?.data?.error ||
-        error.message;
+        err.response?.data?.detail ||
+        err.response?.data?.non_field_errors?.[0] ||
+        err.message;
       setError("خطا در ارسال درخواست: " + detail);
+    } finally {
+      setLoadingSubmit(false);
     }
   };
 
@@ -168,17 +225,45 @@ function SurveyRequestForm({ onSubmit, user, location }) {
     >
       <h5 className="mb-3 text-primary">درخواست نقشه‌برداری</h5>
 
-      <Form.Group className="mb-3">
-        <Form.Label>عنوان پروژه</Form.Label>
-        <Form.Control
-          type="text"
-          name="title"
-          value={formData.title}
-          onChange={handleInputChange}
-          placeholder="زمین در عباس آباد کوچه ..."
-          required
-        />
-      </Form.Group>
+      {projects.length > 0 && (
+        <Form.Group className="mb-3">
+          <Form.Label>انتخاب پروژه</Form.Label>
+          {loadingProjects ? (
+            <div>
+              <Spinner animation="border" size="sm" /> در حال بارگذاری
+              پروژه‌ها...
+            </div>
+          ) : (
+            <Form.Select
+              name="project"
+              value={formData.project}
+              onChange={handleInputChange}
+              required
+            >
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title || p.name}
+                </option>
+              ))}
+              <option value="new">ایجاد پروژه جدید</option>
+            </Form.Select>
+          )}
+        </Form.Group>
+      )}
+
+      {(projects.length === 0 || formData.project === "new") && (
+        <Form.Group className="mb-3">
+          <Form.Label>عنوان پروژه جدید</Form.Label>
+          <Form.Control
+            type="text"
+            name="title"
+            value={formData.title}
+            onChange={handleInputChange}
+            placeholder="نام پروژه جدید را وارد کنید"
+            required
+          />
+        </Form.Group>
+      )}
 
       <Form.Group className="mb-3">
         <Form.Label>نوع ملک</Form.Label>
@@ -188,7 +273,7 @@ function SurveyRequestForm({ onSubmit, user, location }) {
           onChange={handleInputChange}
           required
         >
-          {propertyTypes().map((type) => (
+          {propertyTypes.map((type) => (
             <option key={type.value} value={type.value}>
               {type.label}
             </option>
@@ -197,7 +282,7 @@ function SurveyRequestForm({ onSubmit, user, location }) {
       </Form.Group>
 
       <Form.Group className="mb-3">
-        <Form.Label>مساحت (متر مربع)</Form.Label>
+        <Form.Label>مساحت زمین (متر مربع، حدودی)</Form.Label>
         <Form.Control
           type="number"
           name="area"
@@ -208,6 +293,62 @@ function SurveyRequestForm({ onSubmit, user, location }) {
           min={1}
         />
       </Form.Group>
+
+      {formData.propertyType === "building" && (
+        <Form.Group className="mb-3">
+          <Form.Label>مساحت بنا (متر مربع، اختیاری)</Form.Label>
+          <Form.Control
+            type="number"
+            name="buildingArea"
+            value={formData.buildingArea}
+            onChange={handleInputChange}
+            placeholder="مثلاً 500"
+            min={0}
+          />
+        </Form.Group>
+      )}
+
+      <Form.Group className="mb-3">
+        <Form.Label>وضعیت سند</Form.Label>
+        <Form.Select
+          name="documentStatus"
+          value={formData.documentStatus}
+          onChange={handleInputChange}
+        >
+          {documentStatusOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </Form.Select>
+      </Form.Group>
+
+      {formData.documentStatus === "has_document" && (
+        <>
+          <Form.Group className="mb-3">
+            <Form.Label>پلاک ثبتی اصلی</Form.Label>
+            <Form.Control
+              type="text"
+              name="mainParcelNumber"
+              value={formData.mainParcelNumber}
+              onChange={handleInputChange}
+              placeholder="پلاک ثبتی اصلی را وارد کنید"
+              required
+            />
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label>پلاک ثبتی فرعی</Form.Label>
+            <Form.Control
+              type="text"
+              name="subParcelNumber"
+              value={formData.subParcelNumber}
+              onChange={handleInputChange}
+              placeholder="پلاک ثبتی فرعی را وارد کنید"
+              required
+            />
+          </Form.Group>
+        </>
+      )}
 
       <Form.Group className="mb-3">
         <Form.Label>توضیحات</Form.Label>
@@ -222,11 +363,11 @@ function SurveyRequestForm({ onSubmit, user, location }) {
       </Form.Group>
 
       <Form.Group className="mb-3">
-        <Form.Label>موقعیت ملک (عرض و طول جغرافیایی)</Form.Label>
+        <Form.Label>موقعیت ملک</Form.Label>
         {formData.location ? (
           <div className="p-2 border rounded bg-light text-success">
-            نقطه به مختصات Φ: {formData.location.lat.toFixed(6)}، λ:{" "}
-            {formData.location.lng.toFixed(6)} انتخاب شده است.
+            نقطه انتخاب شده: Φ: {formData.location.lat.toFixed(6)}، λ:{" "}
+            {formData.location.lng.toFixed(6)}
           </div>
         ) : (
           <div className="p-2 border rounded bg-light text-danger">
@@ -240,22 +381,32 @@ function SurveyRequestForm({ onSubmit, user, location }) {
           <strong>برآورد هزینه:</strong> حدوداً {totalCost.toFixed(2)} میلیون
           تومان
           <br />
-          <strong>فاصله از دفتر:</strong> {distanceKm.toFixed(2)} کیلومتر
+          (مسافت تا دفتر: {distanceKm?.toFixed(2)} کیلومتر)
         </div>
       )}
 
       <Form.Group className="mb-3">
-        <Form.Label>پیوست‌ها</Form.Label>
+        <Form.Label>پیوست‌ها (اختیاری)</Form.Label>
         <FileUploadTable
-          attachments={formData.attachments}
-          onFileChange={handleFileChange}
+          files={formData.attachments}
+          onChange={handleFileChange}
         />
       </Form.Group>
 
       {error && <Alert variant="danger">{error}</Alert>}
 
-      <Button type="submit" className="btn btn-primary w-100">
-        ارسال درخواست
+      <Button
+        variant="primary"
+        type="submit"
+        disabled={loadingProjects || loadingSubmit}
+      >
+        {loadingSubmit ? (
+          <>
+            <Spinner animation="border" size="sm" /> در حال ارسال...
+          </>
+        ) : (
+          "ارسال درخواست"
+        )}
       </Button>
     </Form>
   );

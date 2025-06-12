@@ -1,11 +1,8 @@
+#  core/urls.py :
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from .views import SendOTPView, VerifyOTPView, AdminUserViewSet, UserInfoView
+from .views import SendOTPView, VerifyOTPView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-
-# روتری که فقط viewset های ساده core رو ثبت می‌کند
-router = DefaultRouter()
-router.register(r'admin-users', AdminUserViewSet, basename='admin-user')
+from .views import UserInfoAPIView
 
 urlpatterns = [
     # Auth و OTP
@@ -13,12 +10,6 @@ urlpatterns = [
     path('verify-otp/', VerifyOTPView.as_view(), name='verify-otp'),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-
-    # کاربر لاگین شده
-    path('user-info/', UserInfoView.as_view(), name='user-info'),
-
-    # viewset های core (admin-users)
-    path('', include(router.urls)),
 
     # مسیرهای اپ‌های جداگانه
     path('projects/', include('projects.api.urls')),
@@ -31,10 +22,9 @@ urlpatterns = [
     # تیکت ها
     path('tickets/', include('tickets.urls')),
     # تنظیمات سایت
-    path('site/', include('siteconfig.urls')),
+    path('site/', include('siteconfig.api.urls')),
+    # مشخصات User :
+    path("user-info/", UserInfoAPIView.as_view(), name="user-info"),
 
-    # مسیرهای خاص
-    # path('data/', UserDashboardAPIView.as_view(), name='user-dashboard'),
-    # path('requests/<uuid:pk>/', RequestDetailAPIView.as_view(), name='request-detail'),
-    # path('requests/', AllRequestsView.as_view(), name='all-requests'),
+
 ]

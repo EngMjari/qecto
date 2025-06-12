@@ -1,17 +1,12 @@
+from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import get_user_model
+from django.utils import timezone
 import random
 from .models import OTP
-from django.contrib.auth import get_user_model
-from rest_framework_simplejwt.tokens import RefreshToken
-from django.utils import timezone
-from rest_framework.permissions import IsAuthenticated
-from .permissions import IsSuperAdmin
-from .serializers import AdminUserSerializer
-from rest_framework.viewsets import ModelViewSet
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
 
 # یه دیکشنری ساده برای ذخیره OTP موقتی (فقط برای تست)
 User = get_user_model()
@@ -42,6 +37,7 @@ class SendOTPView(APIView):
 
 class VerifyOTPView(APIView):
     permission_classes = [AllowAny]
+
     def post(self, request):
         phone = request.data.get("phone")
         code = request.data.get("otp")
@@ -69,30 +65,27 @@ class VerifyOTPView(APIView):
         })
 
 
-class AdminUserViewSet(ModelViewSet):
-    serializer_class = AdminUserSerializer
-    permission_classes = [IsAuthenticated, IsSuperAdmin]
-
-    def get_queryset(self):
-        return User.objects.filter(is_staff=True, is_superuser=False)
-
-
-class UserInfoView(APIView):
+class UserInfoAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user
-        image_url = None
-        try:
-            if user.profile_image:
-                image_url = user.profile_image.url
-        except Exception:
-            image_url = None
+        # ساختن URL کامل تصویر پروفایل
+        if user.profile_image:
+            image_url = request.build_absolute_uri(user.profile_image.url)
+        else:
+            # تصویر پیش‌فرض اگر نبود
+            image_url = request.build_absolute_uri(
+                '/media/profile_images/default.png')
 
-        return Response({
-            "full_name": user.full_name if hasattr(user, 'full_name') else user.get_full_name(),
-            "is_superuser": user.is_superuser,
+        data = {
+            "id": user.id,
+            "phone": user.phone,
+            "national_id": user.national_id,
+            "full_name": user.full_name,
+            "email": user.email,
             "is_staff": user.is_staff,
-            "phone": getattr(user, "phone", None),
+            "is_superuser": user.is_superuser,
             "image": image_url,
-        })
+        }
+        return Response(data)

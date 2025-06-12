@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { fetchAllRequests } from "api/projectsApi";
+import { fetchAllRequests } from "../../api";
 import { FaSearch, FaFilter, FaTimes } from "react-icons/fa";
 import { useLocation, useNavigate } from "react-router-dom";
 const FiChevronsLeft = () => (

@@ -1,6 +1,6 @@
 // Contexts/SiteConfigContext.js :
 import React, { createContext, useEffect, useState, useCallback } from "react";
-import { fetchSiteConfig } from "../api/siteapi";
+import { fetchSiteConfig } from "../api";
 import defaultLogo from "../assets/images/logo.png"; // لوگوی پیش‌فرض
 
 export const SiteConfigContext = createContext();
@@ -16,9 +16,9 @@ export const SiteConfigProvider = ({ children }) => {
     setError(null);
     fetchSiteConfig()
       .then((res) => {
-        if (res.data) {
-          setSiteConfig(res.data);
-          console.log("Site config loaded:", res.data);
+        if (res) {
+          setSiteConfig(res);
+          console.log("Site config loaded:", res);
           setError(null);
         } else {
           setSiteConfig(null);

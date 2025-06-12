@@ -24,7 +24,10 @@ class SurveyRequest(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.OneToOneField(
-        Project, on_delete=models.CASCADE, related_name='survey')
+        Project,
+        on_delete=models.CASCADE,
+        related_name='survey_request'
+    )
     assigned_admin = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True, blank=True,

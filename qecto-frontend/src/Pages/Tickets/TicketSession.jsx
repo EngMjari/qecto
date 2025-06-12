@@ -5,10 +5,9 @@ import {
   createTicketMessage,
   getTicketSessionById,
   uploadMessageFiles,
-} from "../../api/ticketsApi";
+} from "../../api";
 import { ImAttachment } from "react-icons/im";
 import "./TicketSession.css";
-import noPreviewImage from "./../../assets/images/NoPreview.png";
 import { CiFileOn, CiCirclePlus } from "react-icons/ci";
 
 const isImageFile = (fileName) => {

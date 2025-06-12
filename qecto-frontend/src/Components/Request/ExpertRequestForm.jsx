@@ -1,25 +1,32 @@
 import React, { useEffect, useState } from "react";
 import FileUploadTable from "../FileUpload/FileUploadTable";
-import { Form, Button, Alert, Row, Col } from "react-bootstrap";
-import axiosInstance from "../../utils/axiosInstance";
+import { Form, Button, Alert, Spinner } from "react-bootstrap";
+import { createExpertRequest, fetchProjects } from "../../api";
 
-const propertyTypes = () => [
+const propertyTypes = [
+  { value: "", label: "انتخاب کنید..." },
   { value: "field", label: "زمین" },
-  { value: "Building", label: "ساختمان" },
+  { value: "building", label: "ساختمان" },
   { value: "other", label: "سایر" },
 ];
 
-function ExpertRequestForm({ onSubmit, user, location }) {
+function ExpertEvaluationRequestForm({ onSubmit, user, location }) {
   const [formData, setFormData] = useState({
-    title: "",
+    project: "",
+    project_name: "",
+    property_type: "",
+    area: "",
+    building_area: "",
+    main_parcel_number: "",
+    sub_parcel_number: "",
     description: "",
     location: null,
     attachments: [],
-    propertyType: "",
-    mainParcelNumber: "",
-    subParcelNumber: "",
   });
 
+  const [projects, setProjects] = useState([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+  const [loadingSubmit, setLoadingSubmit] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -32,109 +39,142 @@ function ExpertRequestForm({ onSubmit, user, location }) {
     }
   }, [location]);
 
+  useEffect(() => {
+    if (!user) return;
+    setLoadingProjects(true);
+    fetchProjects()
+      .then((data) => {
+        setProjects(data);
+        setLoadingProjects(false);
+        if (data.length > 0) {
+          setFormData((prev) => ({ ...prev, project: data[0].id }));
+        }
+      })
+      .catch(() => {
+        setProjects([]);
+        setLoadingProjects(false);
+      });
+  }, [user]);
+
   const handleFileChange = (update) => {
-    setFormData((prev) => {
-      const newAttachments =
-        typeof update === "function" ? update(prev.attachments) : update;
-      return {
-        ...prev,
-        attachments: newAttachments,
-      };
-    });
+    setFormData((prev) => ({
+      ...prev,
+      attachments:
+        typeof update === "function"
+          ? Array.isArray(update(prev.attachments))
+            ? update(prev.attachments)
+            : []
+          : Array.isArray(update)
+          ? update
+          : [],
+    }));
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-
-    // فقط اجازه عدد در پلاک‌ها
-    if (name === "mainParcelNumber" || name === "subParcelNumber") {
-      if (value === "" || /^[0-9\b]+$/.test(value)) {
-        setFormData((prev) => ({
-          ...prev,
-          [name]: value,
-        }));
-      }
-    } else {
+    if (name === "project" && value === "new") {
       setFormData((prev) => ({
         ...prev,
-        [name]: value,
+        project: value,
+        project_name: "",
       }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoadingSubmit(true);
 
-    if (!formData.location) {
-      setError("لطفاً موقعیت ملک را از روی نقشه انتخاب کنید.");
-      return;
-    }
-    if (!formData.title.trim()) {
-      setError("لطفاً عنوان پروژه را وارد کنید.");
-      return;
-    }
-    if (!formData.propertyType) {
+    // اعتبارسنجی‌ها
+    if (!formData.property_type) {
       setError("لطفاً نوع ملک را انتخاب کنید.");
+      setLoadingSubmit(false);
       return;
     }
-    if (!formData.mainParcelNumber) {
-      setError("لطفاً پلاک اصلی را وارد کنید.");
+    if (!formData.project && !formData.project_name.trim()) {
+      setError("لطفاً یک پروژه انتخاب کنید یا عنوان پروژه جدید وارد کنید.");
+      setLoadingSubmit(false);
       return;
     }
-    if (!formData.subParcelNumber) {
-      setError("لطفاً پلاک فرعی را وارد کنید.");
+    if (formData.project === "new" && !formData.project_name.trim()) {
+      setError("لطفاً عنوان پروژه جدید را وارد کنید.");
+      setLoadingSubmit(false);
+      return;
+    }
+    if (formData.area && Number(formData.area) <= 0) {
+      setError("لطفاً مساحت معتبر وارد کنید.");
+      setLoadingSubmit(false);
+      return;
+    }
+    if (formData.building_area && Number(formData.building_area) <= 0) {
+      setError("لطفاً مساحت بنا معتبر وارد کنید.");
+      setLoadingSubmit(false);
+      return;
+    }
+    const hasLocation = formData.location?.lat && formData.location?.lng;
+    const hasParcel =
+      formData.main_parcel_number.trim() && formData.sub_parcel_number.trim();
+    if (!hasLocation && !hasParcel) {
+      setError("لطفاً حداقل یکی از مختصات یا پلاک‌های ثبتی را وارد کنید.");
+      setLoadingSubmit(false);
       return;
     }
 
     setError(null);
 
+    const payload = {
+      property_type: formData.property_type,
+      description: formData.description,
+      attachments: formData.attachments,
+    };
+
+    if (formData.area) {
+      payload.area = Number(formData.area);
+    }
+    if (formData.building_area) {
+      payload.building_area = Number(formData.building_area);
+    }
+    if (formData.main_parcel_number.trim()) {
+      payload.main_parcel_number = formData.main_parcel_number.trim();
+    }
+    if (formData.sub_parcel_number.trim()) {
+      payload.sub_parcel_number = formData.sub_parcel_number.trim();
+    }
+    if (hasLocation) {
+      payload.location = formData.location;
+    }
+    if (formData.project && formData.project !== "new") {
+      payload.project = formData.project;
+    } else {
+      payload.project_name = formData.project_name.trim();
+    }
+
     try {
-      const formPayload = new FormData();
-      formPayload.append("title", formData.title);
-      formPayload.append("description", formData.description || "");
-      formPayload.append("location", JSON.stringify(formData.location));
-      formPayload.append("property_type", formData.propertyType);
-      formPayload.append("main_parcel_number", formData.mainParcelNumber);
-      formPayload.append("sub_parcel_number", formData.subParcelNumber);
-
-      if (user && user.id) {
-        formPayload.append("user", user.id);
-      }
-
-      if (Array.isArray(formData.attachments)) {
-        formData.attachments.forEach(({ file, title }) => {
-          formPayload.append("attachments", file);
-          formPayload.append("titles", title);
-        });
-      }
-
-      const response = await axiosInstance.post(
-        "/api/expert/request/",
-        formPayload
-      );
-
-      // چون axios response.ok وجود ندارد، به جای آن باید status بررسی شود:
-      if (response.status !== 201 && response.status !== 200) {
-        setError(`خطا در ارسال درخواست: ${response.statusText}`);
-        return;
-      }
-
+      const result = await createExpertRequest(payload);
       alert("درخواست کارشناسی با موفقیت ارسال شد!");
-
       setFormData({
-        title: "",
+        project: projects.length > 0 ? projects[0].id : "",
+        project_name: "",
+        property_type: "",
+        area: "",
+        building_area: "",
+        main_parcel_number: "",
+        sub_parcel_number: "",
         description: "",
         location: null,
         attachments: [],
-        propertyType: "",
-        mainParcelNumber: "",
-        subParcelNumber: "",
       });
-
-      if (onSubmit) onSubmit(response.data);
-    } catch (error) {
-      console.error("⚠️ خطا در ارسال:", error);
-      setError("خطا در ارسال درخواست: " + error.message);
+      if (onSubmit) onSubmit(result);
+    } catch (err) {
+      const detail =
+        err.response?.data?.detail ||
+        err.response?.data?.non_field_errors?.[0] ||
+        err.message;
+      setError("خطا در ارسال درخواست: " + detail);
+    } finally {
+      setLoadingSubmit(false);
     }
   };
 
@@ -145,27 +185,55 @@ function ExpertRequestForm({ onSubmit, user, location }) {
     >
       <h5 className="mb-3 text-primary">درخواست کارشناسی</h5>
 
-      <Form.Group className="mb-3">
-        <Form.Label>عنوان پروژه</Form.Label>
-        <Form.Control
-          type="text"
-          name="title"
-          value={formData.title}
-          onChange={handleInputChange}
-          placeholder="عنوان پروژه کارشناسی"
-          required
-        />
-      </Form.Group>
+      {projects.length > 0 && (
+        <Form.Group className="mb-3">
+          <Form.Label>انتخاب پروژه</Form.Label>
+          {loadingProjects ? (
+            <div>
+              <Spinner animation="border" size="sm" /> در حال بارگذاری
+              پروژه‌ها...
+            </div>
+          ) : (
+            <Form.Select
+              name="project"
+              value={formData.project}
+              onChange={handleInputChange}
+              required
+            >
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title || p.name}
+                </option>
+              ))}
+              <option value="new">ایجاد پروژه جدید</option>
+            </Form.Select>
+          )}
+        </Form.Group>
+      )}
+
+      {(projects.length === 0 || formData.project === "new") && (
+        <Form.Group className="mb-3">
+          <Form.Label>عنوان پروژه جدید</Form.Label>
+          <Form.Control
+            type="text"
+            name="project_name"
+            value={formData.project_name}
+            onChange={handleInputChange}
+            placeholder="نام پروژه جدید را وارد کنید"
+            required
+          />
+        </Form.Group>
+      )}
 
       <Form.Group className="mb-3">
         <Form.Label>نوع ملک</Form.Label>
         <Form.Select
-          name="propertyType"
-          value={formData.propertyType}
+          name="property_type"
+          value={formData.property_type}
           onChange={handleInputChange}
           required
         >
-          {propertyTypes().map((type) => (
+          {propertyTypes.map((type) => (
             <option key={type.value} value={type.value}>
               {type.label}
             </option>
@@ -173,36 +241,70 @@ function ExpertRequestForm({ onSubmit, user, location }) {
         </Form.Select>
       </Form.Group>
 
-      <Row className="mb-3">
-        <Form.Group as={Col} controlId="mainParcelNumber">
-          <Form.Label>پلاک اصلی</Form.Label>
-          <Form.Control
-            type="text"
-            name="mainParcelNumber"
-            value={formData.mainParcelNumber}
-            onChange={handleInputChange}
-            placeholder="فقط عدد"
-            required
-            maxLength={10}
-          />
-        </Form.Group>
+      <Form.Group className="mb-3">
+        <Form.Label>مساحت زمین (متر مربع، اختیاری)</Form.Label>
+        <Form.Control
+          type="number"
+          name="area"
+          value={formData.area}
+          onChange={handleInputChange}
+          placeholder="مثلاً 1000"
+          min={0}
+        />
+      </Form.Group>
 
-        <Form.Group as={Col} controlId="subParcelNumber">
-          <Form.Label>پلاک فرعی</Form.Label>
+      {formData.property_type === "building" && (
+        <Form.Group className="mb-3">
+          <Form.Label>مساحت بنا (متر مربع، اختیاری)</Form.Label>
           <Form.Control
-            type="text"
-            name="subParcelNumber"
-            value={formData.subParcelNumber}
+            type="number"
+            name="building_area"
+            value={formData.building_area}
             onChange={handleInputChange}
-            placeholder="فقط عدد"
-            required
-            maxLength={10}
+            placeholder="مثلاً 500"
+            min={0}
           />
         </Form.Group>
-      </Row>
+      )}
 
       <Form.Group className="mb-3">
-        <Form.Label>توضیحات</Form.Label>
+        <Form.Label>پلاک اصلی (اختیاری)</Form.Label>
+        <Form.Control
+          type="text"
+          name="main_parcel_number"
+          value={formData.main_parcel_number}
+          onChange={handleInputChange}
+          placeholder="پلاک اصلی را وارد کنید"
+        />
+      </Form.Group>
+
+      <Form.Group className="mb-3">
+        <Form.Label>پلاک فرعی (اختیاری)</Form.Label>
+        <Form.Control
+          type="text"
+          name="sub_parcel_number"
+          value={formData.sub_parcel_number}
+          onChange={handleInputChange}
+          placeholder="پلاک فرعی را وارد کنید"
+        />
+      </Form.Group>
+
+      <Form.Group className="mb-3">
+        <Form.Label>موقعیت ملک (اختیاری)</Form.Label>
+        {formData.location ? (
+          <div className="p-2 border rounded bg-light text-success">
+            نقطه انتخاب شده: Φ: {formData.location.lat.toFixed(6)}، λ:{" "}
+            {formData.location.lng.toFixed(6)}
+          </div>
+        ) : (
+          <div className="p-2 border rounded bg-light text-danger">
+            هنوز موقعیتی انتخاب نشده است.
+          </div>
+        )}
+      </Form.Group>
+
+      <Form.Group className="mb-3">
+        <Form.Label>توضیحات (اختیاری)</Form.Label>
         <Form.Control
           as="textarea"
           rows={3}
@@ -214,34 +316,30 @@ function ExpertRequestForm({ onSubmit, user, location }) {
       </Form.Group>
 
       <Form.Group className="mb-3">
-        <Form.Label>موقعیت ملک (عرض و طول جغرافیایی)</Form.Label>
-        {formData.location ? (
-          <div className="p-2 border rounded bg-light text-success">
-            نقطه به مختصات Φ: {formData.location.lat.toFixed(6)}، λ:{" "}
-            {formData.location.lng.toFixed(6)} انتخاب شده است.
-          </div>
-        ) : (
-          <div className="p-2 border rounded bg-light text-danger">
-            هنوز موقعیتی انتخاب نشده است.
-          </div>
-        )}
-      </Form.Group>
-
-      <Form.Group className="mb-3">
-        <Form.Label>پیوست‌ها</Form.Label>
+        <Form.Label>پیوست‌ها (اختیاری)</Form.Label>
         <FileUploadTable
-          attachments={formData.attachments}
-          onFileChange={handleFileChange}
+          files={formData.attachments}
+          onChange={handleFileChange}
         />
       </Form.Group>
 
       {error && <Alert variant="danger">{error}</Alert>}
 
-      <Button type="submit" className="btn btn-primary w-100">
-        ارسال درخواست
+      <Button
+        variant="primary"
+        type="submit"
+        disabled={loadingProjects || loadingSubmit}
+      >
+        {loadingSubmit ? (
+          <>
+            <Spinner animation="border" size="sm" /> در حال ارسال...
+          </>
+        ) : (
+          "ارسال درخواست"
+        )}
       </Button>
     </Form>
   );
 }
 
-export default ExpertRequestForm;
+export default ExpertEvaluationRequestForm;

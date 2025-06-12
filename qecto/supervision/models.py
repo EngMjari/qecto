@@ -42,14 +42,13 @@ class SupervisionRequest(models.Model):
     area = models.FloatField(null=True, blank=True,
                              verbose_name="مساحت زمین (متر مربع)")
     building_area = models.FloatField(
-        null=True, blank=True, verbose_name="مساحت بنا (متر مربع)")
+        verbose_name="مساحت بنا (متر مربع)")  # null=True حذف شد چون اجباریه
     permit_number = models.CharField(
         max_length=100, null=True, blank=True, verbose_name="شماره پروانه")
 
     location_lat = models.FloatField(null=True, blank=True)
     location_lng = models.FloatField(null=True, blank=True)
 
-    # فایل‌ها با GenericRelation
     attachments = GenericRelation(
         Attachment, related_query_name='supervision_request')
 
