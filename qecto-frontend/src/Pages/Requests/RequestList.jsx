@@ -118,7 +118,6 @@ function RequestListPage() {
         !filters.sub_parcel_number
       ) {
         setRequests(data);
-        console.log("All Requests:", data);
       }
     } catch (err) {
       setAllRequests([]);

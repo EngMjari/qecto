@@ -5,14 +5,11 @@ import ProjectDescription from "./ProjectDescription";
 import MapView from "./MapView";
 import TabsManager from "./TabsManager";
 import PreviewModal from "./PreviewModal";
-import { fetchRequestDetails } from "../../api";
-import {
-  getTicketSessionsBySurveyRequest,
-  getTicketSessionsByEvaluationRequest,
-} from "../../api";
+import { fetchRequestDetail } from "../../api/requestsApi";
+import { getTicketSessionsByRequest } from "../../api/ticketsApi";
 
 function RequestPage() {
-  const { id } = useParams();
+  const { requestId } = useParams();
   const [projectData, setProjectData] = useState(null);
   const [userFiles, setUserFiles] = useState([]);
   const [adminFiles, setAdminFiles] = useState([]);
@@ -26,9 +23,22 @@ function RequestPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const res = await fetchRequestDetails(id);
-        const req = res.data;
+        const res = await fetchRequestDetail(requestId);
+        console.log("API Response:", res); // لاگ برای دیباگ
+        const req = {
+          id: res.id,
+          request_type: res.request_type,
+          project: { owner: res.owner, title: res.project_title }, // owner از درخواست
+          description: res.specific_fields.description || "",
+          location_lat: res.specific_fields.location_lat,
+          location_lng: res.specific_fields.location_lng,
+          attachments: res.attachments || [],
+          status: res.status,
+          status_display: res.status_display,
+          specific_fields: res.specific_fields,
+        };
         setProjectData(req);
+
         const allFiles = req.attachments || [];
         setUserFiles(
           allFiles.filter((file) => file.uploaded_by === req.project.owner.id)
@@ -37,25 +47,13 @@ function RequestPage() {
           allFiles.filter((file) => file.uploaded_by !== req.project.owner.id)
         );
 
-        // بلافاصله بعد از گرفتن projectData، سشن‌های مربوط به تیکت‌ها را هم بگیر
-        if (req.request_type === "survey") {
-          const ticketRes = await getTicketSessionsBySurveyRequest(req.id);
-          const data = Array.isArray(ticketRes.data.results)
-            ? ticketRes.data.results
-            : [];
-          setSessions(data);
-          console.log("Session data : ", data);
-        } else if (
-          req.request_type === "expert" ||
-          req.request_type === "evaluation"
-        ) {
-          const ticketRes = await getTicketSessionsByEvaluationRequest(req.id);
-          const data = Array.isArray(ticketRes.data.results)
-            ? ticketRes.data.results
-            : [];
-          setSessions(data);
-          console.log("Session data : ", data);
-        }
+        const ticketRes = await getTicketSessionsByRequest(
+          req.id,
+          req.request_type
+        );
+        const data = Array.isArray(ticketRes.results) ? ticketRes.results : [];
+        setSessions(data);
+        console.log("Session data:", data);
       } catch (err) {
         console.error("خطا در بارگذاری درخواست:", err);
       } finally {
@@ -64,7 +62,7 @@ function RequestPage() {
     };
 
     fetchData();
-  }, [id]);
+  }, [requestId]);
 
   const handlePreview = (file) => {
     setPreviewFile(file);

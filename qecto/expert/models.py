@@ -5,6 +5,7 @@ from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
 from projects.models import Project
 from attachments.models import Attachment
+from core.models import User
 
 
 class ExpertEvaluationRequest(models.Model):
@@ -25,6 +26,8 @@ class ExpertEvaluationRequest(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.OneToOneField(
         Project, on_delete=models.CASCADE, related_name='expert_request')
+    owner = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='expert_requests')
     assigned_admin = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         null=True, blank=True,

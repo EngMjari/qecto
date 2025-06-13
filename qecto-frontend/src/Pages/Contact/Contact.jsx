@@ -43,7 +43,6 @@ export default function Contact({ showToast }) {
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
-      console.log("Form Submitted:", formData);
       showToast("پیام شما با موفقیت ارسال شد!");
       setFormData({ name: "", phone: "", subject: "", message: "" });
     } else {
@@ -80,7 +79,6 @@ export default function Contact({ showToast }) {
       }
     } catch (error) {
       showToast("خطا در دریافت پیشنهاد. لطفا دوباره تلاش کنید.", "error");
-      console.error("Gemini API Error:", error);
     } finally {
       setIsSuggesting(false);
     }
@@ -118,7 +116,6 @@ export default function Contact({ showToast }) {
       }
     } catch (error) {
       showToast("خطا در رسمی‌سازی پیام. لطفا دوباره تلاش کنید.", "error");
-      console.error("Gemini API Error:", error);
     } finally {
       setIsFormalizing(false);
     }

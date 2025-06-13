@@ -5,6 +5,7 @@ from projects.models import Project
 from attachments.models import Attachment
 from django.contrib.contenttypes.fields import GenericRelation
 import uuid
+from core.models import User
 
 
 class SurveyRequest(models.Model):
@@ -34,6 +35,8 @@ class SurveyRequest(models.Model):
         on_delete=models.SET_NULL,
         related_name='assigned_survey_requests'
     )
+    owner = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='survey_requests')
     description = models.TextField(blank=True, null=True)
     area = models.FloatField("مساحت (متر مربع)", null=True, blank=True)
     building_area = models.FloatField(

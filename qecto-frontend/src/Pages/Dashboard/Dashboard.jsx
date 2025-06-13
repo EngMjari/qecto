@@ -13,7 +13,7 @@ import { IoIosCloseCircleOutline, IoMdSettings } from "react-icons/io";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import WelcomeCard from "./WelcomeCard";
-import { fetchProjects } from "../../api";
+import { fetchProjects, fetchUserRequests } from "../../api";
 
 // Utility functions for status
 const getStatusColor = (status) => {
@@ -55,15 +55,17 @@ const getTicketStatusColor = (status) => {
 };
 
 export default function Dashboard() {
-  const [data, setData] = useState(null);
+  const [projects, setProjects] = useState(null);
+  const [requests, setRequests] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchProjects()
-      .then((response) => {
-        console.log("fetchProjects : ", response.data);
-        setData(response.data);
+    Promise.all([fetchProjects(), fetchUserRequests()])
+      .then(([projectsData, requestsData]) => {
+        setRequests(requestsData);
+        setProjects(projectsData);
         setLoading(false);
       })
       .catch((err) => {
@@ -79,24 +81,19 @@ export default function Dashboard() {
   return (
     <div className="font-vazir page-content text-gray-800 bg-gray-50 p-5">
       <WelcomeCard />
-      <ProjectInfoCard
-        requests={data?.requests.length}
-        requestsList={data?.requests}
-        projects={data?.projects}
-        tickets={data?.latest_messages || []}
-      />
+      <ProjectInfoCard requests={requests} projects={projects} tickets={[]} />
       <SectionGrid
-        recentRequests={data?.latest_requests || []}
-        recentTickets={data?.latest_messages || []}
+        recentRequests={(requests?.results || []).slice(0, 5)}
+        recentTickets={[]}
       />
     </div>
   );
 }
 
-function ProjectInfoCard({ requestsList = [], projects = [], tickets = [] }) {
+function ProjectInfoCard({ requests = [], projects = [], tickets = [] }) {
   const [openAccordion, setOpenAccordion] = useState(null);
   const navigate = useNavigate();
-
+  const statusCounts = requests?.stats?.status_counts || {};
   const statusList = [
     {
       key: "all",
@@ -104,7 +101,7 @@ function ProjectInfoCard({ requestsList = [], projects = [], tickets = [] }) {
       color: "#2563eb",
       icon: <FaClipboardList size={24} />,
       link: "/requests",
-      value: requestsList.length,
+      value: statusCounts,
     },
     {
       key: "pending",
@@ -112,7 +109,7 @@ function ProjectInfoCard({ requestsList = [], projects = [], tickets = [] }) {
       color: "#f1c40f",
       icon: <FaHourglassHalf size={24} />,
       link: "/requests?status=pending",
-      value: requestsList.filter((r) => r.status === "pending").length,
+      value: statusCounts["pending"] || 0,
     },
     {
       key: "in_progress",
@@ -120,7 +117,7 @@ function ProjectInfoCard({ requestsList = [], projects = [], tickets = [] }) {
       color: "#1abc9c",
       icon: <IoMdSettings size={24} />,
       link: "/requests?status=in_progress",
-      value: requestsList.filter((r) => r.status === "in_progress").length,
+      value: statusCounts["in_progress"] || 0,
     },
     {
       key: "completed",
@@ -128,7 +125,7 @@ function ProjectInfoCard({ requestsList = [], projects = [], tickets = [] }) {
       color: "#28a745",
       icon: <FaCheckCircle size={24} />,
       link: "/requests?status=completed",
-      value: requestsList.filter((r) => r.status === "completed").length,
+      value: statusCounts["completed"] || 0,
     },
     {
       key: "incomplete",
@@ -136,7 +133,7 @@ function ProjectInfoCard({ requestsList = [], projects = [], tickets = [] }) {
       color: "#e67e22",
       icon: <FaExclamationCircle size={24} />,
       link: "/requests?status=incomplete",
-      value: requestsList.filter((r) => r.status === "incomplete").length,
+      value: statusCounts["incomplete"] || 0,
     },
     {
       key: "rejected",
@@ -144,7 +141,7 @@ function ProjectInfoCard({ requestsList = [], projects = [], tickets = [] }) {
       color: "#dc3545",
       icon: <IoIosCloseCircleOutline size={24} />,
       link: "/requests?status=rejected",
-      value: requestsList.filter((r) => r.status === "rejected").length,
+      value: statusCounts["rejected"] || 0,
     },
   ];
 
@@ -311,7 +308,7 @@ function SectionGrid({ recentRequests = [], recentTickets = [] }) {
             className="flex justify-between items-center p-3 border-b border-gray-100 cursor-pointer hover:bg-orange-50 hover:rounded-md transition-colors"
           >
             <div className="flex flex-col flex-grow">
-              <span className="font-medium">{req.project.title}</span>
+              <span className="font-medium">{req.project_title}</span>
               <span className="text-xs text-gray-500 mt-1">
                 {req.request_type === "survey" ? "نقشه‌برداری" : "کارشناسی"}
               </span>

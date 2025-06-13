@@ -1,5 +1,7 @@
 import axiosInstance from "../utils/axiosInstance";
+import API_ENDPOINTS from "./apiEndpoints";
 
+// ایجاد درخواست نظارت
 export const createSupervisionRequest = async (formValues) => {
   try {
     if (!formValues.project && !formValues.project_name) {
@@ -56,7 +58,7 @@ export const createSupervisionRequest = async (formValues) => {
     }
 
     const response = await axiosInstance.post(
-      "/api/supervision/requests/",
+      API_ENDPOINTS.SUPERVISION.REQUESTS,
       formData,
       {
         headers: {
@@ -68,6 +70,39 @@ export const createSupervisionRequest = async (formValues) => {
     return response.data;
   } catch (error) {
     console.error("خطا در ثبت درخواست نظارت:", error);
+    if (error.response) {
+      console.error("Error data:", error.response.data);
+    }
+    throw error;
+  }
+};
+
+// گرفتن لیست درخواست‌های نظارت
+export const fetchSupervisionRequests = async (params = {}) => {
+  try {
+    const response = await axiosInstance.get(
+      API_ENDPOINTS.SUPERVISION.REQUESTS,
+      { params }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("خطا در دریافت درخواست‌های نظارت:", error);
+    if (error.response) {
+      console.error("Error data:", error.response.data);
+    }
+    throw error;
+  }
+};
+
+// گرفتن جزئیات یک درخواست نظارت
+export const fetchSupervisionRequestDetail = async (id) => {
+  try {
+    const response = await axiosInstance.get(
+      `${API_ENDPOINTS.SUPERVISION.REQUESTS}${id}/`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("خطا در دریافت جزئیات درخواست نظارت:", error);
     if (error.response) {
       console.error("Error data:", error.response.data);
     }

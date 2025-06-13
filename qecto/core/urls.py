@@ -13,6 +13,8 @@ urlpatterns = [
 
     # مسیرهای اپ‌های جداگانه
     path('projects/', include('projects.api.urls')),
+    # کل درخواست ها
+    path('requests/', include('requests.api.urls')),
     # درخواست ها
     path('survey/', include('survey.api.urls')),
     path('expert/', include('expert.api.urls')),
@@ -20,11 +22,13 @@ urlpatterns = [
     path('supervision/', include('supervision.api.urls')),
     path('registration/', include('registration.api.urls')),
     # تیکت ها
-    path('tickets/', include('tickets.urls')),
+    path('tickets/', include('tickets.api.urls')),
     # تنظیمات سایت
     path('site/', include('siteconfig.api.urls')),
     # مشخصات User :
     path("user-info/", UserInfoAPIView.as_view(), name="user-info"),
+    # attachments
+    path('attachments/', include('attachments.api.urls')),
 
 
 ]

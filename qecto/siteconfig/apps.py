@@ -11,6 +11,7 @@ def create_site_config(sender, **kwargs):
 class SiteconfigConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'siteconfig'
+    verbose_name = "تنظیمات سایت"
 
     def ready(self):
         post_migrate.connect(create_site_config, sender=self)

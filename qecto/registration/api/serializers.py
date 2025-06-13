@@ -3,6 +3,7 @@ from rest_framework import serializers
 from registration.models import RegistrationRequest
 from projects.models import Project
 from attachments.models import Attachment
+from core.serializers import UserSerializer
 
 
 class RegistrationRequestSerializer(serializers.ModelSerializer):
@@ -10,6 +11,8 @@ class RegistrationRequestSerializer(serializers.ModelSerializer):
         source='project.title', read_only=True)
     assigned_admin = serializers.CharField(
         source='assigned_admin.username', read_only=True, allow_null=True)
+    owner = UserSerializer(read_only=True)
+
     required_documents = serializers.SerializerMethodField()
 
     class Meta:
@@ -119,6 +122,8 @@ class RegistrationRequestCreateSerializer(serializers.ModelSerializer):
                 "A project must be provided or created with project_name.")
 
         validated_data['status'] = 'pending'
+        validated_data['owner'] = user
+
         registration_request = RegistrationRequest.objects.create(
             project=project, **validated_data)
 

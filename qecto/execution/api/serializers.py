@@ -3,6 +3,7 @@ from rest_framework import serializers
 from execution.models import ExecutionRequest
 from projects.models import Project
 from attachments.models import Attachment
+from core.serializers import UserSerializer
 
 
 class ExecutionRequestSerializer(serializers.ModelSerializer):
@@ -10,11 +11,12 @@ class ExecutionRequestSerializer(serializers.ModelSerializer):
         source='project.title', read_only=True)
     assigned_admin = serializers.CharField(
         source='assigned_admin.username', read_only=True, allow_null=True)
+    owner = UserSerializer(read_only=True)
 
     class Meta:
         model = ExecutionRequest
         fields = [
-            'id', 'project', 'project_title', 'description', 'area', 'building_area',
+            'id', 'project', 'owner', 'project_title', 'description', 'area', 'building_area',
             'permit_number', 'location_lat', 'location_lng', 'status', 'created_at',
             'updated_at', 'assigned_admin'
         ]
@@ -89,6 +91,8 @@ class ExecutionRequestCreateSerializer(serializers.ModelSerializer):
                 "A project must be provided or created with project_name.")
 
         validated_data['status'] = 'pending'
+        validated_data['owner'] = user
+
         execution_request = ExecutionRequest.objects.create(
             project=project, **validated_data)
 

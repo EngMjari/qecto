@@ -21,7 +21,7 @@ class SurveyRequestViewSet(viewsets.ModelViewSet):
             return SurveyRequest.objects.all()
         elif user.is_staff:
             return SurveyRequest.objects.filter(assigned_admin=user)
-        return SurveyRequest.objects.filter(project__owner=user)
+        return SurveyRequest.objects.filter(owner=user)
 
     def perform_create(self, serializer):
-        serializer.save()  # حذف owner
+        serializer.save()

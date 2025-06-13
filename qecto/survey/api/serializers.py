@@ -1,16 +1,17 @@
-# survey/api/serializers.py
 from rest_framework import serializers
 from survey.models import SurveyRequest
 from projects.api.serializers import ProjectNestedSerializer
 from core.serializers import UserSerializer
 from projects.models import Project
-from attachments.serializers import AttachmentSerializer
+from attachments.api.serializers import AttachmentSerializer
 from attachments.models import Attachment
+from django.contrib.contenttypes.models import ContentType  # اضافه شده
 
 
 class SurveyRequestSerializer(serializers.ModelSerializer):
     project = ProjectNestedSerializer(read_only=True)
     assigned_admin = UserSerializer(read_only=True)
+    owner = UserSerializer(read_only=True)
     attachments_count = serializers.IntegerField(
         source='attachments.count', read_only=True)
     attachments = AttachmentSerializer(many=True, read_only=True)
@@ -18,7 +19,7 @@ class SurveyRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = SurveyRequest
         fields = [
-            'id', 'project', 'assigned_admin', 'description', 'area',
+            'id', 'project', 'owner', 'assigned_admin', 'description', 'area',
             'building_area', 'main_parcel_number', 'sub_parcel_number',
             'property_type', 'location_lat', 'location_lng',
             'created_at', 'updated_at', 'status', 'attachments_count',
@@ -57,7 +58,6 @@ class SurveyRequestCreateSerializer(serializers.ModelSerializer):
         super().__init__(*args, **kwargs)
         request = self.context.get('request')
         user = request.user if request else None
-        # به‌روزرسانی با related_name
         qs = Project.objects.filter(survey_request__isnull=True)
         if user and not user.is_staff:
             qs = qs.filter(owner=user)
@@ -94,11 +94,17 @@ class SurveyRequestCreateSerializer(serializers.ModelSerializer):
                 "A project must be provided or created with project_name.")
 
         validated_data['status'] = 'pending'
+        validated_data['owner'] = user
         survey_request = SurveyRequest.objects.create(
             project=project, **validated_data)
 
         for file, title in zip(attachments, titles or []):
             Attachment.objects.create(
-                survey_request=survey_request, file=file, title=title or '')
+                content_type=ContentType.objects.get_for_model(SurveyRequest),
+                object_id=survey_request.id,
+                file=file,
+                title=title or '',
+                uploaded_by=user
+            )
 
         return survey_request

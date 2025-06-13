@@ -36,6 +36,10 @@ const API_ENDPOINTS = {
     LIST: "/api/projects/",
     DETAIL: (id) => `/api/projects/${id}/`,
   },
+  REQUESTS: {
+    LIST: "/api/requests/user/all/",
+    DETAIL: "/api/requests/user/",
+  },
   SITECONFIG: `api/site/config/`,
 };
 

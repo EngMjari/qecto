@@ -12,11 +12,6 @@ export const fetchSurveyAttachmentPreview = async () => {
   return {}; // یا null یا هر ساختار ساده
 };
 
-export const fetchRequestDetails = async () => {
-  console.warn("⚠️ oldFetchX is deprecated. Replace this call.");
-  return {}; // یا null یا هر ساختار ساده
-};
-
 export const getTicketSessionsBySurveyRequest = async () => {
   console.warn("⚠️ oldFetchX is deprecated. Replace this call.");
   return {}; // یا null یا هر ساختار ساده
@@ -43,10 +38,6 @@ export const fetchAllRequests = async () => {
   return {}; // یا null یا هر ساختار ساده
 };
 
-export const createTicketSession = async () => {
-  console.warn("⚠️ oldFetchX is deprecated. Replace this call.");
-  return {}; // یا null یا هر ساختار ساده
-};
 export const getTicketSessionById = async () => {
   console.warn("⚠️ oldFetchX is deprecated. Replace this call.");
   return {}; // یا null یا هر ساختار ساده

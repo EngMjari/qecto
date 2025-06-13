@@ -65,6 +65,7 @@ class SupervisionRequestCreateSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
+        user = request.user
         project = validated_data.pop('project', None)
         project_name = validated_data.pop('project_name', None)
         attachments = validated_data.pop('attachments', [])
@@ -74,7 +75,8 @@ class SupervisionRequestCreateSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if owner is None or not request.user.is_staff:
             owner = request.user
-
+        validated_data['status'] = 'pending'
+        validated_data['owner'] = user
         if project_name and not project:
             project = Project.objects.create(
                 title=project_name,

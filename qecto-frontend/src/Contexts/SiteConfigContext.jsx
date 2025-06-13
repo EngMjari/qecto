@@ -18,7 +18,6 @@ export const SiteConfigProvider = ({ children }) => {
       .then((res) => {
         if (res) {
           setSiteConfig(res);
-          console.log("Site config loaded:", res);
           setError(null);
         } else {
           setSiteConfig(null);

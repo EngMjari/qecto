@@ -30,6 +30,8 @@ class RegistrationRequest(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.OneToOneField(
         Project, on_delete=models.CASCADE, related_name='registration_request')
+    owner = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='registration_requests')
     assigned_admin = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='assigned_registration_requests', verbose_name="ادمین تخصیص‌یافته")

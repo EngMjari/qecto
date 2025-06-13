@@ -49,6 +49,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return f'{self.full_name} ({self.phone})'
 
+    class Meta:
+        verbose_name = 'کاربر'
+        verbose_name_plural = 'کاربر ها'
+
 
 class OTP(models.Model):
     phone = models.CharField(max_length=11)
@@ -61,3 +65,17 @@ class OTP(models.Model):
     @staticmethod
     def generate_code():
         return str(random.randint(100000, 999999))
+
+
+class AdminUser(User):
+    class Meta:
+        proxy = True
+        verbose_name = "ادمین"
+        verbose_name_plural = "ادمین‌ها"
+
+
+class SuperAdminUser(User):
+    class Meta:
+        proxy = True
+        verbose_name = "سوپر ادمین"
+        verbose_name_plural = "سوپر ادمین‌ها"

@@ -263,7 +263,7 @@ function Router() {
           }
         />
         <Route
-          path="/requests/:id"
+          path="/requests/:requestId"
           element={
             <ProtectedRoute
               isAuthenticated={isAuthenticated}

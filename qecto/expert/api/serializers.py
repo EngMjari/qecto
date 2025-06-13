@@ -3,6 +3,7 @@ from rest_framework import serializers
 from expert.models import ExpertEvaluationRequest
 from projects.models import Project
 from attachments.models import Attachment
+from core.serializers import UserSerializer
 
 
 class ExpertEvaluationRequestSerializer(serializers.ModelSerializer):
@@ -10,11 +11,12 @@ class ExpertEvaluationRequestSerializer(serializers.ModelSerializer):
         source='project.title', read_only=True)
     assigned_admin = serializers.CharField(
         source='assigned_admin.username', read_only=True, allow_null=True)
+    owner = UserSerializer(read_only=True)
 
     class Meta:
         model = ExpertEvaluationRequest
         fields = [
-            'id', 'project', 'project_title', 'area', 'building_area', 'property_type',
+            'id', 'project', 'owner', 'project_title', 'area', 'building_area', 'property_type',
             'main_parcel_number', 'sub_parcel_number', 'status', 'location_lat',
             'location_lng', 'description', 'created_at', 'updated_at', 'assigned_admin'
         ]
@@ -87,6 +89,8 @@ class ExpertEvaluationRequestCreateSerializer(serializers.ModelSerializer):
                 "A project must be provided or created with project_name.")
 
         validated_data['status'] = 'pending'
+        validated_data['owner'] = user
+
         expert_request = ExpertEvaluationRequest.objects.create(
             project=project, **validated_data)
 

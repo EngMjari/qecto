@@ -1,13 +1,21 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import {
   FaShieldAlt,
   FaFileAlt,
   FaExpand,
   FaMapMarkerAlt,
 } from "react-icons/fa";
+import axios from "axios";
 import Card from "./Card";
 import CardHeader from "./CardHeader";
-function ProjectDetails({ project }) {
+
+function ProjectDetails() {
+  const { requestId } = useParams(); // گرفتن UUID از URL
+  const [project, setProject] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   const statusMap = {
     pending: "در انتظار بررسی",
     in_progress: "در حال انجام",
@@ -15,28 +23,93 @@ function ProjectDetails({ project }) {
     rejected: "رد شده",
     incomplete: "ناقص",
   };
+
   const propertyTypeMap = {
     field: "زمین",
-    Building: "ساختمان",
+    building: "ساختمان",
     other: "سایر",
   };
-  const statusColor =
-    {
-      pending: "bg-yellow-100 text-yellow-800",
-      in_progress: "bg-blue-100 text-blue-800",
-      completed: "bg-green-100 text-green-800",
-      rejected: "bg-red-100 text-red-800",
-      incomplete: "bg-gray-100 text-gray-800",
-    }[project.status] || "bg-gray-100 text-gray-800";
+
+  const statusColor = {
+    pending: "bg-yellow-100 text-yellow-800",
+    in_progress: "bg-blue-100 text-blue-800",
+    completed: "bg-green-100 text-green-800",
+    rejected: "bg-red-100 text-red-800",
+    incomplete: "bg-gray-100 text-gray-800",
+  };
+
+  useEffect(() => {
+    const fetchProjectDetails = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(
+          `/api/requests/user/${requestId}/detail/`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+            },
+          }
+        );
+        setProject(response.data);
+        setError(null);
+      } catch (err) {
+        console.error("خطا در دریافت جزئیات پروژه:", err);
+        setError(
+          err.response?.status === 404
+            ? "درخواست پیدا نشد"
+            : "خطا در دریافت اطلاعات"
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (requestId) {
+      fetchProjectDetails();
+    } else {
+      setError("شناسه درخواست نامعتبر است");
+      setLoading(false);
+    }
+  }, [requestId]);
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>در حال بارگذاری...</CardHeader>
+        <div className="px-5 py-3">لطفاً صبر کنید</div>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>خطا</CardHeader>
+        <div className="px-5 py-3 text-red-600">{error}</div>
+      </Card>
+    );
+  }
+
+  if (!project) {
+    return (
+      <Card>
+        <CardHeader>بدون اطلاعات</CardHeader>
+        <div className="px-5 py-3">اطلاعاتی برای نمایش وجود ندارد</div>
+      </Card>
+    );
+  }
+
   const isAssigned = !!project.assigned_admin && !!project.assigned_admin.name;
 
   return (
     <Card>
-      <CardHeader>{project.project.title || "بدون عنوان"}</CardHeader>
+      <CardHeader>{project.project?.title || "بدون عنوان"}</CardHeader>
       <div className="px-5 py-3">
         <div className="flex flex-col gap-1">
           <span
-            className={`px-3 py-1 text-xs font-semibold rounded-full ${statusColor} whitespace-nowrap w-fit mt-1`}
+            className={`px-3 py-1 text-xs font-semibold rounded-full ${
+              statusColor[project.status] || "bg-gray-100 text-gray-800"
+            } whitespace-nowrap w-fit mt-1`}
             title={statusMap[project.status] || "نامشخص"}
           >
             {statusMap[project.status] || "نامشخص"}
