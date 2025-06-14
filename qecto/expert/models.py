@@ -1,11 +1,12 @@
 # expert/models.py
 import uuid
-from django.db import models
+from django.db import models, transaction
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
 from projects.models import Project
 from attachments.models import Attachment
 from core.models import User
+from requests.utils import generate_tracking_code
 
 
 class ExpertEvaluationRequest(models.Model):
@@ -22,7 +23,8 @@ class ExpertEvaluationRequest(models.Model):
         ('building', 'ساختمان'),
         ('other', 'سایر'),
     ]
-
+    tracking_code = models.CharField(
+        max_length=20, unique=True, blank=True, null=True)
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.OneToOneField(
         Project, on_delete=models.CASCADE, related_name='expert_request')
@@ -58,3 +60,8 @@ class ExpertEvaluationRequest(models.Model):
 
     def __str__(self):
         return f"درخواست کارشناسی - {self.project.title}"
+
+    def save(self, *args, **kwargs):
+        if not self.tracking_code:
+            self.tracking_code = generate_tracking_code('expert', str(self.id))
+        super().save(*args, **kwargs)

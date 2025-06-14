@@ -55,3 +55,29 @@ a {
     margin-bottom: 96px;
   }
 }
+
+.rmdp-container {
+  direction: rtl;
+  font-family: Vazir, sans-serif;
+  width: 100%;
+}
+.rmdp-input {
+  width: 100%;
+  padding: 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  outline: none;
+  font-size: 14px;
+}
+.rmdp-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
+.rmdp-calendar {
+  z-index: 1000;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+.rmdp-day span {
+  font-size: 14px;
+}

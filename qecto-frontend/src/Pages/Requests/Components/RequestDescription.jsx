@@ -2,7 +2,7 @@ import React from "react";
 import Card from "./Card";
 import CardHeader from "./CardHeader";
 
-function ProjectDescription({ description }) {
+function RequestDescription({ description }) {
   return (
     <Card>
       <CardHeader>توضیحات پروژه</CardHeader>
@@ -13,4 +13,4 @@ function ProjectDescription({ description }) {
   );
 }
 
-export default ProjectDescription;
+export default RequestDescription;

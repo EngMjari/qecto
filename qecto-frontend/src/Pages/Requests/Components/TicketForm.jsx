@@ -3,7 +3,7 @@ import {
   createTicketSession,
   createTicketMessage,
   uploadMessageFiles,
-} from "../../api";
+} from "../../../api";
 import { FaPaperclip, FaSpinner } from "react-icons/fa";
 import FileItemForSelectedFiles from "./FileItemForSelectedFiles";
 

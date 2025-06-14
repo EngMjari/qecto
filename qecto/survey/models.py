@@ -6,6 +6,7 @@ from attachments.models import Attachment
 from django.contrib.contenttypes.fields import GenericRelation
 import uuid
 from core.models import User
+from requests.utils import generate_tracking_code
 
 
 class SurveyRequest(models.Model):
@@ -22,7 +23,8 @@ class SurveyRequest(models.Model):
         ('building', 'ساختمان'),
         ('other', 'سایر'),
     ]
-
+    tracking_code = models.CharField(
+        max_length=20, unique=True, blank=True, null=True)
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.OneToOneField(
         Project,
@@ -66,3 +68,8 @@ class SurveyRequest(models.Model):
     class Meta:
         verbose_name = 'نقشه برداری'
         verbose_name_plural = 'نقشه برداری ها'
+
+    def save(self, *args, **kwargs):
+        if not self.tracking_code:
+            self.tracking_code = generate_tracking_code('survey', str(self.id))
+        super().save(*args, **kwargs)

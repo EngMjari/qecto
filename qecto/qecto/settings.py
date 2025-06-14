@@ -53,8 +53,8 @@ INSTALLED_APPS = [
     'django_filters',
     # All Projects:
     'projects.apps.ProjectsConfig',
-    # All Requests:
-    'requests.apps.RequestsConfig',
+
+
     # Requests:
     'survey.apps.SurveyConfig',
     'expert.apps.ExpertConfig',
@@ -67,6 +67,8 @@ INSTALLED_APPS = [
     'siteconfig.apps.SiteconfigConfig',
     # Files and Attachments:
     'attachments.apps.AttachmentsConfig',
+    # All Requests:
+    'requests.apps.RequestsConfig',
 
 
 ]
@@ -172,27 +174,4 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',  # همه کاربران لاگین شده اجازه دارن
     ],
-}
-
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'file': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': 'debug.log',
-        },
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-        },
-    },
-    'loggers': {
-        '': {
-            'handlers': ['file', 'console'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
-    },
 }

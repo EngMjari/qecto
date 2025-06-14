@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Navigate } from "react-router-dom";
-import ProjectDetails from "./ProjectDetails";
-import ProjectDescription from "./ProjectDescription";
-import MapView from "./MapView";
-import TabsManager from "./TabsManager";
-import PreviewModal from "./PreviewModal";
+import RequestDetails from "./Components/RequestsDetails";
+import RequestDescription from "./Components/RequestDescription";
+import MapView from "./Components/MapView";
+import TabsManager from "./Components/TabsManager";
+import PreviewModal from "./Components/PreviewModal";
 import { fetchRequestDetail } from "../../api/requestsApi";
 import { getTicketSessionsByRequest } from "../../api/ticketsApi";
 
 function RequestPage() {
   const { requestId } = useParams();
-  const [projectData, setProjectData] = useState(null);
+  const [requestData, setRequestData] = useState(null);
   const [userFiles, setUserFiles] = useState([]);
   const [adminFiles, setAdminFiles] = useState([]);
   const [ticketFiles, setTicketFiles] = useState([]);
@@ -24,27 +24,31 @@ function RequestPage() {
       setLoading(true);
       try {
         const res = await fetchRequestDetail(requestId);
-        console.log("API Response:", res); // لاگ برای دیباگ
         const req = {
           id: res.id,
+          title: res.project_title,
+          status: res.status,
+          createAt:
+            new Date(res.created_at).toLocaleDateString("fa-IR") || "date",
+          assignedAdmin: res.assigned_admin,
+          property_type: res.specific_fields.property_type,
+          area: res.specific_fields.area,
+          building_area: res.specific_fields.building_area,
+          main_parcel_number: res.specific_fields.main_parcel_number,
+          sub_parcel_number: res.specific_fields.sub_parcel_number,
           request_type: res.request_type,
-          project: { owner: res.owner, title: res.project_title }, // owner از درخواست
+          owner: res.owner,
           description: res.specific_fields.description || "",
           location_lat: res.specific_fields.location_lat,
           location_lng: res.specific_fields.location_lng,
           attachments: res.attachments || [],
-          status: res.status,
           status_display: res.status_display,
-          specific_fields: res.specific_fields,
         };
-        setProjectData(req);
-
+        setRequestData(req);
         const allFiles = req.attachments || [];
-        setUserFiles(
-          allFiles.filter((file) => file.uploaded_by === req.project.owner.id)
-        );
+        setUserFiles(allFiles.filter((file) => file.uploaded_by === req.owner));
         setAdminFiles(
-          allFiles.filter((file) => file.uploaded_by !== req.project.owner.id)
+          allFiles.filter((file) => file.uploaded_by !== req.owner)
         );
 
         const ticketRes = await getTicketSessionsByRequest(
@@ -53,7 +57,6 @@ function RequestPage() {
         );
         const data = Array.isArray(ticketRes.results) ? ticketRes.results : [];
         setSessions(data);
-        console.log("Session data:", data);
       } catch (err) {
         console.error("خطا در بارگذاری درخواست:", err);
       } finally {
@@ -77,7 +80,7 @@ function RequestPage() {
     );
   }
 
-  if (!projectData) {
+  if (!requestData) {
     return <Navigate to="/404" replace />;
   }
 
@@ -91,11 +94,11 @@ function RequestPage() {
       <div className="container mx-auto p-4 md:p-8 relative">
         <main className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-1 space-y-8">
-            <ProjectDetails project={projectData} />
-            <ProjectDescription description={projectData.description} />
+            <RequestDetails request={requestData} />
+            <RequestDescription description={requestData.description} />
             <MapView
-              lat={projectData.location_lat}
-              lng={projectData.location_lng}
+              lat={requestData.location_lat}
+              lng={requestData.location_lng}
             />
           </div>
           <div className="lg:col-span-2">
@@ -106,10 +109,10 @@ function RequestPage() {
               setSessions={setSessions}
               ticketFiles={ticketFiles}
               setTicketFiles={setTicketFiles}
-              requestId={projectData.id}
-              requestType={projectData.request_type}
+              requestId={requestData.id}
+              requestType={requestData.request_type}
               handlePreview={handlePreview}
-              currentUserId={projectData.project.owner.id}
+              currentUserId={requestData.owner.id}
             />
           </div>
         </main>

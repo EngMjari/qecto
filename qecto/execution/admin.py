@@ -23,6 +23,7 @@ class ExecutionRequestAdmin(admin.ModelAdmin):
         'attachment_count',  # نمایش تعداد پیوست‌ها
         'created_at',
         'updated_at',
+
     )
     list_filter = ('status', 'created_at', 'updated_at')
     search_fields = (
@@ -45,6 +46,8 @@ class ExecutionRequestAdmin(admin.ModelAdmin):
                 ('location_lat', 'location_lng'),
                 'created_at',
                 'updated_at',
+                'property_type',
+                'tracking_code',
             )
         }),
     )

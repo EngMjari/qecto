@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericRelation
 from projects.models import Project
 from attachments.models import Attachment
+from requests.utils import generate_tracking_code
 
 User = get_user_model()
 
@@ -17,7 +18,8 @@ class ExecutionRequest(models.Model):
         ('rejected', 'رد شده'),
         ('incomplete', 'ناقص'),
     ]
-
+    tracking_code = models.CharField(
+        max_length=20, unique=True, blank=True, null=True)
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.OneToOneField(
         Project, on_delete=models.CASCADE, related_name='execution_request')
@@ -46,6 +48,8 @@ class ExecutionRequest(models.Model):
         auto_now_add=True, verbose_name="تاریخ ثبت")
     updated_at = models.DateTimeField(
         auto_now=True, verbose_name="تاریخ به‌روزرسانی")
+    property_type = models.CharField(
+        max_length=20, default="building", null=True, blank=True)
 
     class Meta:
         verbose_name = "درخواست اجرا"
@@ -53,3 +57,9 @@ class ExecutionRequest(models.Model):
 
     def __str__(self):
         return f"درخواست اجرا - {self.project.title}"
+
+    def save(self, *args, **kwargs):
+        if not self.tracking_code:
+            self.tracking_code = generate_tracking_code(
+                'execution', str(self.id))
+        super().save(*args, **kwargs)

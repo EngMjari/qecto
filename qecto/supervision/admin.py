@@ -30,7 +30,8 @@ class SupervisionRequestAdmin(admin.ModelAdmin):
         (None, {
             'fields': (
                 'project', 'owner', 'assigned_admin', 'supervision_type', 'status',
-                'description', 'permit_number'
+                'description', 'permit_number', 'property_type',
+                'tracking_code',
             )
         }),
         ('مساحت', {

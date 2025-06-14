@@ -8,7 +8,7 @@ import {
   getTicketSessions,
   createTicketMessage,
   uploadMessageFiles,
-} from "../../api";
+} from "../../../api";
 
 function TabsManager({
   userFiles,

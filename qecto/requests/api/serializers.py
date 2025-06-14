@@ -1,16 +1,12 @@
 from rest_framework import serializers
-from supervision.models import SupervisionRequest
-from survey.models import SurveyRequest
-from expert.models import ExpertEvaluationRequest
-from execution.models import ExecutionRequest
-from registration.models import RegistrationRequest
-from projects.models import Project
 from attachments.api.serializers import AttachmentSerializer
 from core.serializers import UserSerializer
 
 
+# requests/serializers.py
 class BaseRequestSerializer(serializers.Serializer):
     id = serializers.UUIDField()
+    tracking_code = serializers.CharField(read_only=True)  # اضافه شده
     request_type = serializers.CharField(read_only=True)
     project_title = serializers.CharField(
         source='project.title', read_only=True)
@@ -20,6 +16,7 @@ class BaseRequestSerializer(serializers.Serializer):
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField()
     specific_fields = serializers.DictField(read_only=True)
+    assigned_admin = UserSerializer(read_only=True)
 
     def get_status_display(self, obj):
         return dict(obj.STATUS_CHOICES).get(obj.status, obj.status)
@@ -41,7 +38,10 @@ class SupervisionRequestSerializer(BaseRequestSerializer):
             'area': instance.area,
             'building_area': instance.building_area,
             'permit_number': instance.permit_number,
-            'description': instance.description
+            'description': instance.description,
+
+
+
         }
         return data
 
@@ -64,6 +64,7 @@ class SurveyRequestSerializer(BaseRequestSerializer):
             'location_lng': instance.location_lng,
             'description': instance.description,
             'attachments_count': instance.attachments.count(),
+
         }
         return data
 
@@ -81,6 +82,7 @@ class ExpertEvaluationRequestSerializer(BaseRequestSerializer):
             'location_lat': instance.location_lat,
             'location_lng': instance.location_lng,
             'description': instance.description,
+
         }
         return data
 
@@ -92,12 +94,11 @@ class ExecutionRequestSerializer(BaseRequestSerializer):
         data['specific_fields'] = {
             'area': instance.area,
             'building_area': instance.building_area,
-            'main_parcel_number': instance.main_parcel_number,
-            'sub_parcel_number': instance.sub_parcel_number,
             'property_type': instance.property_type,
             'location_lat': instance.location_lat,
             'location_lng': instance.location_lng,
             'description': instance.description,
+
         }
         return data
 
@@ -115,6 +116,7 @@ class RegistrationRequestSerializer(BaseRequestSerializer):
             'location_lat': instance.location_lat,
             'location_lng': instance.location_lng,
             'description': instance.description,
+
         }
         return data
 

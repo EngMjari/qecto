@@ -1,10 +1,11 @@
 import uuid
-from django.db import models
+from django.db import models, transaction
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericRelation
-
 from projects.models import Project
 from attachments.models import Attachment
+from core.utils import generate_tracking_code_base
+import datetime
 
 User = get_user_model()
 
@@ -25,7 +26,8 @@ class SupervisionRequest(models.Model):
         ('mechanical', 'نظارت مکانیک'),
         ('electrical', 'نظارت برق'),
     ]
-
+    tracking_code = models.CharField(
+        max_length=20, unique=True, blank=True, null=True)
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     project = models.ForeignKey(
@@ -57,6 +59,8 @@ class SupervisionRequest(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    property_type = models.CharField(
+        max_length=20, default="building", null=True, blank=True)
 
     class Meta:
         verbose_name = "درخواست نظارت"
@@ -64,3 +68,20 @@ class SupervisionRequest(models.Model):
 
     def __str__(self):
         return f"{self.get_supervision_type_display()} - {self.project.title}"
+
+    def save(self, *args, **kwargs):
+        if not self.tracking_code:
+            with transaction.atomic():
+                # شمارش درخواست‌های امروز برای اپ survey
+                count = SupervisionRequest.objects.filter(
+                    created_at__date=datetime.datetime.now().date()
+                ).count() + 1
+                tracking_code = generate_tracking_code_base(
+                    'supervision', count)
+                # بررسی منحصربه‌فرد بودن
+                while SupervisionRequest.objects.filter(tracking_code=tracking_code).exists():
+                    count += 1
+                    tracking_code = generate_tracking_code_base(
+                        'supervision', count)
+                self.tracking_code = tracking_code
+        super().save(*args, **kwargs)

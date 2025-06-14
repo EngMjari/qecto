@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.fields import GenericRelation
 from projects.models import Project
 from attachments.models import Attachment
+from requests.utils import generate_tracking_code
 
 User = get_user_model()
 
@@ -26,7 +27,8 @@ class RegistrationRequest(models.Model):
         ('shared_deed', 'سند مشاعی'),
         ('normal_purchase', 'خریداری عادی'),
     ]
-
+    tracking_code = models.CharField(
+        max_length=20, unique=True, blank=True, null=True)
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.OneToOneField(
         Project, on_delete=models.CASCADE, related_name='registration_request')
@@ -73,3 +75,9 @@ class RegistrationRequest(models.Model):
 
     def __str__(self):
         return f"درخواست اخذ سند - {self.project.title}"
+
+    def save(self, *args, **kwargs):
+        if not self.tracking_code:
+            self.tracking_code = generate_tracking_code(
+                'registration', str(self.id))
+        super().save(*args, **kwargs)
