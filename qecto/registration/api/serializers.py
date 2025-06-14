@@ -1,33 +1,10 @@
-# registration/api/serializers.py
+# qecto/registration/api/serializers.py
+import logging
 from rest_framework import serializers
 from registration.models import RegistrationRequest
 from projects.models import Project
 from attachments.models import Attachment
-from core.serializers import UserSerializer
-
-
-class RegistrationRequestSerializer(serializers.ModelSerializer):
-    project_title = serializers.CharField(
-        source='project.title', read_only=True)
-    assigned_admin = serializers.CharField(
-        source='assigned_admin.username', read_only=True, allow_null=True)
-    owner = UserSerializer(read_only=True)
-
-    required_documents = serializers.SerializerMethodField()
-
-    class Meta:
-        model = RegistrationRequest
-        fields = [
-            'id', 'project', 'project_title', 'property_type', 'ownership_status',
-            'area', 'building_area', 'main_parcel_number', 'sub_parcel_number',
-            'request_survey', 'location_lat', 'location_lng', 'description',
-            'status', 'created_at', 'updated_at', 'assigned_admin', 'required_documents'
-        ]
-        read_only_fields = ['id', 'status',
-                            'created_at', 'updated_at', 'assigned_admin']
-
-    def get_required_documents(self, obj):
-        return self.context.get('required_documents', '')
+from django.db import transaction
 
 
 class RegistrationRequestCreateSerializer(serializers.ModelSerializer):
@@ -64,48 +41,53 @@ class RegistrationRequestCreateSerializer(serializers.ModelSerializer):
         super().__init__(*args, **kwargs)
         request = self.context.get('request')
         user = request.user if request else None
-        qs = Project.objects.filter(registration_request__isnull=True)
+        qs = Project.objects.all()
         if user and not user.is_staff:
             qs = qs.filter(owner=user)
         self.fields['project'].queryset = qs
+        # لاگ برای دیباگ
+        logger = logging.getLogger(__name__)
+        logger.info("Project queryset: %s", qs.values_list('id', flat=True))
 
     def validate(self, data):
+        logger = logging.getLogger(__name__)
+        logger.info("Validated data: %s", data)
+
         project = data.get('project')
         project_name = data.get('project_name')
         ownership_status = data.get('ownership_status')
-        request_survey = data.get('request_survey', False)
-        attachments = data.get('attachments', [])
-        titles = data.get('titles', [])
 
-        # اعتبارسنجی پروژه
+        logger.info("Project: %s, Project_name: %s", project, project_name)
+
         if not project and not project_name:
+            logger.error("No project or project_name provided")
             raise serializers.ValidationError(
-                "project_name is required when no project is selected.")
+                "لطفاً یک پروژه انتخاب کنید یا عنوان پروژه جدید وارد کنید.")
         if project and project_name:
+            logger.error("Both project and project_name provided")
             raise serializers.ValidationError(
-                "Cannot provide both project and project_name.")
+                "نمی‌توانید هم پروژه انتخاب کنید و هم عنوان پروژه جدید وارد کنید.")
         if project and RegistrationRequest.objects.filter(project=project).exists():
+            logger.info(
+                "Registration request exists for project: %s", project.id)
             raise serializers.ValidationError(
-                "این پروژه قبلاً درخواست اخذ سند دارد.")
+                "برای این پروژه یک درخواست اخذ سند ثبت شده.")
 
-        # اعتبارسنجی پلاک‌ها برای سند مشاعی
         if ownership_status == 'shared_deed':
             if data.get('main_parcel_number') is None or data.get('sub_parcel_number') is None:
+                logger.error(
+                    "Main or sub parcel number missing for shared_deed")
                 raise serializers.ValidationError(
                     "برای سند مشاعی، پلاک اصلی و فرعی اجباری هستند.")
 
-        # اعتبارسنجی فایل‌های نقشه UTM
-        if not request_survey and attachments:
-            utm_map = any(title.lower() == 'نقشه utm' for title in titles)
-            coordinates_certificate = any(
-                title.lower() == 'گواهی تعیین مختصات' for title in titles)
-            if not (utm_map and coordinates_certificate):
-                raise serializers.ValidationError(
-                    "اگر نقشه UTM دارید، باید فایل‌های 'نقشه UTM' و 'گواهی تعیین مختصات' آپلود شوند.")
-
         return data
 
+    @transaction.atomic
     def create(self, validated_data):
+        logger = logging.getLogger(__name__)
+        logger.info(
+            "Creating registration request with validated data: %s", validated_data)
+
         request = self.context.get('request')
         user = request.user
 
@@ -115,17 +97,22 @@ class RegistrationRequestCreateSerializer(serializers.ModelSerializer):
         titles = validated_data.pop('titles', [])
 
         if project_name and not project:
+            logger.info("Creating new project with title: %s", project_name)
             project = Project.objects.create(
                 owner=user, title=project_name, created_by=user)
         elif not project:
+            logger.error("No valid project provided")
             raise serializers.ValidationError(
-                "A project must be provided or created with project_name.")
+                "یک پروژه باید انتخاب یا با عنوان پروژه جدید ایجاد شود.")
 
         validated_data['status'] = 'pending'
         validated_data['owner'] = user
+        validated_data['project'] = project
 
         registration_request = RegistrationRequest.objects.create(
-            project=project, **validated_data)
+            **validated_data)
+        logger.info("Registration request created: %s",
+                    registration_request.id)
 
         for file, title in zip(attachments, titles or []):
             Attachment.objects.create(

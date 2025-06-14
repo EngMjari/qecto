@@ -1,7 +1,9 @@
+// qecto/src/components/RegistrationRequestForm.jsx
 import React, { useEffect, useState } from "react";
-import { Form, Button, Alert, Spinner } from "react-bootstrap";
+import { Form, Button, Spinner, Row, Col } from "react-bootstrap";
 import FileUploadTable from "../FileUpload/FileUploadTable";
 import { createRegistrationRequest, fetchProjects } from "../../api";
+import { toast } from "react-toastify";
 
 const propertyTypes = [
   { value: "", label: "انتخاب کنید..." },
@@ -31,22 +33,21 @@ function RegistrationRequestForm({ onSubmit, user, location }) {
     building_area: "",
     main_parcel_number: "",
     sub_parcel_number: "",
-    utm_status: "have_utm", // پیش‌فرض
+    utm_status: "have_utm",
     location: null,
     description: "",
     attachments: [],
+    showNewProjectForm: false,
   });
 
   const [projects, setProjects] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [loadingSubmit, setLoadingSubmit] = useState(false);
-  const [error, setError] = useState(null);
   const [requiredDocuments, setRequiredDocuments] = useState("");
 
   useEffect(() => {
     if (location) {
       setFormData((prev) => ({ ...prev, location }));
-      setError(null);
     }
   }, [location]);
 
@@ -55,16 +56,18 @@ function RegistrationRequestForm({ onSubmit, user, location }) {
     setLoadingProjects(true);
     fetchProjects()
       .then((data) => {
+        console.log("Fetched projects:", data);
         setProjects(data);
         setLoadingProjects(false);
         if (data.length > 0) {
           setFormData((prev) => ({ ...prev, project: data[0].id }));
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("Error fetching projects:", err);
         setProjects([]);
         setLoadingProjects(false);
-        setError("خطا در بارگذاری پروژه‌ها.");
+        toast.error("خطا در بارگذاری پروژه‌ها.");
       });
   }, [user]);
 
@@ -84,40 +87,47 @@ function RegistrationRequestForm({ onSubmit, user, location }) {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    if (name === "project" && value === "new") {
-      setFormData((prev) => ({ ...prev, project: value, project_name: "" }));
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
-    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const toggleNewProjectForm = () => {
+    setFormData((prev) => ({
+      ...prev,
+      showNewProjectForm: !prev.showNewProjectForm,
+      project: "",
+      project_name: "",
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoadingSubmit(true);
 
+    console.log("FormData before validation:", formData);
+
     // اعتبارسنجی‌ها
     if (!user) {
-      setError("لطفاً ابتدا وارد حساب کاربری خود شوید.");
+      toast.error("لطفاً ابتدا وارد حساب کاربری خود شوید.");
       setLoadingSubmit(false);
       return;
     }
     if (!formData.project && !formData.project_name.trim()) {
-      setError("لطفاً یک پروژه انتخاب کنید یا عنوان پروژه جدید وارد کنید.");
+      toast.error("لطفاً یک پروژه انتخاب کنید یا عنوان پروژه جدید وارد کنید.");
       setLoadingSubmit(false);
       return;
     }
-    if (formData.project === "new" && !formData.project_name.trim()) {
-      setError("لطفاً عنوان پروژه جدید را وارد کنید.");
+    if (formData.showNewProjectForm && !formData.project_name.trim()) {
+      toast.error("لطفاً عنوان پروژه جدید را وارد کنید.");
       setLoadingSubmit(false);
       return;
     }
     if (!formData.property_type) {
-      setError("لطفاً نوع ملک را انتخاب کنید.");
+      toast.error("لطفاً نوع ملک را انتخاب کنید.");
       setLoadingSubmit(false);
       return;
     }
     if (!formData.ownership_status) {
-      setError("لطفاً وضعیت مالکیت را انتخاب کنید.");
+      toast.error("لطفاً وضعیت مالکیت را انتخاب کنید.");
       setLoadingSubmit(false);
       return;
     }
@@ -126,80 +136,60 @@ function RegistrationRequestForm({ onSubmit, user, location }) {
         !formData.main_parcel_number.trim() ||
         !formData.sub_parcel_number.trim()
       ) {
-        setError("برای سند مشاع، پلاک اصلی و فرعی اجباری هستند.");
+        toast.error("برای سند مشاع، پلاک اصلی و فرعی اجباری هستند.");
         setLoadingSubmit(false);
         return;
       }
     }
     if (formData.area && Number(formData.area) <= 0) {
-      setError("لطفاً مساحت زمین معتبر وارد کنید.");
+      toast.error("لطفاً مساحت زمین معتبر وارد کنید.");
       setLoadingSubmit(false);
       return;
     }
     if (formData.building_area && Number(formData.building_area) <= 0) {
-      setError("لطفاً مساحت بنا معتبر وارد کنید.");
+      toast.error("لطفاً مساحت بنا معتبر وارد کنید.");
       setLoadingSubmit(false);
       return;
     }
     if (
-      formData.utm_status === "have_utm" &&
-      Array.isArray(formData.attachments)
+      !formData.location ||
+      !formData.location.lat ||
+      !formData.location.lng
     ) {
-      const titles = formData.attachments.map((a) => a.title.toLowerCase());
-      if (
-        !titles.includes("نقشه utm") ||
-        !titles.includes("گواهی تعیین مختصات")
-      ) {
-        setError(
-          "لطفاً فایل‌های 'نقشه UTM' و 'گواهی تعیین مختصات' را آپلود کنید."
-        );
-        setLoadingSubmit(false);
-        return;
-      }
+      toast.error("لطفاً موقعیت ملک را روی نقشه انتخاب کنید.");
+      setLoadingSubmit(false);
+      return;
     }
 
-    setError(null);
-
-    const payload = {
+    // آماده‌سازی formValues
+    const formValues = {
+      project: formData.project,
+      project_name: formData.project_name.trim(),
       property_type: formData.property_type,
       ownership_status: formData.ownership_status,
+      area: formData.area ? Number(formData.area) : undefined,
+      building_area: formData.building_area
+        ? Number(formData.building_area)
+        : undefined,
+      main_parcel_number: formData.main_parcel_number
+        ? Number(formData.main_parcel_number)
+        : undefined,
+      sub_parcel_number: formData.sub_parcel_number
+        ? Number(formData.sub_parcel_number)
+        : undefined,
       request_survey: formData.utm_status === "no_utm",
-      description: formData.description,
+      location: formData.location,
+      description: formData.description || "",
       attachments: formData.attachments,
     };
 
-    if (formData.area) {
-      payload.area = Number(formData.area);
-    }
-    if (formData.building_area) {
-      payload.building_area = Number(formData.building_area);
-    }
-    if (
-      formData.main_parcel_number &&
-      formData.ownership_status === "shared_deed"
-    ) {
-      payload.main_parcel_number = formData.main_parcel_number;
-    }
-    if (
-      formData.sub_parcel_number &&
-      formData.ownership_status === "shared_deed"
-    ) {
-      payload.sub_parcel_number = formData.sub_parcel_number;
-    }
-    if (formData.location?.lat && formData.location?.lng) {
-      payload.location = formData.location;
-    }
-    if (formData.project && formData.project !== "new") {
-      payload.project = formData.project;
-    } else {
-      payload.project_name = formData.project_name.trim();
-    }
+    console.log("FormValues before API call:", formValues);
 
     try {
-      console.log("Payload:", payload); // برای دیباگ
-      const result = await createRegistrationRequest(payload);
+      const result = await createRegistrationRequest(formValues);
+      console.log("API response:", result);
       setRequiredDocuments(result.required_documents || "");
-      alert("درخواست اخذ سند با موفقیت ارسال شد!");
+      toast.success("درخواست اخذ سند با موفقیت ارسال شد!");
       setFormData({
         project: projects.length > 0 ? projects[0].id : "",
         project_name: "",
@@ -213,6 +203,7 @@ function RegistrationRequestForm({ onSubmit, user, location }) {
         location: null,
         description: "",
         attachments: [],
+        showNewProjectForm: false,
       });
       if (onSubmit) onSubmit(result);
     } catch (err) {
@@ -222,15 +213,25 @@ function RegistrationRequestForm({ onSubmit, user, location }) {
           detail = err.response.data.detail;
         } else if (
           err.response.data.non_field_errors &&
-          Array.isArray(err.response.data.non_field_errors) &&
-          err.response.data.non_field_errors.length > 0
+          Array.isArray(err.response.data.non_field_errors)
         ) {
-          detail = err.response.data.non_field_errors[0];
+          detail = err.response.data.non_field_errors.join(", ");
+        } else if (err.response.data.property_type) {
+          detail = err.response.data.property_type.join(", ");
+        } else if (
+          err.response.data.location_lat ||
+          err.response.data.location_lng
+        ) {
+          detail = "موقعیت ملک (مختصات) نامعتبر است.";
         } else {
-          detail = err.message || "خطای ناشناخته";
+          detail =
+            JSON.stringify(err.response.data) || err.message || "خطای ناشناخته";
         }
+      } else {
+        detail = err.message || "خطای ناشناخته";
       }
-      setError(`خطا در ارسال درخواست: ${detail}`);
+      toast.error(`خطا در ارسال درخواست: ${detail}`);
+      console.error("API Error:", err.response?.data || err);
     } finally {
       setLoadingSubmit(false);
     }
@@ -239,58 +240,60 @@ function RegistrationRequestForm({ onSubmit, user, location }) {
   return (
     <Form
       onSubmit={handleSubmit}
-      className="p-3 border rounded shadow-sm bg-white"
+      className="p-3 border border-gray-300 rounded-lg shadow-sm bg-white"
     >
-      <style>
-        {`
-          .utm-select {
-            border: 2px solid #007bff;
-            border-radius: 8px;
-            padding: 8px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-          }
-          .utm-select:focus {
-            border-color: #0056b3;
-            box-shadow: 0 0 5px rgba(0,123,255,0.5);
-            outline: none;
-          }
-          .utm-select option {
-            padding: 10px;
-          }
-        `}
-      </style>
-      <h5 className="mb-3 text-primary">درخواست اخذ سند</h5>
+      <h5 className="mb-3 text-blue-600">درخواست اخذ سند</h5>
 
-      {projects.length > 0 && (
-        <Form.Group className="mb-3">
-          <Form.Label>انتخاب پروژه</Form.Label>
-          {loadingProjects ? (
-            <div>
-              <Spinner animation="border" size="sm" /> در حال بارگذاری
-              پروژه‌ها...
-            </div>
-          ) : (
-            <Form.Select
-              name="project"
-              value={formData.project}
-              onChange={handleInputChange}
-              required
-            >
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.title || p.name}
-                </option>
-              ))}
-              <option value="new">ایجاد پروژه جدید</option>
-            </Form.Select>
-          )}
-        </Form.Group>
-      )}
+      <Row className="mb-3 space-y-2">
+        <Col md={8}>
+          <Form.Group>
+            <Form.Label>
+              انتخاب پروژه <span className="text-red-500">*</span>
+            </Form.Label>
+            {loadingProjects ? (
+              <div className="flex items-center">
+                <Spinner animation="border" size="sm" className="ml-2" />
+                در حال بارگذاری پروژه‌ها...
+              </div>
+            ) : (
+              <Form.Select
+                name="project"
+                value={formData.project}
+                onChange={handleInputChange}
+                disabled={formData.showNewProjectForm}
+                className="border-2 border-orange-400 rounded-lg p-2 text-base focus:border-orange-500 focus:ring focus:ring-orange-200 focus:ring-opacity-50 bg-no-repeat bg-[length:1.25rem] pl-10"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f97316' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                  backgroundPosition: "left 0.75rem center",
+                }}
+              >
+                <option value="">انتخاب کنید...</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.title}
+                  </option>
+                ))}
+              </Form.Select>
+            )}
+          </Form.Group>
+        </Col>
+        <Col md={4} className="flex items-end">
+          <Button
+            className="w-100 !border-2  !border-[#ff6f00] !text-[#ff6f00] rounded-lg py-2 px-4 text-base hover:!bg-[#f97316] hover:!text-white transition-all duration-300 !bg-transparent"
+            onClick={toggleNewProjectForm}
+          >
+            {formData.showNewProjectForm
+              ? "لغو ایجاد پروژه"
+              : "ایجاد پروژه جدید"}
+          </Button>
+        </Col>
+      </Row>
 
-      {(projects.length === 0 || formData.project === "new") && (
+      {formData.showNewProjectForm && (
         <Form.Group className="mb-3">
-          <Form.Label>عنوان پروژه جدید</Form.Label>
+          <Form.Label>
+            عنوان پروژه جدید <span className="text-red-500">*</span>
+          </Form.Label>
           <Form.Control
             type="text"
             name="project_name"
@@ -298,125 +301,182 @@ function RegistrationRequestForm({ onSubmit, user, location }) {
             onChange={handleInputChange}
             placeholder="نام پروژه جدید را وارد کنید"
             required
+            className="border-2 border-gray-300 rounded-lg p-2 focus:border-orange-400 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
           />
         </Form.Group>
       )}
 
-      <Form.Group className="mb-3">
-        <Form.Label>نوع ملک</Form.Label>
-        <Form.Select
-          name="property_type"
-          value={formData.property_type}
-          onChange={handleInputChange}
-          required
-        >
-          {propertyTypes.map((type) => (
-            <option key={type.value} value={type.value}>
-              {type.label}
-            </option>
-          ))}
-        </Form.Select>
-      </Form.Group>
+      <Row className="mb-3">
+        <Col md={6}>
+          <Form.Group>
+            <Form.Label>
+              نوع ملک <span className="text-red-500">*</span>
+            </Form.Label>
+            <Form.Select
+              name="property_type"
+              value={formData.property_type}
+              onChange={handleInputChange}
+              required
+              className="border-2 border-orange-400 rounded-lg p-2 text-base focus:border-orange-500 focus:ring focus:ring-orange-200 focus:ring-opacity-50 bg-no-repeat bg-[length:1.25rem] pl-10"
+              style={{
+                backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f97316' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                backgroundPosition: "left 0.75rem center",
+              }}
+            >
+              {propertyTypes.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+        </Col>
+        <Col md={6}>
+          <Form.Group>
+            <Form.Label>
+              وضعیت مالکیت <span className="text-red-500">*</span>
+            </Form.Label>
+            <Form.Select
+              name="ownership_status"
+              value={formData.ownership_status}
+              onChange={handleInputChange}
+              required
+              className="border-2 border-orange-400 rounded-lg p-2 text-base focus:border-orange-500 focus:ring focus:ring-orange-200 focus:ring-opacity-50 bg-no-repeat bg-[length:1.25rem] pl-10"
+              style={{
+                backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f97316' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                backgroundPosition: "left 0.75rem center",
+              }}
+            >
+              {ownershipStatuses.map((status) => (
+                <option key={status.value} value={status.value}>
+                  {status.label}
+                </option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+        </Col>
+      </Row>
 
-      <Form.Group className="mb-3">
-        <Form.Label>وضعیت مالکیت</Form.Label>
-        <Form.Select
-          name="ownership_status"
-          value={formData.ownership_status}
-          onChange={handleInputChange}
-          required
-        >
-          {ownershipStatuses.map((status) => (
-            <option key={status.value} value={status.value}>
-              {status.label}
-            </option>
-          ))}
-        </Form.Select>
-      </Form.Group>
-
-      <Form.Group className="mb-3">
-        <Form.Label>مساحت زمین (متر مربع)</Form.Label>
-        <Form.Control
-          type="number"
-          name="area"
-          value={formData.area}
-          onChange={handleInputChange}
-          placeholder="مثلاً 1000"
-          min={0}
-        />
-      </Form.Group>
-
-      {formData.property_type === "building" && (
-        <Form.Group className="mb-3">
-          <Form.Label>مساحت بنا (متر مربع)</Form.Label>
-          <Form.Control
-            type="number"
-            name="building_area"
-            value={formData.building_area}
-            onChange={handleInputChange}
-            placeholder="مثلاً 500"
-            min={0}
-          />
-        </Form.Group>
+      {(formData.property_type === "field" ||
+        formData.property_type === "building") && (
+        <Row className="mb-3">
+          <Col md={formData.property_type === "field" ? 12 : 6}>
+            <Form.Group>
+              <Form.Label>مساحت زمین (متر مربع)</Form.Label>
+              <Form.Control
+                type="number"
+                name="area"
+                value={formData.area}
+                onChange={handleInputChange}
+                placeholder="مثلاً 1000"
+                min={0}
+                className="border-2 border-gray-300 rounded-lg p-2 focus:border-orange-400 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
+              />
+            </Form.Group>
+          </Col>
+          {formData.property_type === "building" && (
+            <Col md={6}>
+              <Form.Group>
+                <Form.Label>مساحت بنا (متر مربع)</Form.Label>
+                <Form.Control
+                  type="number"
+                  name="building_area"
+                  value={formData.building_area}
+                  onChange={handleInputChange}
+                  placeholder="مثلاً 500"
+                  min={0}
+                  className="border-2 border-gray-300 rounded-lg p-2 focus:border-orange-400 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
+                />
+              </Form.Group>
+            </Col>
+          )}
+        </Row>
       )}
 
       {formData.ownership_status === "shared_deed" && (
-        <>
-          <Form.Group className="mb-3">
-            <Form.Label>پلاک اصلی</Form.Label>
-            <Form.Control
-              type="text"
-              name="main_parcel_number"
-              value={formData.main_parcel_number}
-              onChange={handleInputChange}
-              placeholder="پلاک اصلی را وارد کنید"
-              required
-            />
-          </Form.Group>
-
-          <Form.Group className="mb-3">
-            <Form.Label>پلاک فرعی</Form.Label>
-            <Form.Control
-              type="text"
-              name="sub_parcel_number"
-              value={formData.sub_parcel_number}
-              onChange={handleInputChange}
-              placeholder="پلاک فرعی را وارد کنید"
-              required
-            />
-          </Form.Group>
-        </>
+        <Row className="mb-3">
+          <Col md={6}>
+            <Form.Group>
+              <Form.Label>
+                پلاک اصلی <span className="text-red-500">*</span>
+              </Form.Label>
+              <Form.Control
+                type="text"
+                name="main_parcel_number"
+                value={formData.main_parcel_number}
+                onChange={handleInputChange}
+                placeholder="پلاک اصلی را وارد کنید"
+                required
+                className="border-2 border-gray-300 rounded-lg p-2 focus:border-orange-400 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
+              />
+            </Form.Group>
+          </Col>
+          <Col md={6}>
+            <Form.Group>
+              <Form.Label>
+                پلاک فرعی <span className="text-red-500">*</span>
+              </Form.Label>
+              <Form.Control
+                type="text"
+                name="sub_parcel_number"
+                value={formData.sub_parcel_number}
+                onChange={handleInputChange}
+                placeholder="پلاک فرعی را وارد کنید"
+                required
+                className="border-2 border-gray-300 rounded-lg p-2 focus:border-orange-400 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
+              />
+            </Form.Group>
+          </Col>
+        </Row>
       )}
 
-      <Form.Group className="mb-3">
-        <Form.Label>وضعیت نقشه UTM</Form.Label>
-        <Form.Select
-          name="utm_status"
-          value={formData.utm_status}
-          onChange={handleInputChange}
-          className="utm-select"
-        >
-          {utmOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </Form.Select>
-      </Form.Group>
-
-      <Form.Group className="mb-3">
-        <Form.Label>موقعیت ملک</Form.Label>
-        {formData.location ? (
-          <div className="p-2 border rounded bg-light text-success">
-            نقطه انتخاب شده: Φ: {formData.location.lat.toFixed(6)}، λ:{" "}
-            {formData.location.lng.toFixed(6)}
-          </div>
-        ) : (
-          <div className="p-2 border rounded bg-light text-danger">
-            هنوز موقعیتی انتخاب نشده است.
-          </div>
-        )}
-      </Form.Group>
+      <Row className="mb-3">
+        <Col md={6}>
+          <Form.Group>
+            <Form.Label>وضعیت نقشه UTM</Form.Label>
+            <Form.Select
+              name="utm_status"
+              value={formData.utm_status}
+              onChange={handleInputChange}
+              className="border-2 border-orange-400 rounded-lg p-2 text-base focus:border-orange-500 focus:ring focus:ring-orange-200 focus:ring-opacity-50 bg-no-repeat bg-[length:1.25rem] pl-10"
+              style={{
+                backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f97316' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                backgroundPosition: "left 0.75rem center",
+              }}
+            >
+              {utmOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+        </Col>
+        <Col md={6}>
+          <Form.Group>
+            <Form.Label>
+              موقعیت ملک <span className="text-red-500">*</span>
+            </Form.Label>
+            {formData.location ? (
+              <div className="p-2 border border-gray-300 rounded-lg bg-gray-50">
+                نقطه انتخاب شده: Φ:{" "}
+                <span className="text-orange-600">
+                  {formData.location.lat.toFixed(6)}
+                </span>
+                , λ:{" "}
+                <span className="text-orange-600">
+                  {formData.location.lng.toFixed(6)}
+                </span>
+              </div>
+            ) : (
+              <div className="p-2 border border-gray-300 rounded-lg bg-gray-50 text-red-600">
+                هنوز موقعیتی انتخاب نشده است. لطفاً موقعیت را روی نقشه انتخاب
+                کنید.
+              </div>
+            )}
+          </Form.Group>
+        </Col>
+      </Row>
 
       <Form.Group className="mb-3">
         <Form.Label>توضیحات</Form.Label>
@@ -427,44 +487,47 @@ function RegistrationRequestForm({ onSubmit, user, location }) {
           value={formData.description}
           onChange={handleInputChange}
           placeholder="توضیحات بیشتر..."
+          className="border-2 border-gray-300 rounded-lg p-2 focus:border-orange-400 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
         />
       </Form.Group>
 
       <Form.Group className="mb-3">
         <Form.Label>پیوست‌ها</Form.Label>
-        <p className="text-muted">
-          {requiredDocuments ||
-            "مدارک مورد نیاز: مدرک مالکیت، تصویر شناسنامه، کارت ملی برابر اصل. این مدارک اجباری هستند و باید در نهایت ارائه شوند."}
+        <ul className="list-disc pr-5 mb-3 text-gray-700 ">
+          <li>مدرک مالکیت</li>
+          <li>تصویر شناسنامه برابر اصل</li>
+          <li>کارت ملی برابر اصل</li>
           {formData.utm_status === "have_utm" && (
             <>
-              <br />
-              <span>
-                لطفاً فایل‌های نقشه UTM و گواهی تعیین مختصات را آپلود کنید.
-              </span>
+              <li>فایل‌های نقشه UTM (در صورت وجود)</li>
+              <li>گواهی تعیین مختصات (در صورت وجود)</li>
             </>
           )}
-        </p>
-        <FileUploadTable
-          files={formData.attachments}
-          onChange={handleFileChange}
-        />
+        </ul>
+        <div className="border border-orange-400 rounded-lg p-3 bg-orange-50">
+          <FileUploadTable
+            files={formData.attachments}
+            onChange={handleFileChange}
+          />
+        </div>
       </Form.Group>
 
-      {error && <Alert variant="danger">{error}</Alert>}
-
-      <Button
-        variant="primary"
-        type="submit"
-        disabled={loadingProjects || loadingSubmit}
-      >
-        {loadingSubmit ? (
-          <>
-            <Spinner animation="border" size="sm" /> در حال ارسال...
-          </>
-        ) : (
-          "ارسال درخواست"
-        )}
-      </Button>
+      <div className="flex justify-center mt-4">
+        <Button
+          type="submit"
+          className="!bg-[#ff6f00] w-50 !text-white rounded-lg py-2 px-6 text-lg hover:!bg-[#e65100] transition-all duration-300 disabled:!bg-[#fed7aa] disabled:cursor-not-allowed"
+          disabled={loadingProjects || loadingSubmit}
+        >
+          {loadingSubmit ? (
+            <>
+              <Spinner animation="border" size="sm" className="ml-2" />
+              در حال ارسال...
+            </>
+          ) : (
+            "ارسال درخواست"
+          )}
+        </Button>
+      </div>
     </Form>
   );
 }

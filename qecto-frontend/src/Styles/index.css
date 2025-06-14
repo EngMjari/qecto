@@ -81,3 +81,6 @@ a {
 .rmdp-day span {
   font-size: 14px;
 }
+.z-1000 {
+  z-index: 1000;
+}

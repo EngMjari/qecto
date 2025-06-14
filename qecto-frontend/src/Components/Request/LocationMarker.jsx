@@ -3,6 +3,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { Form, Button, Row, Col } from "react-bootstrap";
 import inside from "point-in-polygon";
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -138,7 +139,6 @@ const LocationMarker = ({ onLocationChange, lat: propLat, lng: propLng }) => {
       }
     });
 
-    // 👇 نمایش خودکار موقعیت فعلی کاربر
     showUserLocation();
 
     return () => {
@@ -176,7 +176,6 @@ const LocationMarker = ({ onLocationChange, lat: propLat, lng: propLng }) => {
         const { latitude, longitude } = position.coords;
         const latlng = L.latLng(latitude, longitude);
 
-        // اضافه یا بروزرسانی مارکر کاربر
         if (userMarkerRef.current) {
           userMarkerRef.current.setLatLng(latlng);
         } else {
@@ -198,48 +197,55 @@ const LocationMarker = ({ onLocationChange, lat: propLat, lng: propLng }) => {
 
   return (
     <div>
-      <div className="mb-3 gap-2 align-items-center ">
-        <div className="flex gap-3">
-          <div className="form-group w-1/2">
-            <label htmlFor="lat">عرض جغرافیایی φ:</label>
-            <input
+      <Row className="mb-3">
+        <Col md={6}>
+          <Form.Group>
+            <Form.Label>عرض جغرافیایی φ:</Form.Label>
+            <Form.Control
               type="number"
               step="0.000001"
-              className="form-control"
               value={lat}
               onChange={(e) => setLat(e.target.value)}
               placeholder="عرض جغرافیایی (lat)"
               name="lat"
+              className="border-2 border-gray-300 rounded-lg p-2 focus:border-orange-400 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
             />
-          </div>
-          <div className="form-group  w-1/2">
-            <label htmlFor="lng">طول جغرافیایی λ:</label>
-            <input
+          </Form.Group>
+        </Col>
+        <Col md={6}>
+          <Form.Group>
+            <Form.Label>طول جغرافیایی λ:</Form.Label>
+            <Form.Control
               type="number"
               step="0.000001"
-              className="form-control"
               value={lng}
               onChange={(e) => setLng(e.target.value)}
               placeholder="طول جغرافیایی (lng)"
               name="lng"
+              className="border-2 border-gray-300 rounded-lg p-2 focus:border-orange-400 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
             />
-          </div>
-        </div>
-        <div className="flex gap-3 py-2">
-          <button
-            className="btn btn-primary w-1/2"
+          </Form.Group>
+        </Col>
+      </Row>
+
+      <Row className="mb-3 space-y-3 lg:space-y-0">
+        <Col md={6}>
+          <Button
+            className="!bg-[#ff6f00] w-full !text-white rounded-lg py-2 px-4 text-base hover:!bg-[#e65100] transition-all duration-300"
             onClick={handleManualChange}
           >
             تنظیم مارکر
-          </button>
-          <button
-            className="btn btn-outline-info w-1/2"
+          </Button>
+        </Col>
+        <Col md={6}>
+          <Button
+            className="!border-2 !border-[#ff6f00] w-full !text-[#ff6f00] rounded-lg py-2 px-4 text-base hover:!bg-[#f97316] hover:!text-white transition-all duration-300 !bg-transparent"
             onClick={showUserLocation}
           >
             نمایش موقعیت من
-          </button>
-        </div>
-      </div>
+          </Button>
+        </Col>
+      </Row>
 
       <div
         id="map"

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Form, Button, Alert, Spinner, Row, Col } from "react-bootstrap";
 import FileUploadTable from "../FileUpload/FileUploadTable";
 import { createSupervisionRequest, fetchProjects } from "../../api";
+import { toast } from "react-toastify";
 
 const supervisionTypes = [
   { value: "", label: "انتخاب کنید..." },
@@ -44,12 +45,16 @@ function SupervisionRequestForm({ onSubmit, user, location }) {
     fetchProjects()
       .then((data) => {
         setProjects(data);
-        setLoadingProjects(false);
+        if (data.length > 0) {
+          setFormData((prev) => ({ ...prev, project: data[0].id }));
+        }
       })
       .catch((err) => {
         setProjects([]);
-        setLoadingProjects(false);
         setError(err.response?.data?.detail || "خطا در بارگذاری پروژه‌ها.");
+      })
+      .finally(() => {
+        setLoadingProjects(false);
       });
   }, [user]);
 
@@ -153,11 +158,10 @@ function SupervisionRequestForm({ onSubmit, user, location }) {
     }
 
     try {
-      console.log("Payload:", payload);
       const result = await createSupervisionRequest(payload);
-      alert("درخواست نظارت با موفقیت ارسال شد!");
+      toast.success("درخواست نظارت با موفقیت ارسال شد!");
       setFormData({
-        project: "",
+        project: projects.length > 0 ? projects[0].id : "",
         project_name: "",
         supervision_type: "",
         area: "",
@@ -194,34 +198,26 @@ function SupervisionRequestForm({ onSubmit, user, location }) {
   return (
     <Form
       onSubmit={handleSubmit}
-      className="p-3 border rounded shadow-sm bg-white"
+      className="p-3 border border-gray-300 rounded-lg shadow-sm bg-white"
     >
-      <style>
-        {`
-          .custom-select {
-            border: 2px solid #007bff;
-            border-radius: 8px;
-            padding: 8px;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-          }
-          .custom-select:focus {
-            border-color: #0056b3;
-            box-shadow: 0 0 5px rgba(0,123,255,0.5);
-            outline: none;
-          }
-        `}
-      </style>
-      <h5 className="mb-3 text-primary">درخواست نظارت</h5>
+      <h5 className="mb-3 text-blue-600">درخواست نظارت</h5>
+
+      {error && (
+        <Alert variant="danger" className="mb-3 text-red-600">
+          {error}
+        </Alert>
+      )}
 
       <Row className="mb-3">
         <Col md={8}>
           <Form.Group>
-            <Form.Label>انتخاب پروژه</Form.Label>
+            <Form.Label>
+              انتخاب پروژه <span className="text-red-500">*</span>
+            </Form.Label>
             {loadingProjects ? (
-              <div>
-                <Spinner animation="border" size="sm" /> در حال بارگذاری
-                پروژه‌ها...
+              <div className="flex items-center">
+                <Spinner animation="border" size="sm" className="ml-2" />
+                در حال بارگذاری پروژه‌ها...
               </div>
             ) : (
               <Form.Select
@@ -229,23 +225,27 @@ function SupervisionRequestForm({ onSubmit, user, location }) {
                 value={formData.project}
                 onChange={handleInputChange}
                 disabled={formData.showNewProjectForm}
-                className="custom-select"
+                required
+                className="border-2 border-orange-400 rounded-lg p-2 text-base focus:border-orange-500 focus:ring focus:ring-orange-200 focus:ring-opacity-50 bg-no-repeat bg-[length:1.25rem] pl-10"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f97316' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                  backgroundPosition: "left 0.75rem center",
+                }}
               >
                 <option value="">انتخاب کنید...</option>
                 {projects.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.title}
+                    {p.title || p.name}
                   </option>
                 ))}
               </Form.Select>
             )}
           </Form.Group>
         </Col>
-        <Col md={4} className="d-flex align-items-end">
+        <Col md={4} className="flex items-end">
           <Button
-            variant="outline-primary"
+            className="!border-2 !border-[#ff6f00] w-100 !text-[#ff6f00] rounded-lg py-2 px-4 text-base hover:!bg-[#f97316] hover:!text-white transition-all duration-300 !bg-transparent"
             onClick={toggleNewProjectForm}
-            className="w-100"
           >
             {formData.showNewProjectForm
               ? "لغو ایجاد پروژه"
@@ -255,124 +255,177 @@ function SupervisionRequestForm({ onSubmit, user, location }) {
       </Row>
 
       {formData.showNewProjectForm && (
-        <Form.Group className="mb-3">
-          <Form.Label>عنوان پروژه جدید</Form.Label>
-          <Form.Control
-            type="text"
-            name="project_name"
-            value={formData.project_name}
-            onChange={handleInputChange}
-            placeholder="نام پروژه جدید را وارد کنید"
-            required
-          />
-        </Form.Group>
+        <Row className="mb-3">
+          <Col md={12}>
+            <Form.Group>
+              <Form.Label>
+                عنوان پروژه جدید <span className="text-red-500">*</span>
+              </Form.Label>
+              <Form.Control
+                type="text"
+                name="project_name"
+                value={formData.project_name}
+                onChange={handleInputChange}
+                placeholder="نام پروژه جدید را وارد کنید"
+                required
+                className="border-2 border-gray-300 rounded-lg p-2 focus:border-orange-400 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
+              />
+            </Form.Group>
+          </Col>
+        </Row>
       )}
 
-      <Form.Group className="mb-3">
-        <Form.Label>نوع نظارت</Form.Label>
-        <Form.Select
-          name="supervision_type"
-          value={formData.supervision_type}
-          onChange={handleInputChange}
-          className="custom-select"
-          required
+      <Row className="mb-3">
+        <Col md={12}>
+          <Form.Group>
+            <Form.Label>
+              نوع نظارت <span className="text-red-500">*</span>
+            </Form.Label>
+            <Form.Select
+              name="supervision_type"
+              value={formData.supervision_type}
+              onChange={handleInputChange}
+              required
+              className="border-2 border-orange-400 rounded-lg p-2 text-base focus:border-orange-500 focus:ring focus:ring-orange-200 focus:ring-opacity-50 bg-no-repeat bg-[length:1.25rem] pl-10"
+              style={{
+                backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f97316' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                backgroundPosition: "left 0.75rem center",
+              }}
+            >
+              {supervisionTypes.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+            </Form.Select>
+          </Form.Group>
+        </Col>
+      </Row>
+
+      <Row className="mb-3">
+        <Col md={formData.building_area ? 6 : 12}>
+          <Form.Group>
+            <Form.Label>مساحت زمین (متر مربع، اختیاری)</Form.Label>
+            <Form.Control
+              type="number"
+              name="area"
+              value={formData.area}
+              onChange={handleInputChange}
+              placeholder="مثلاً 1000"
+              min={0}
+              className="border-2 border-gray-300 rounded-lg p-2 focus:border-orange-400 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
+            />
+          </Form.Group>
+        </Col>
+        {formData.building_area && (
+          <Col md={6}>
+            <Form.Group>
+              <Form.Label>مساحت بنا (متر مربع، اجباری)</Form.Label>
+              <Form.Control
+                type="number"
+                name="building_area"
+                value={formData.building_area}
+                onChange={handleInputChange}
+                placeholder="مثلاً 500"
+                min={0}
+                required
+                className="border-2 border-gray-300 rounded-lg p-2 focus:border-orange-400 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
+              />
+            </Form.Group>
+          </Col>
+        )}
+      </Row>
+
+      <Row className="mb-3">
+        <Col md={12}>
+          <Form.Group>
+            <Form.Label>شماره پروانه (اختیاری)</Form.Label>
+            <Form.Control
+              type="text"
+              name="permit_number"
+              value={formData.permit_number}
+              onChange={handleInputChange}
+              placeholder="شماره پروانه را وارد کنید"
+              className="border-2 border-gray-300 rounded-lg p-2 focus:border-orange-400 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
+            />
+          </Form.Group>
+        </Col>
+      </Row>
+
+      <Row className="mb-3">
+        <Col md={12}>
+          <Form.Group>
+            <Form.Label>موقعیت ملک (اختیاری)</Form.Label>
+            {formData.location ? (
+              <div className="p-2 border border-gray-300 rounded-lg bg-gray-50">
+                نقطه انتخاب شده: Φ:{" "}
+                <span className="text-orange-600">
+                  {formData.location.lat.toFixed(6)}
+                </span>
+                , λ:{" "}
+                <span className="text-orange-600">
+                  {formData.location.lng.toFixed(6)}
+                </span>
+              </div>
+            ) : (
+              <div className="p-2 border border-gray-300 rounded-lg bg-gray-50 text-red-600">
+                هنوز موقعیتی انتخاب نشده است.
+              </div>
+            )}
+          </Form.Group>
+        </Col>
+      </Row>
+
+      <Row className="mb-3">
+        <Col md={12}>
+          <Form.Group>
+            <Form.Label>توضیحات (اختیاری)</Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={3}
+              name="description"
+              value={formData.description}
+              onChange={handleInputChange}
+              placeholder="توضیحات بیشتر..."
+              className="border-2 border-gray-300 rounded-lg p-2 focus:border-orange-400 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
+            />
+          </Form.Group>
+        </Col>
+      </Row>
+
+      <Row className="mb-3">
+        <Col md={12}>
+          <Form.Group>
+            <Form.Label>پیوست‌ها (اختیاری)</Form.Label>
+            <p className="text-muted">
+              مدارک مورد نیاز: نقشه‌های معماری، پروانه ساخت (اختیاری).
+            </p>
+            <div className="border border-orange-400 rounded-lg p-3 bg-orange-50">
+              <FileUploadTable
+                files={formData.attachments}
+                onChange={handleFileChange}
+              />
+            </div>
+          </Form.Group>
+        </Col>
+      </Row>
+
+      <div className="flex justify-center mt-4">
+        <Button
+          type="submit"
+          className="!bg-[#ff6f00] w-50 !text-white rounded-lg py-2 px-6 text-lg hover:!bg-[#e65100] transition-all duration-300 disabled:!bg-[#fed7aa] disabled:cursor-not-allowed"
+          disabled={loadingProjects || loadingSubmit}
         >
-          {supervisionTypes.map((type) => (
-            <option key={type.value} value={type.value}>
-              {type.label}
-            </option>
-          ))}
-        </Form.Select>
-      </Form.Group>
-
-      <Form.Group className="mb-3">
-        <Form.Label>مساحت زمین (متر مربع)</Form.Label>
-        <Form.Control
-          type="number"
-          name="area"
-          value={formData.area}
-          onChange={handleInputChange}
-          placeholder="مثلاً 1000"
-          min={0}
-        />
-      </Form.Group>
-
-      <Form.Group className="mb-3">
-        <Form.Label>مساحت بنا (متر مربع)</Form.Label>
-        <Form.Control
-          type="number"
-          name="building_area"
-          value={formData.building_area}
-          onChange={handleInputChange}
-          placeholder="مثلاً 500"
-          min={0}
-          required
-        />
-      </Form.Group>
-
-      <Form.Group className="mb-3">
-        <Form.Label>شماره پروانه</Form.Label>
-        <Form.Control
-          type="text"
-          name="permit_number"
-          value={formData.permit_number}
-          onChange={handleInputChange}
-          placeholder="شماره پروانه را وارد کنید"
-        />
-      </Form.Group>
-
-      <Form.Group className="mb-3">
-        <Form.Label>موقعیت ملک</Form.Label>
-        {formData.location ? (
-          <div className="p-2 border rounded bg-light text-success">
-            نقطه انتخاب شده: Φ: {formData.location.lat.toFixed(6)}، λ:{" "}
-            {formData.location.lng.toFixed(6)}
-          </div>
-        ) : (
-          <div className="p-2 border rounded bg-light text-danger">
-            هنوز موقعیتی انتخاب نشده است.
-          </div>
-        )}
-      </Form.Group>
-
-      <Form.Group className="mb-3">
-        <Form.Label>توضیحات</Form.Label>
-        <Form.Control
-          as="textarea"
-          rows={3}
-          name="description"
-          value={formData.description}
-          onChange={handleInputChange}
-          placeholder="توضیحات بیشتر..."
-        />
-      </Form.Group>
-
-      <Form.Group className="mb-3">
-        <Form.Label>پیوست‌ها</Form.Label>
-        <p className="text-muted">
-          مدارک مورد نیاز: نقشه‌های معماری، پروانه ساخت (اختیاری).
-        </p>
-        <FileUploadTable
-          files={formData.attachments}
-          onChange={handleFileChange}
-        />
-      </Form.Group>
-
-      {error && <Alert variant="danger">{error}</Alert>}
-
-      <Button
-        variant="primary"
-        type="submit"
-        disabled={loadingProjects || loadingSubmit}
-      >
-        {loadingSubmit ? (
-          <>
-            <Spinner animation="border" size="sm" /> در حال ارسال...
-          </>
-        ) : (
-          "ارسال درخواست"
-        )}
-      </Button>
+          {loadingSubmit ? (
+            <>
+              <Spinner animation="border" size="sm" className="ml-2" />
+              در حال ارسال...
+            </>
+          ) : (
+            "ارسال درخواست"
+          )}
+        </Button>
+      </div>
     </Form>
   );
 }

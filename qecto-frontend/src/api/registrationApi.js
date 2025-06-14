@@ -34,11 +34,9 @@ export const fetchRegistrationRequest = async (id) => {
 
 export const createRegistrationRequest = async (formValues) => {
   try {
-    if (!formValues.project && !formValues.project_name) {
-      throw new Error(
-        "لطفاً یک پروژه انتخاب کنید یا عنوان پروژه جدید وارد کنید."
-      );
-    }
+    console.log("FormValues received:", formValues); // برای دیباگ
+
+    // اعتبارسنجی‌های ضروری
     if (!formValues.property_type) {
       throw new Error("نوع ملک اجباری است.");
     }
@@ -50,22 +48,12 @@ export const createRegistrationRequest = async (formValues) => {
         throw new Error("برای سند مشاعی، پلاک اصلی و فرعی اجباری هستند.");
       }
     }
-    if (!formValues.request_survey && Array.isArray(formValues.attachments)) {
-      const titles = formValues.attachments.map((a) => a.title.toLowerCase());
-      if (
-        !titles.includes("نقشه utm") ||
-        !titles.includes("گواهی تعیین مختصات")
-      ) {
-        throw new Error(
-          "اگر نقشه UTM دارید، باید فایل‌های 'نقشه UTM' و 'گواهی تعیین مختصات' آپلود شوند."
-        );
-      }
-    }
 
     const formData = new FormData();
     if (formValues.project && formValues.project !== "new") {
       formData.append("project", formValues.project);
-    } else if (formValues.project_name) {
+    }
+    if (formValues.project_name) {
       formData.append("project_name", formValues.project_name);
     }
     formData.append("property_type", formValues.property_type);
@@ -98,6 +86,8 @@ export const createRegistrationRequest = async (formValues) => {
         formData.append("titles", title || "");
       });
     }
+
+    console.log("Sending FormData to API:", Object.fromEntries(formData)); // برای دیباگ
 
     const response = await axiosInstance.post(
       API_ENDPOINTS.REGISTRATION.REQUESTS,

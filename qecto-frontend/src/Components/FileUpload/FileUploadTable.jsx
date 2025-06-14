@@ -1,4 +1,6 @@
 import React, { useRef } from "react";
+import { Button, Form, Row, Col } from "react-bootstrap";
+import { toast } from "react-toastify";
 
 // آیکون پیش‌نمایش نوع فایل
 function FileTypePreview({ file }) {
@@ -10,7 +12,7 @@ function FileTypePreview({ file }) {
       <svg
         width="24"
         height="24"
-        fill="#FF5722"
+        fill="#f97316"
         viewBox="0 0 24 24"
         xmlns="http://www.w3.org/2000/svg"
         style={{ verticalAlign: "middle" }}
@@ -25,7 +27,7 @@ function FileTypePreview({ file }) {
       <svg
         width="24"
         height="24"
-        fill="#4CAF50"
+        fill="#f97316"
         viewBox="0 0 24 24"
         xmlns="http://www.w3.org/2000/svg"
         style={{ verticalAlign: "middle" }}
@@ -42,7 +44,7 @@ function FileTypePreview({ file }) {
       <svg
         width="24"
         height="24"
-        fill="#FF9800"
+        fill="#f97316"
         viewBox="0 0 24 24"
         xmlns="http://www.w3.org/2000/svg"
         style={{ verticalAlign: "middle" }}
@@ -74,7 +76,7 @@ function formatFileSize(bytes) {
 }
 
 // جدول بارگذاری فایل‌ها
-function FileUploadTable({ attachments = [], onFileChange }) {
+function FileUploadTable({ files = [], onFileChange }) {
   const fileInputRef = useRef();
   const MAX_FILES = 10;
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -83,7 +85,7 @@ function FileUploadTable({ attachments = [], onFileChange }) {
     const selectedFiles = Array.from(e.target.files);
     const filteredFiles = selectedFiles.filter((file) => {
       if (file.size > MAX_FILE_SIZE) {
-        alert(
+        toast.error(
           `فایل "${file.name}" بیش از ۱۰ مگابایت است و نمی‌تواند اضافه شود.`
         );
         return false;
@@ -91,10 +93,10 @@ function FileUploadTable({ attachments = [], onFileChange }) {
       return true;
     });
 
-    const totalFiles = attachments.length + filteredFiles.length;
+    const totalFiles = files.length + filteredFiles.length;
     if (totalFiles > MAX_FILES) {
-      alert("حداکثر ۱۰ فایل می‌توانید انتخاب کنید.");
-      const allowedCount = MAX_FILES - attachments.length;
+      toast.error(`حداکثر ${MAX_FILES} فایل می‌توانید انتخاب کنید.`);
+      const allowedCount = MAX_FILES - files.length;
       if (allowedCount <= 0) {
         e.target.value = null;
         return;
@@ -124,7 +126,7 @@ function FileUploadTable({ attachments = [], onFileChange }) {
   };
 
   return (
-    <div>
+    <div className="animate-fade-in">
       <input
         type="file"
         multiple
@@ -132,69 +134,110 @@ function FileUploadTable({ attachments = [], onFileChange }) {
         style={{ display: "none" }}
         onChange={handleFileChange}
         accept=".pdf,image/*,.zip,.rar,.7z"
+        aria-label="انتخاب فایل‌ها"
       />
 
-      <div className="mb-2 d-flex flex-wrap gap-2">
-        <button
-          type="button"
-          className="btn btn-sm btn-primary"
-          onClick={() => fileInputRef.current.click()}
-        >
-          انتخاب/ویرایش فایل‌ها
-        </button>
-        {attachments.length > 0 && (
-          <button
-            type="button"
-            className="btn btn-sm btn-danger"
-            onClick={() => onFileChange([])}
+      <Row className="mb-3">
+        <Col xs={12}>
+          <p className="text-muted text-sm">
+            حداکثر {MAX_FILES} فایل، هر کدام تا {MAX_FILE_SIZE / (1024 * 1024)}{" "}
+            مگابایت (فرمت‌های مجاز: PDF، تصویر، ZIP، RAR، 7Z)
+          </p>
+        </Col>
+        <Col xs={6}>
+          <Button
+            className="!bg-[#ff6f00] w-full !text-white rounded-lg py-2 px-4 text-base hover:!bg-[#e65100] transition-all duration-300"
+            onClick={() => fileInputRef.current.click()}
+            aria-label="انتخاب یا ویرایش فایل‌ها"
           >
-            حذف همه فایل‌ها
-          </button>
+            انتخاب/ویرایش فایل‌ها
+          </Button>
+        </Col>
+        {files.length > 0 && (
+          <Col xs={6}>
+            <Button
+              className="!border-2 !border-[#ff6f00] w-full !text-[#ff6f00] rounded-lg py-2 px-4 text-base hover:!bg-[#f97316] hover:!text-white transition-all duration-300 !bg-transparent"
+              onClick={() => onFileChange([])}
+              aria-label="حذف همه فایل‌ها"
+            >
+              حذف همه فایل‌ها
+            </Button>
+          </Col>
         )}
-      </div>
+      </Row>
 
-      {attachments.length === 0 ? (
-        <p className="text-muted">هیچ فایلی انتخاب نشده است.</p>
+      {files.length === 0 ? (
+        <p className="text-muted text-center">هیچ فایلی انتخاب نشده است.</p>
       ) : (
-        <table className="table table-bordered table-striped table-sm text-center align-middle w-100">
-          <thead className="table-info">
+        <table className="w-full border-collapse text-center text-sm">
+          <thead className="bg-orange-100 text-orange-600">
             <tr>
-              <th style={{ minWidth: "100px" }}>عنوان</th>
-              <th style={{ width: "50px" }}>نوع</th>
-              <th style={{ width: "80px" }}>حجم</th>
-              <th style={{ width: "80px" }}>حذف</th>
+              <th scope="col" className="p-2 border border-orange-300">
+                عنوان
+              </th>
+              <th scope="col" className="p-2 border border-orange-300 w-[50px]">
+                نوع
+              </th>
+              <th scope="col" className="p-2 border border-orange-300 w-[80px]">
+                حجم
+              </th>
+              <th scope="col" className="p-2 border border-orange-300 w-[80px]">
+                حذف
+              </th>
             </tr>
           </thead>
           <tbody>
-            {attachments.map(({ file, title }, index) => (
-              <tr key={file.name + index}>
-                <td>
-                  <input
+            {files.map(({ file, title }, index) => (
+              <tr
+                key={file.name + index}
+                className="hover:bg-orange-50 transition-all duration-200"
+              >
+                <td className="p-2 border border-orange-300">
+                  <Form.Control
                     type="text"
-                    className="form-control form-control-sm"
                     placeholder="عنوان فایل"
                     value={title}
                     onChange={(e) => handleTitleChange(index, e.target.value)}
+                    className="border-2 border-gray-300 rounded-lg p-1 text-sm focus:border-orange-400 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
+                    aria-label={`عنوان فایل ${file.name}`}
                   />
                 </td>
-                <td>
+                <td className="p-2 border border-orange-300">
                   <FileTypePreview file={file} />
                 </td>
-                <td>{formatFileSize(file.size)}</td>
-                <td>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-outline-danger w-100"
+                <td className="p-2 border border-orange-300">
+                  {formatFileSize(file.size)}
+                </td>
+                <td className="p-2 border border-orange-300">
+                  <Button
+                    className="!border-2 !border-[#ff6f00] w-full !text-[#ff6f00] rounded-lg py-1 px-2 text-sm hover:!bg-[#f97316] hover:!text-white transition-all duration-300 !bg-transparent"
                     onClick={() => handleRemoveFile(index)}
+                    aria-label={`حذف فایل ${file.name}`}
                   >
                     حذف
-                  </button>
+                  </Button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fade-in {
+          animation: fadeIn 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 }

@@ -47,7 +47,7 @@ const MobileTopNav = ({ isLoggedIn, onLogout, logoSrc }) => {
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 right-0 border-b border-gray-300 flex justify-between items-center h-16 px-4 z-50 lg:hidden transition-all duration-300 ${
+        className={`fixed top-0 left-0 right-0 border-b border-gray-300 flex justify-between items-center h-16 px-4 z-1000 lg:hidden transition-all duration-300 ${
           isScrolled ? "bg-transparent border-none" : "bg-white"
         }`}
         style={{ direction: "rtl" }}

@@ -1,7 +1,7 @@
+// api/surveyApi.js :
 import axiosInstance from "../utils/axiosInstance";
 import API_ENDPOINTS from "./apiEndpoints";
 
-// گرفتن لیست درخواست‌های نقشه‌برداری
 export const fetchSurveyRequests = async () => {
   try {
     const response = await axiosInstance.get(API_ENDPOINTS.SURVEY.REQUESTS);
@@ -15,7 +15,6 @@ export const fetchSurveyRequests = async () => {
   }
 };
 
-// گرفتن جزئیات یک درخواست خاص
 export const fetchSurveyRequest = async (id) => {
   try {
     const response = await axiosInstance.get(
@@ -31,27 +30,26 @@ export const fetchSurveyRequest = async (id) => {
   }
 };
 
-// ایجاد درخواست جدید نقشه‌برداری
 export const createSurveyRequest = async (formValues) => {
   try {
-    if (!formValues.project && !formValues.project_name) {
-      throw new Error(
-        "لطفاً یک پروژه انتخاب کنید یا عنوان پروژه جدید وارد کنید."
-      );
+    console.log("FormValues received for survey:", formValues); // برای دیباگ
+
+    // اعتبارسنجی‌های ضروری
+    if (!formValues.property_type) {
+      throw new Error("نوع ملک اجباری است.");
+    }
+    if (!formValues.location?.lat || !formValues.location?.lng) {
+      throw new Error("مختصات موقعیت (lat, lng) اجباری است.");
     }
 
     const formData = new FormData();
     if (formValues.project && formValues.project !== "new") {
       formData.append("project", formValues.project);
-    } else if (formValues.project_name) {
+    }
+    if (formValues.project_name) {
       formData.append("project_name", formValues.project_name);
     }
-
-    if (!formValues.property_type) {
-      throw new Error("نوع ملک اجباری است.");
-    }
     formData.append("property_type", formValues.property_type);
-
     if (formValues.area) {
       formData.append("area", formValues.area);
     }
@@ -65,10 +63,6 @@ export const createSurveyRequest = async (formValues) => {
       formData.append("sub_parcel_number", formValues.sub_parcel_number);
     }
     formData.append("description", formValues.description || "");
-
-    if (!formValues.location?.lat || !formValues.location?.lng) {
-      throw new Error("مختصات موقعیت (lat, lng) اجباری است.");
-    }
     formData.append("location_lat", formValues.location.lat);
     formData.append("location_lng", formValues.location.lng);
 
@@ -78,6 +72,11 @@ export const createSurveyRequest = async (formValues) => {
         formData.append("titles", title || "");
       });
     }
+
+    console.log(
+      "Sending FormData to API for survey:",
+      Object.fromEntries(formData)
+    ); // برای دیباگ
 
     const response = await axiosInstance.post(
       API_ENDPOINTS.SURVEY.REQUESTS,

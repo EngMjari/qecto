@@ -3,7 +3,7 @@ import React from "react";
 const MobileBottomNav = ({ activePage, setPage, navItems }) => {
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-300 flex justify-around items-center h-24 lg:hidden z-50"
+      className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-300 flex justify-around items-center h-24 lg:hidden z-1000"
       style={{ direction: "rtl" }}
     >
       {navItems.map(({ name, page, Icon }) => (
