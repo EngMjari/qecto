@@ -1,35 +1,57 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
-import FileItem from "./FileItem"; // Import the FileItem component
 
-function TicketConversation({ session, onBack, onSendMessage, onPreview }) {
+function TicketConversation({ session, onSendMessage, userId }) {
+  const messagesContainerRef = useRef(null);
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    if (messagesContainerRef.current && messagesEndRef.current) {
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
+      // یا اگر بخوای می‌تونی از scrollIntoView روی messagesEndRef استفاده کنی:
+      // messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [session.messages]);
+
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-white rounded-b-xl shadow-inner">
       <div
-        className="flex-grow p-4 overflow-y-auto w-full"
-        style={{ maxHeight: "50vh", minHeight: 200, overflowX: "hidden" }}
+        ref={messagesContainerRef}
+        className="flex-grow p-4 overflow-y-auto w-full space-y-6"
+        style={{ maxHeight: "60vh", minHeight: 200, overflowX: "hidden" }}
       >
-        {session.tickets.map((ticket) => (
-          <MessageBubble key={ticket.id} message={ticket} />
-        ))}
+        {session.messages?.length > 0 ? (
+          session.messages.map((message) => {
+            const isAdmin = message.sender.id !== userId;
 
-        {/* Render attachments if they exist */}
-        {session.attachments && session.attachments.length > 0 && (
-          <div className="mt-2">
-            <h4 className="text-xs text-gray-500 mb-1">فایل‌های این تیکت:</h4>
-            <div className="space-y-1">
-              {session.attachments.map((file) => (
-                <FileItem key={file.id} file={file} onPreview={onPreview} />
-              ))}
-            </div>
-          </div>
+            return (
+              <div
+                key={message.id}
+                className={`flex ${isAdmin ? "justify-start" : "justify-end"}`}
+              >
+                <div className="max-w-[80%]">
+                  <MessageBubble message={message} userId={userId} />
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <p className="text-sm text-gray-400 text-center py-6">
+            پیامی وجود ندارد.
+          </p>
         )}
+        {/* این div برای اسکرول کردن به آخر پیام‌ها */}
+        <div ref={messagesEndRef} />
       </div>
-      <MessageInput
-        disabled={session.status === "closed"}
-        onSendMessage={onSendMessage}
-      />
+
+      <div className="p-1 bg-gray-50 rounded-b-xl">
+        <MessageInput
+          disabled={session.status === "closed"}
+          onSendMessage={onSendMessage}
+        />
+      </div>
     </div>
   );
 }

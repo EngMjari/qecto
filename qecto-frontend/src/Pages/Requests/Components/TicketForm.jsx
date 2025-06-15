@@ -1,9 +1,5 @@
 import React, { useState } from "react";
-import {
-  createTicketSession,
-  createTicketMessage,
-  uploadMessageFiles,
-} from "../../../api";
+import { createTicketSession, sendTicketMessage } from "../../../api";
 import { FaPaperclip, FaSpinner } from "react-icons/fa";
 import FileItemForSelectedFiles from "./FileItemForSelectedFiles";
 
@@ -42,38 +38,59 @@ function TicketForm({ requestId, requestType, onTicketCreated }) {
     setSuccessMsg("");
     setErrorMsg("");
     try {
+      // بررسی مقادیر ورودی
+      if (!requestId || !requestType) {
+        throw new Error("شناسه درخواست یا نوع درخواست نامعتبر است.");
+      }
+      const validRequestTypes = [
+        "survey",
+        "expert",
+        "evaluation",
+        "supervision",
+        "execution",
+        "registration",
+      ];
+      if (!validRequestTypes.includes(requestType)) {
+        throw new Error(`نوع درخواست نامعتبر است: ${requestType}`);
+      }
+
+      // نگاشت requestType به content_type
+      const contentTypeMap = {
+        survey: "surveyrequest",
+        expert: "expertevaluationrequest",
+        evaluation: "expertevaluationrequest",
+        supervision: "supervisionrequest",
+        execution: "executionrequest",
+        registration: "registrationrequest",
+      };
+      const content_type = contentTypeMap[requestType];
+      if (!content_type) {
+        throw new Error(`content_type نامعتبر برای ${requestType}`);
+      }
+
       const formData = new FormData();
       formData.append("title", title);
       formData.append("session_type", requestType);
-      if (requestType === "survey") {
-        formData.append("survey_request", requestId);
-      } else if (requestType === "expert" || requestType === "evaluation") {
-        formData.append("evaluation_request", requestId);
-      }
+      formData.append("content_type", content_type);
+      formData.append("object_id", requestId);
 
-      // لاگ گرفتن دیتا قبل از ارسال
+      // لاگ فرم دیتا
       for (let pair of formData.entries()) {
         console.log("FormData:", pair[0], pair[1]);
       }
 
       const sessionRes = await createTicketSession(formData);
-      const sessionId = sessionRes.data.id;
+      const sessionId = sessionRes.id;
 
-      // اگر پیام یا فایل وجود دارد، پیام اولیه بساز
-      if ((message && message.trim()) || files.length > 0) {
-        const msgRes = await createTicketMessage(sessionId, {
-          content: message && message.trim() ? message : " ",
+      // ارسال پیام اولیه اگر وجود داشته باشد
+      if (message.trim() || files.length > 0) {
+        await sendTicketMessage(sessionId, {
+          message: message.trim() || " ",
+          attachments: files.map((file, idx) => ({
+            file,
+            title: fileTitles[idx] || "",
+          })),
         });
-        const messageId = msgRes.data.id;
-
-        if (files.length > 0) {
-          const fileForm = new FormData();
-          files.forEach((file, idx) => {
-            fileForm.append("files", file);
-            fileForm.append("titles", fileTitles[idx] || "");
-          });
-          await uploadMessageFiles(messageId, fileForm);
-        }
       }
 
       setTitle("");
@@ -83,7 +100,12 @@ function TicketForm({ requestId, requestType, onTicketCreated }) {
       setSuccessMsg("تیکت با موفقیت ثبت شد.");
       onTicketCreated();
     } catch (err) {
-      setErrorMsg("خطا در ثبت تیکت. لطفاً دوباره تلاش کنید.");
+      console.error("جزئیات خطا:", err.response?.data || err.message);
+      setErrorMsg(
+        `خطا در ثبت تیکت: ${
+          err.response?.data?.non_field_errors?.[0] || err.message
+        }`
+      );
     } finally {
       setLoading(false);
     }
@@ -122,7 +144,6 @@ function TicketForm({ requestId, requestType, onTicketCreated }) {
           onChange={(e) =>
             setMessage(e.target.value.slice(0, MAX_MESSAGE_LENGTH))
           }
-          required
           rows={4}
           maxLength={MAX_MESSAGE_LENGTH}
         />
@@ -162,10 +183,7 @@ function TicketForm({ requestId, requestType, onTicketCreated }) {
           loading ? "opacity-60 cursor-not-allowed" : ""
         }`}
         disabled={
-          loading ||
-          !title.trim() ||
-          !message.trim() ||
-          message.length > MAX_MESSAGE_LENGTH
+          loading || !title.trim() || message.length > MAX_MESSAGE_LENGTH
         }
       >
         {loading && <FaSpinner className="animate-spin" />}

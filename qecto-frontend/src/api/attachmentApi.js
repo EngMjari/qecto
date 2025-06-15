@@ -1,4 +1,4 @@
-import axiosInstance from "./axiosInstance";
+import axiosInstance from "../utils/axiosInstance";
 
 export const uploadInitialAttachment = async (
   contentType,
@@ -127,9 +127,17 @@ export const getFilePreview = async (attachmentId) => {
         responseType: "blob",
       }
     );
-    return URL.createObjectURL(response.data);
+    const blob = response.data;
+    const contentType = response.headers["content-type"];
+    if (contentType === "application/json") {
+      // اگر پاسخ JSON باشه (مثل ارور)، متنش رو بخون
+      const text = await blob.text();
+      const errorData = JSON.parse(text);
+      throw errorData;
+    }
+    return URL.createObjectURL(blob);
   } catch (error) {
     console.error("خطا در دریافت پیش‌نمایش:", error);
-    throw error.response?.data || { error: "خطای ناشناخته" };
+    throw error.error ? error : { error: "خطای ناشناخته در پیش‌نمایش" };
   }
 };

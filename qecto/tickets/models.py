@@ -83,7 +83,7 @@ class TicketMessage(models.Model):
         TicketSession, on_delete=models.CASCADE, related_name='messages')
     sender = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    message = models.TextField()
+    message = models.TextField(blank=True, default="")
     attachments = models.ManyToManyField(Attachment, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

@@ -1,14 +1,13 @@
-// src/Contexts/AuthContext.js
 import React, { createContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import LoadingScreen from "../Pages/LoadingScreen/LoadingScreen";
-import { fetchUserInfo, logout as logoutApi } from "../api/authApi"; // ✅ ایمپورت تابع جدید
+import { fetchUserInfo, logout as logoutApi } from "../api/authApi";
 
 export const AuthContext = createContext();
 const BASE_URL =
   import.meta.env?.VITE_API_BASE_URL ||
   process.env.REACT_APP_API_BASE_URL ||
-  "https://192.168.1.101:8000";
+  "https://192.168.1.3:8000";
 
 export function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -41,6 +40,7 @@ export function AuthProvider({ children }) {
     try {
       const user = await fetchUserInfo();
       setUserProfile({
+        id: user.id,
         image: user.profile_image?.startsWith("http")
           ? user.profile_image
           : `${BASE_URL}${
@@ -89,6 +89,7 @@ export function AuthProvider({ children }) {
         userProfile,
         userRole,
         loadingProfile,
+        isAdmin: userRole === "admin" || userRole === "superadmin",
       }}
     >
       {children}

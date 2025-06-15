@@ -1,3 +1,4 @@
+
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -7,10 +8,15 @@ from tickets.models import TicketSession, TicketMessage
 from .serializers import AttachmentSerializer, AttachmentCreateSerializer
 from django.contrib.contenttypes.models import ContentType
 from django.http import FileResponse
-from django.core.files.temp import NamedTemporaryFile
+import tempfile
 import os
 from PIL import Image
-import fitz  # PyMuPDF
+import fitz
+import logging
+import io
+
+# تنظیم لاگ برای دیباگ
+logger = logging.getLogger(__name__)
 
 
 class AttachmentViewSet(viewsets.ModelViewSet):
@@ -33,24 +39,22 @@ class AttachmentViewSet(viewsets.ModelViewSet):
             model_class = content_type_obj.model_class()
             obj = model_class.objects.get(id=uuid)
 
-            # فایل‌های اولیه
             initial_files = Attachment.objects.filter(
                 content_type=content_type_obj, object_id=uuid)
-
-            # فایل‌های تیکت
             ticket_files = Attachment.objects.filter(
                 ticketmessage__ticket__content_type=content_type_obj,
                 ticketmessage__ticket__object_id=uuid
             )
-
-            # فایل‌های ادمین
-            admin_files = Attachment.objects.filter(
-                content_type=content_type_obj, object_id=uuid,
-                uploaded_by__is_staff=True
-            ) if hasattr(obj, 'status') and obj.status == 'completed' else Attachment.objects.none()
+            admin_files = (
+                Attachment.objects.filter(
+                    content_type=content_type_obj, object_id=uuid, uploaded_by__is_staff=True)
+                if hasattr(obj, 'status') and obj.status == 'completed'
+                else Attachment.objects.none()
+            )
 
             all_files = initial_files | ticket_files | admin_files
-            serializer = self.get_serializer(all_files.distinct(), many=True)
+            serializer = self.get_serializer(
+                all_files.distinct(), many=True)
             return Response(serializer.data)
         except (ContentType.DoesNotExist, model_class.DoesNotExist):
             return Response({'error': 'درخواست یا نوع غیرمعتبر'}, status=status.HTTP_404_NOT_FOUND)
@@ -59,6 +63,8 @@ class AttachmentViewSet(viewsets.ModelViewSet):
     def ticket_session_files(self, request, ticket_id):
         try:
             ticket = TicketSession.objects.get(id=ticket_id)
+            if ticket.user != request.user and not request.user.is_staff:
+                return Response({'error': 'عدم دسترسی به سشن تیکت'}, status=status.HTTP_403_FORBIDDEN)
             files = Attachment.objects.filter(ticketmessage__ticket=ticket)
             serializer = self.get_serializer(files.distinct(), many=True)
             return Response(serializer.data)
@@ -90,24 +96,42 @@ class AttachmentViewSet(viewsets.ModelViewSet):
     def preview(self, request, pk=None):
         try:
             attachment = self.get_object()
+            logger.debug(
+                f"Preview requested for attachment {pk}: {attachment.file.name}")
+            if not os.path.exists(attachment.file.path):
+                logger.error(f"File not found: {attachment.file.path}")
+                return Response({'error': 'فایل یافت نشد.'}, status=status.HTTP_404_NOT_FOUND)
+
             file_ext = os.path.splitext(attachment.file.name)[1].lower()
+            logger.debug(f"File extension: {file_ext}")
             if file_ext not in ['.pdf', '.jpg', '.jpeg', '.png']:
+                logger.warning(
+                    f"Unsupported file format for preview: {file_ext}")
                 return Response({'error': 'پیش‌نمایش فقط برای PDF و تصاویر موجود است.'},
                                 status=status.HTTP_400_BAD_REQUEST)
+
             if file_ext == '.pdf':
-                pdf_document = fitz.open(attachment.file.path)
-                page = pdf_document.load_page(0)
-                pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))  # زوم ۲ برابر
-                img = Image.frombytes(
-                    "RGB", [pix.width, pix.height], pix.samples)
-                temp_file = NamedTemporaryFile(delete=False, suffix='.png')
-                img.save(temp_file, format='PNG')
-                temp_file.close()
-                response = FileResponse(
-                    open(temp_file.name, 'rb'), content_type='image/png')
-                os.unlink(temp_file.name)
-                return response
+                logger.debug(f"Processing PDF: {attachment.file.path}")
+                try:
+                    pdf_document = fitz.open(attachment.file.path)
+                    page = pdf_document.load_page(0)
+                    pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+                    img = Image.frombytes(
+                        "RGB", [pix.width, pix.height], pix.samples)
+
+                    # ذخیره تصویر تو حافظه به‌جای فایل موقت
+                    buffer = io.BytesIO()
+                    img.save(buffer, format='PNG')
+                    buffer.seek(0)
+
+                    logger.debug("PDF converted to PNG in memory")
+                    return FileResponse(buffer, content_type='image/png')
+                except Exception as e:
+                    logger.error(f"Error processing PDF: {str(e)}")
+                    raise
             else:
+                logger.debug(f"Serving image: {attachment.file.path}")
                 return FileResponse(attachment.file, content_type=f'image/{file_ext[1:]}')
         except Exception as e:
+            logger.error(f"Preview error for attachment {pk}: {str(e)}")
             return Response({'error': f'خطا در پیش‌نمایش: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -5,8 +5,8 @@ from .models import TicketSession, TicketMessage
 
 class TicketMessageInline(admin.TabularInline):
     model = TicketMessage
-    extra = 0
-    readonly_fields = ['message', 'created_at', 'sender_display']
+    extra = 1
+    readonly_fields = ['created_at', 'sender_display']
     can_delete = False
 
     def has_add_permission(self, request, obj):
@@ -54,7 +54,8 @@ class TicketMessageAdmin(admin.ModelAdmin):
     list_display = ['id', 'ticket', 'sender_display', 'created_at']
     search_fields = ['message', 'ticket__title',
                      'sender_user__username', 'sender_admin__username']
-    readonly_fields = ['created_at', 'sender_display', 'ticket', 'message']
+    readonly_fields = ['created_at', 'sender_display']
+    autocomplete_fields = ['ticket']
 
     def sender_display(self, obj):
         return obj.sender.get_username() if obj.sender else "-"

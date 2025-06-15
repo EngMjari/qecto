@@ -1,10 +1,18 @@
 import React, { useState, useEffect } from "react";
-import { fetchSurveyAttachmentPreview } from "../../../api";
+import { getFilePreview } from "../../../api/attachmentApi";
 
 function getFileUrl(file) {
-  if (!file.file) return "#";
-  if (file.file.startsWith("http")) return file.file;
-  return file.file;
+  if (!file.file_url) {
+    console.warn("file_url is missing:", file);
+    return "#";
+  }
+  if (file.file_url.startsWith("http")) {
+    return file.file_url;
+  }
+  const baseUrl = process.env.REACT_APP_API_URL || "http://192.168.1.3:8000";
+  return `${baseUrl}${file.file_url.startsWith("/") ? "" : "/"}${
+    file.file_url
+  }`;
 }
 
 function PreviewModal({ open, file, onClose }) {
@@ -14,25 +22,31 @@ function PreviewModal({ open, file, onClose }) {
 
   useEffect(() => {
     if (!open || !file) return;
-    const ext = (file.file_extension || "").toLowerCase();
 
-    if (["jpg", "jpeg", "png", "gif", "bmp", "webp"].includes(ext)) {
-      setPreviewUrl(getFileUrl(file));
+    console.log("Previewing file:", file); // لاگ برای دیباگ
+
+    const ext = (file.file_format || file.file_extension || "").toLowerCase();
+
+    // برای تصاویر مستقیم
+    if (["jpg", "jpeg", "png"].includes(ext)) {
+      const url = getFileUrl(file);
+      setPreviewUrl(url);
       setError("");
       setLoading(false);
       return;
     }
 
-    if (["pdf", "xls", "xlsx", "dwg", "dxf"].includes(ext)) {
+    // برای PDF
+    if (ext === "pdf") {
       setLoading(true);
       setError("");
-      fetchSurveyAttachmentPreview(file.id)
-        .then((res) => {
-          const url = URL.createObjectURL(res.data);
+      getFilePreview(file.id)
+        .then((url) => {
           setPreviewUrl(url);
         })
-        .catch(() => {
-          setError("پیش‌نمایش این فایل ممکن نیست.");
+        .catch((err) => {
+          setError(err.error || "خطا در بارگذاری پیش‌نمایش فایل PDF.");
+          console.error("Preview error:", err);
         })
         .finally(() => setLoading(false));
       return;
@@ -41,6 +55,10 @@ function PreviewModal({ open, file, onClose }) {
     setPreviewUrl(null);
     setError("پیش‌نمایش این فرمت پشتیبانی نمی‌شود.");
     setLoading(false);
+
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
   }, [open, file]);
 
   if (!open || !file) return null;
@@ -63,11 +81,16 @@ function PreviewModal({ open, file, onClose }) {
         ) : previewUrl ? (
           <img
             src={previewUrl}
-            alt={file.custom_name || file.title}
+            alt={file.custom_name || file.title || "پیش‌نمایش"}
             className="max-h-[70vh] mx-auto rounded"
             style={{ display: "block" }}
+            onError={() => setError("نمی‌توان تصویر را بارگذاری کرد.")}
           />
-        ) : null}
+        ) : (
+          <div className="text-center text-gray-500 py-10">
+            هیچ پیش‌نمایشی موجود نیست.
+          </div>
+        )}
       </div>
     </div>
   );

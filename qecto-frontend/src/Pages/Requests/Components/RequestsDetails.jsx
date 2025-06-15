@@ -79,29 +79,44 @@ function RequestDetails({ request }) {
               <span className="mr-2">{request.assignedAdmin.full_name}</span>
             </div>
           )}
-          <div className="flex items-center">
-            <FaFileAlt className="w-5 h-5 ml-3 text-gray-400" />
-            <strong>نوع ملک:</strong>
-            <span className="mr-2">
-              {propertyTypeMap[request.property_type] || "—"}
-            </span>
-          </div>
-          <div className="flex items-center">
-            <FaExpand className="w-5 h-5 ml-3 text-gray-400" />
-            <strong>مساحت:</strong>
-            <span className="mr-2">
-              {request.area ? `${request.area} متر مربع` : "—"}
-            </span>
-          </div>
-          <div className="flex items-center">
-            <FaRegBuilding className="w-5 h-5 ml-3 text-gray-400" />
-            <strong>مساحت بنا:</strong>
-            <span className="mr-2">
-              {request.building_area
-                ? `${request.building_area} متر مربع`
-                : "—"}
-            </span>
-          </div>
+          {request.tracking_code && (
+            <div className="flex items-center">
+              <FaFileAlt className="w-5 h-5 ml-3 text-gray-400" />
+              <strong>کد رهگیری :</strong>
+              <span className="mr-2 text-orange-600">
+                {request.tracking_code || "—"}
+              </span>
+            </div>
+          )}
+          {request.property_type && (
+            <div className="flex items-center">
+              <FaFileAlt className="w-5 h-5 ml-3 text-gray-400" />
+              <strong>نوع ملک:</strong>
+              <span className="mr-2">
+                {propertyTypeMap[request.property_type] || "—"}
+              </span>
+            </div>
+          )}
+          {request.area && (
+            <div className="flex items-center">
+              <FaExpand className="w-5 h-5 ml-3 text-gray-400" />
+              <strong>مساحت:</strong>
+              <span className="mr-2">
+                {request.area ? `${request.area} متر مربع` : "—"}
+              </span>
+            </div>
+          )}
+          {request.building_area && (
+            <div className="flex items-center">
+              <FaRegBuilding className="w-5 h-5 ml-3 text-gray-400" />
+              <strong>مساحت بنا:</strong>
+              <span className="mr-2">
+                {request.building_area
+                  ? `${request.building_area} متر مربع`
+                  : "—"}
+              </span>
+            </div>
+          )}
           {request.main_parcel_number && (
             <div className="flex items-center">
               <FaMapMarkerAlt className="w-5 h-5 ml-3 text-gray-400" />

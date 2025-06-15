@@ -15,7 +15,7 @@ class OTPVerifySerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'full_name', 'phone', 'profile_image']
+        fields = ['id', 'full_name', 'phone', 'profile_image', 'is_staff']
 
 
 class AdminUserSerializer(serializers.ModelSerializer):

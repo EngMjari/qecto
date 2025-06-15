@@ -1,50 +1,93 @@
 from rest_framework import serializers
 from tickets.models import TicketSession, TicketMessage
-from attachments.api.serializers import AttachmentSerializer, AttachmentCreateSerializer
-from core.serializers import UserSerializer
-from django.contrib.contenttypes.models import ContentType
 from attachments.models import Attachment
+from django.contrib.contenttypes.models import ContentType
+from attachments.api.serializers import AttachmentSerializer
+from core.serializers import UserSerializer
+from survey.models import SurveyRequest
+from supervision.models import SupervisionRequest
+from expert.models import ExpertEvaluationRequest
+from execution.models import ExecutionRequest
+from registration.models import RegistrationRequest
+
+
+class MessageAttachmentCreateSerializer(serializers.Serializer):
+    file = serializers.FileField()
+    title = serializers.CharField(
+        max_length=255, required=False, allow_blank=True)
 
 
 class TicketMessageSerializer(serializers.ModelSerializer):
-    sender = UserSerializer(read_only=True)
+    sender = UserSerializer()
     attachments = AttachmentSerializer(many=True, read_only=True)
 
     class Meta:
         model = TicketMessage
         fields = ['id', 'sender', 'message', 'attachments', 'created_at']
-        read_only_fields = ['sender', 'created_at']
+
+
+class TicketMessageCreateSerializer(serializers.Serializer):
+    message = serializers.CharField(required=False, allow_blank=True)
+    attachments = serializers.ListField(
+        child=serializers.FileField(),
+        required=False,
+    )
+
+    def validate(self, data):
+        if not data.get('message') and not data.get('attachments'):
+            raise serializers.ValidationError('پیام یا فایل الزامی است.')
+        return data
+
+    def create(self, validated_data):
+        ticket = self.context['ticket']
+        user = self.context['request'].user
+        attachments_data = validated_data.pop('attachments', [])
+        message = TicketMessage.objects.create(
+            ticket=ticket,
+            sender=user,
+            message=validated_data.get('message', '')
+        )
+        for file in attachments_data:
+            attachment = Attachment.objects.create(
+                content_type=ContentType.objects.get_for_model(TicketMessage),
+                object_id=message.id,
+                file=file,
+                title=file.name,
+                uploaded_by=user
+            )
+            message.attachments.add(attachment)
+        ticket.last_message_by = 'admin' if user.is_staff else 'user'
+        ticket.save()
+        return message
 
 
 class TicketSessionSerializer(serializers.ModelSerializer):
+    messages = TicketMessageSerializer(many=True, read_only=True)
     user = UserSerializer(read_only=True)
     assigned_admin = UserSerializer(read_only=True)
-    messages = TicketMessageSerializer(many=True, read_only=True)
-    related_request_id = serializers.UUIDField(
-        source='object_id', read_only=True)
-    session_type_display = serializers.CharField(
-        source='get_session_type_display', read_only=True)
     status_display = serializers.CharField(
         source='get_status_display', read_only=True)
+    session_type_display = serializers.CharField(
+        source='get_session_type_display', read_only=True)
+    related_request_id = serializers.SerializerMethodField()
+
+    def get_related_request_id(self, obj):
+        return str(obj.object_id)
 
     class Meta:
         model = TicketSession
         fields = [
-            'id', 'title', 'session_type', 'session_type_display', 'content_type',
-            'related_request_id', 'user', 'assigned_admin', 'status', 'status_display',
-            'reply_status', 'last_message_by', 'closed_reason', 'created_at',
-            'updated_at', 'messages'
-        ]
-        read_only_fields = [
-            'user', 'assigned_admin', 'status', 'reply_status', 'last_message_by',
-            'created_at', 'updated_at', 'messages'
+            'id', 'title', 'status', 'status_display', 'session_type',
+            'session_type_display', 'created_at', 'updated_at', 'user',
+            'assigned_admin', 'last_message_by', 'messages', 'related_request_id',
+            'closed_reason', 'content_type'
         ]
 
 
 class TicketSessionCreateSerializer(serializers.ModelSerializer):
-    content_type = serializers.CharField(required=False, allow_blank=True)
-    object_id = serializers.UUIDField(required=False, allow_null=True)
-    attachments = AttachmentCreateSerializer(many=True, required=False)
+    content_type = serializers.IntegerField(write_only=True)
+    object_id = serializers.UUIDField(write_only=True)
+    attachments = MessageAttachmentCreateSerializer(many=True, required=False)
 
     class Meta:
         model = TicketSession
@@ -52,108 +95,54 @@ class TicketSessionCreateSerializer(serializers.ModelSerializer):
                   'content_type', 'object_id', 'attachments']
 
     def validate(self, data):
-        session_type = data.get('session_type')
-        content_type = data.get('content_type')
+        content_type_id = data.get('content_type')
         object_id = data.get('object_id')
-        user = self.context['request'].user
-
-        if session_type != 'general':
-            if not content_type or not object_id:
-                raise serializers.ValidationError(
-                    'برای سشن‌های غیرعمومی، درخواست مرتبط اجباری است.')
-            try:
-                ct = ContentType.objects.get(model=content_type.lower())
-                model_class = ct.model_class()
-                request_obj = model_class.objects.get(id=object_id)
-                # چک دسترسی کاربر
-                if not user.is_superuser:
-                    if hasattr(request_obj, 'owner'):
-                        if request_obj.owner != user:
-                            raise serializers.ValidationError(
-                                'شما به این درخواست دسترسی ندارید.')
-                    elif request_obj.project.owner != user:
-                        raise serializers.ValidationError(
-                            'شما به این درخواست دسترسی ندارید.')
-                # چک سشن فعال
-                if TicketSession.objects.filter(
-                    content_type=ct, object_id=object_id, status='open'
-                ).exists():
-                    raise serializers.ValidationError(
-                        'سشن فعال برای این درخواست وجود دارد.')
-            except (ContentType.DoesNotExist, model_class.DoesNotExist):
-                raise serializers.ValidationError('درخواست نامعتبر است.')
-        else:
-            if content_type or object_id:
-                raise serializers.ValidationError(
-                    'سشن‌های عمومی نباید درخواست مرتبط داشته باشند.')
-            # چک محدودیت ۵ سشن عمومی
-            if TicketSession.objects.filter(user=user, session_type='general', status='open').count() >= 5:
-                raise serializers.ValidationError(
-                    'حداکثر ۵ سشن عمومی فعال می‌توانید داشته باشید.')
-
+        model_map = {
+            'survey': SurveyRequest,
+            'supervision': SupervisionRequest,
+            'expert': ExpertEvaluationRequest,
+            'execution': ExecutionRequest,
+            'registration': RegistrationRequest,
+        }
+        try:
+            content_type = ContentType.objects.get(pk=content_type_id)
+            model = content_type.model_class()
+            if model not in model_map.values():
+                raise serializers.ValidationError('نوع محتوا نامعتبر است.')
+            model.objects.get(pk=object_id)
+        except (ContentType.DoesNotExist, model.DoesNotExist):
+            raise serializers.ValidationError(
+                'شناسه محتوا یا نوع محتوا نامعتبر است.')
         return data
 
     def create(self, validated_data):
-        attachments_data = validated_data.pop('attachments', [])
-        content_type_name = validated_data.pop('content_type', None)
-        content_type = None
-        if content_type_name:
-            content_type = ContentType.objects.get(
-                model=content_type_name.lower())
         user = self.context['request'].user
-
+        attachments_data = validated_data.pop('attachments', [])
         ticket = TicketSession.objects.create(
-            user=user, content_type=content_type, **validated_data
+            user=user,
+            title=validated_data['title'],
+            session_type=validated_data['session_type'],
+            content_type=ContentType.objects.get(
+                pk=validated_data['content_type']),
+            object_id=validated_data['object_id']
         )
-
         if attachments_data:
+            message = TicketMessage.objects.create(
+                ticket=ticket,
+                sender=user,
+                message=''
+            )
             for attachment_data in attachments_data:
                 attachment = Attachment.objects.create(
                     content_type=ContentType.objects.get_for_model(
                         TicketMessage),
-                    object_id=None,  # بعداً به پیام وصل می‌شه
+                    object_id=message.id,
                     file=attachment_data['file'],
-                    title=attachment_data.get('title', ''),
+                    title=attachment_data.get(
+                        'title', '') or attachment_data['file'].name,
                     uploaded_by=user
                 )
-                # پیام اولیه با پیوست
-                message = TicketMessage.objects.create(
-                    ticket=ticket, sender=user, message='پیام اولیه با پیوست'
-                )
                 message.attachments.add(attachment)
-
+            ticket.last_message_by = 'admin' if user.is_staff else 'user'
+            ticket.save()
         return ticket
-
-
-class TicketMessageCreateSerializer(serializers.ModelSerializer):
-    attachments = AttachmentCreateSerializer(many=True, required=False)
-
-    class Meta:
-        model = TicketMessage
-        fields = ['message', 'attachments']
-
-    def create(self, validated_data):
-        attachments_data = validated_data.pop('attachments', [])
-        user = self.context['request'].user
-        ticket = self.context['ticket']
-
-        message = TicketMessage.objects.create(
-            ticket=ticket, sender=user, **validated_data
-        )
-
-        for attachment_data in attachments_data:
-            attachment = Attachment.objects.create(
-                content_type=ContentType.objects.get_for_model(TicketMessage),
-                object_id=message.id,
-                file=attachment_data['file'],
-                title=attachment_data.get('title', ''),
-                uploaded_by=user
-            )
-            message.attachments.add(attachment)
-
-        ticket.last_message_by = 'user' if not user.is_staff else 'admin'
-        ticket.reply_status = 'waiting_for_admin' if not user.is_staff else 'answered'
-        ticket.updated_at = message.created_at
-        ticket.save()
-
-        return message

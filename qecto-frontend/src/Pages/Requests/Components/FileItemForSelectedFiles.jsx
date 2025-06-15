@@ -14,42 +14,39 @@ function FileItemForSelectedFiles({
 
   return (
     <div
-      className="flex flex-col items-start bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 shadow-sm relative animate-fadeInUp"
-      style={{ minWidth: 160, maxWidth: 220 }}
+      className="flex flex-col items-start bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 shadow-sm relative hover:shadow-md transition-shadow duration-200"
+      style={{ minWidth: 180, maxWidth: 240 }}
     >
       <div className="flex items-center w-full relative">
-        <div className="ml-2">
+        <div className="ml-3">
           {isImage ? (
             <img
               src={URL.createObjectURL(file)}
               alt={file.name}
-              className="w-8 h-8 object-cover rounded border"
+              className="w-10 h-10 object-cover rounded border border-gray-200"
             />
           ) : (
             getFileIcon({ file_extension: ext })
           )}
         </div>
-
         <span
-          className="truncate text-xs font-medium text-gray-700"
+          className="truncate text-sm font-medium text-gray-800 flex-grow"
           title={file.name}
         >
           {file.name}
         </span>
-
         <button
           type="button"
-          className="absolute -top-0.5 -left-0.5 bg-white border border-gray-300 rounded-full p-1 text-red-500 hover:bg-red-100 hover:scale-110 transition-all duration-200 ease-in-out"
+          className="absolute -top-1 -left-1 bg-white border border-gray-300 rounded-full p-1.5 text-red-500 hover:bg-red-50 hover:scale-110 transition-all duration-200"
           onClick={() => onRemove(index)}
           title="حذف فایل"
         >
           <FaTimes className="w-3 h-3" />
         </button>
       </div>
-
       <input
         type="text"
-        className="mt-2 w-full border rounded px-2 py-1 text-xs"
+        className="mt-3 w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:ring-2 focus:ring-blue-400 outline-none"
         placeholder="عنوان فایل (اختیاری)"
         value={title || ""}
         onChange={(e) => onTitleChange(index, e.target.value)}
