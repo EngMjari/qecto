@@ -11,48 +11,73 @@ function TicketSession() {
   const { sessionId } = useParams();
   const { userProfile } = useContext(AuthContext);
   const [ticketInfo, setTicketInfo] = useState(null);
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const messagesContainerRef = useRef(null);
   const messagesEndRef = useRef(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 1024);
-    };
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener("resize", handleResize);
     handleResize();
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   useEffect(() => {
+    console.log("Fetching ticket info for sessionId:", sessionId);
     fetchTicketInfo();
   }, [sessionId]);
 
   const fetchTicketInfo = async () => {
     try {
-      const response = await fetchTicketSessions({ id: sessionId });
-      const session = response.results?.[0];
-      if (!session) {
-        throw { status: 404, error: "سشن یافت نشد" };
+      setLoading(true);
+      setError(null);
+      const response = await fetchTicketSessions(
+        {
+          id: sessionId,
+          _t: new Date().getTime(),
+        },
+        {
+          headers: { "Cache-Control": "no-cache" },
+        }
+      );
+      console.log("Raw API response:", JSON.stringify(response, null, 2));
+
+      // بررسی اینکه response.results.results یک آرایه است
+      if (!Array.isArray(response.results?.results)) {
+        console.error(
+          "response.results.results is not an array:",
+          response.results
+        );
+        throw new Error(
+          "داده‌های دریافتی از API نادرست است: results.results باید یک آرایه باشد"
+        );
       }
+
+      // پیدا کردن سشن با id مطابق با sessionId
+      const session = response.results.results.find((s) => s.id === sessionId);
+      if (!session) {
+        console.error("Session not found for sessionId:", sessionId);
+        throw new Error("سشن یافت نشد");
+      }
+      console.log("Found session:", JSON.stringify(session, null, 2));
+      console.log("ticketInfo.messages:", session.messages);
       setTicketInfo(session);
     } catch (error) {
       console.error("خطا در دریافت اطلاعات تیکت:", error);
+      setError(error.message || "خطا در دریافت اطلاعات تیکت");
       if (error.status === 404 || error.response?.status === 404) {
         navigate("/404");
       }
+    } finally {
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (messagesContainerRef.current && messagesEndRef.current) {
-      messagesContainerRef.current.scrollTop =
-        messagesContainerRef.current.scrollHeight;
-    }
-  }, [ticketInfo?.messages]);
-
   const handleRefresh = () => {
+    console.log("Refreshing ticket info for sessionId:", sessionId);
     fetchTicketInfo();
   };
 
@@ -82,6 +107,34 @@ function TicketSession() {
       })
     : "-";
 
+  if (loading) {
+    return (
+      <div
+        className="page-content flex flex-col min-h-screen bg-gray-100 justify-center items-center"
+        dir="rtl"
+      >
+        <p className="text-lg text-gray-600">در حال بارگذاری...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div
+        className="page-content flex flex-col min-h-screen bg-gray-100 justify-center items-center"
+        dir="rtl"
+      >
+        <p className="text-lg text-red-500">خطا: {error}</p>
+        <button
+          onClick={handleRefresh}
+          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          تلاش مجدد
+        </button>
+      </div>
+    );
+  }
+
   if (isMobile) {
     return (
       <TicketModal
@@ -89,6 +142,7 @@ function TicketSession() {
         onClose={() => navigate("/dashboard")}
         onSendMessage={async (msg, files) => {
           try {
+            console.log("Sending message for sessionId:", sessionId);
             await sendTicketMessage(sessionId, {
               message: msg,
               attachments: files,
@@ -144,24 +198,23 @@ function TicketSession() {
               style={{ height: "calc(100vh - 200px)", overflowX: "hidden" }}
             >
               {ticketInfo?.messages?.length > 0 ? (
-                ticketInfo.messages.map((message) => {
-                  const isAdmin = message.sender.id !== userProfile?.id;
-                  return (
-                    <div
-                      key={message.id}
-                      className={`flex ${
-                        isAdmin ? "justify-start" : "justify-end"
-                      }`}
-                    >
-                      <div className="max-w-[70%]">
-                        <MessageBubble
-                          message={message}
-                          userId={userProfile?.id}
-                        />
-                      </div>
+                ticketInfo.messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`flex ${
+                      message.sender.id !== userProfile?.id
+                        ? "justify-start"
+                        : "justify-end"
+                    }`}
+                  >
+                    <div className="max-w-[70%]">
+                      <MessageBubble
+                        message={message}
+                        userId={userProfile?.id}
+                      />
                     </div>
-                  );
-                })
+                  </div>
+                ))
               ) : (
                 <p className="text-base text-gray-400 text-center py-8">
                   پیامی وجود ندارد.
@@ -175,6 +228,7 @@ function TicketSession() {
                 disabled={ticketInfo?.status === "closed"}
                 onSendMessage={async (msg, files) => {
                   try {
+                    console.log("Sending message for sessionId:", sessionId);
                     await sendTicketMessage(sessionId, {
                       message: msg,
                       attachments: files,

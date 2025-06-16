@@ -17,6 +17,7 @@ from expert.models import ExpertEvaluationRequest
 from execution.models import ExecutionRequest
 from registration.models import RegistrationRequest
 from attachments.api.serializers import AttachmentSerializer
+from django.db.models import Count
 
 
 class StandardPagination(PageNumberPagination):
@@ -31,27 +32,66 @@ class TicketSessionListCreateView(APIView):
 
     def get(self, request):
         user = request.user
+        print(f"User: {user}, Query params: {request.query_params}")
         if user.is_superuser:
             sessions = TicketSession.objects.all()
         elif user.is_staff:
             sessions = TicketSession.objects.filter(assigned_admin=user)
         else:
             sessions = TicketSession.objects.filter(user=user)
+        print(f"Sessions count before filters: {sessions.count()}")
 
+        # اعمال فیلترها
+        if 'session_type' in request.query_params:
+            sessions = sessions.filter(
+                session_type=request.query_params['session_type'])
+        if 'status' in request.query_params:
+            sessions = sessions.filter(status=request.query_params['status'])
+        if 'title' in request.query_params:
+            sessions = sessions.filter(
+                title__icontains=request.query_params['title'])
+        if 'created_at__gte' in request.query_params:
+            sessions = sessions.filter(
+                created_at__gte=request.query_params['created_at__gte'])
+        if 'created_at__lte' in request.query_params:
+            sessions = sessions.filter(
+                created_at__lte=request.query_params['created_at__lte'])
+        if 'content_type' in request.query_params:
+            try:
+                content_type = ContentType.objects.get(
+                    model=request.query_params['content_type'])
+                sessions = sessions.filter(content_type=content_type)
+            except ContentType.DoesNotExist:
+                sessions = sessions.none()
+
+        print(f"Sessions count after filters: {sessions.count()}")
+
+        # محاسبه آمار
+        stats = {
+            'total_tickets': sessions.count(),
+            'status_counts': sessions.values('status').annotate(count=Count('status')),
+            'session_type_counts': sessions.values('session_type').annotate(count=Count('session_type')),
+        }
+
+        # صفحه‌بندی
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(sessions, request)
         serializer = TicketSessionSerializer(page, many=True)
-        return paginator.get_paginated_response(serializer.data)
+        response_data = {
+            'results': serializer.data,
+            'stats': stats,
+        }
+        print(f"Response data: {response_data}")
+        return paginator.get_paginated_response(response_data)
 
     def post(self, request):
-        print("Received POST data:", request.data)  # لاگ برای دیباگ
+        print(f"Creating ticket with data: {request.data}")
         serializer = TicketSessionCreateSerializer(
             data=request.data, context={'request': request})
         if serializer.is_valid():
             ticket = serializer.save()
-            print(f"Created ticket: {ticket.id}")
             return Response(TicketSessionSerializer(ticket).data, status=status.HTTP_201_CREATED)
-        print("Serializer errors:", serializer.errors)
+        print(f"Serializer errors: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

@@ -59,7 +59,7 @@ const getTicketStatus = (ticket, userId) => {
 const getTicketStatusLabel = (ticket, userId) => {
   const status = getTicketStatus(ticket, userId);
   const labels = {
-    closed: "بسته شد",
+    closed: "بسته شده",
     waiting_for_admin: "در انتظار پاسخ",
     answered: "پاسخ داده شده",
   };
@@ -69,18 +69,31 @@ const getTicketStatusLabel = (ticket, userId) => {
 const getTicketStatusColor = (ticket, userId) => {
   const status = getTicketStatus(ticket, userId);
   const colors = {
-    closed: "#e55039", // رنگ خاکستری برای بسته‌شده
+    closed: "#e55039",
     answered: "#28a745",
     waiting_for_admin: "#ffc107",
   };
   return colors[status] || "#999";
 };
 
+const getRequestTypeLabel = (sessionType) => {
+  const labels = {
+    survey: "نقشه‌برداری",
+    expert: "کارشناسی",
+    execution: "اجرا",
+    registration: "اخذ سند",
+    supervision: "نظارت",
+    general: "عمومی",
+  };
+  return labels[sessionType] || "نامشخص";
+};
+
 export default function Dashboard() {
   const { userProfile } = useContext(AuthContext);
-  const [projects, setProjects] = useState(null);
-  const [requests, setRequests] = useState(null);
-  const [tickets, setTickets] = useState(null);
+  const [projects, setProjects] = useState([]);
+  const [requests, setRequests] = useState({ results: [], stats: {} });
+  const [tickets, setTickets] = useState({ results: [] });
+  const [allTickets, setAllTickets] = useState({ results: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedTicket, setSelectedTicket] = useState(null);
@@ -100,14 +113,51 @@ export default function Dashboard() {
       fetchProjects(),
       fetchUserRequests(),
       fetchTicketSessions({ page_size: 5, ordering: "-updated_at" }),
+      fetchTicketSessions({ ordering: "-updated_at" }),
     ])
-      .then(([projectsData, requestsData, ticketsData]) => {
-        setProjects(projectsData);
-        setRequests(requestsData);
-        setTickets(ticketsData);
-        setLoading(false);
-      })
+      .then(
+        ([projectsData, requestsData, recentTicketsData, allTicketsData]) => {
+          console.log("Projects:", projectsData);
+          console.log("Requests:", requestsData);
+          console.log("Recent tickets:", recentTicketsData);
+          console.log("All tickets:", allTicketsData);
+
+          // مدیریت پروژه‌ها
+          setProjects(
+            Array.isArray(projectsData.results)
+              ? projectsData.results
+              : Array.isArray(projectsData)
+              ? projectsData
+              : []
+          );
+
+          // مدیریت درخواست‌ها
+          setRequests({
+            results: Array.isArray(requestsData.results)
+              ? requestsData.results
+              : [],
+            stats: requestsData.stats || {},
+          });
+
+          // مدیریت تیکت‌های اخیر
+          setTickets({
+            results: Array.isArray(recentTicketsData.results?.results)
+              ? recentTicketsData.results.results
+              : [],
+          });
+
+          // مدیریت همه تیکت‌ها
+          setAllTickets({
+            results: Array.isArray(allTicketsData.results?.results)
+              ? allTicketsData.results.results
+              : [],
+          });
+
+          setLoading(false);
+        }
+      )
       .catch((err) => {
+        console.error("Error fetching data:", err);
         setError(err.message || "خطا در دریافت داده‌ها");
         setLoading(false);
       });
@@ -115,6 +165,7 @@ export default function Dashboard() {
 
   const handleTicketClick = (ticket) => {
     if (isMobile) {
+      console.log("Opening modal for ticket:", ticket.id);
       setSelectedTicket(ticket);
     }
   };
@@ -129,12 +180,17 @@ export default function Dashboard() {
       <ProjectInfoCard
         requests={requests}
         projects={projects}
-        tickets={tickets?.results || []}
+        tickets={allTickets.results}
         userId={userProfile?.id}
       />
       <SectionGrid
-        recentRequests={(requests?.results || []).slice(0, 5)}
-        recentTickets={(tickets?.results || []).slice(0, 5)}
+        recentRequests={
+          Array.isArray(requests.results) ? requests.results.slice(0, 5) : []
+        }
+        recentTickets={
+          Array.isArray(tickets.results) ? tickets.results.slice(0, 5) : []
+        }
+        requestsData={Array.isArray(requests.results) ? requests.results : []}
         userId={userProfile?.id}
         onTicketClick={handleTicketClick}
         isMobile={isMobile}
@@ -142,9 +198,13 @@ export default function Dashboard() {
       {selectedTicket && isMobile && (
         <TicketModal
           session={selectedTicket}
-          onClose={() => setSelectedTicket(null)}
+          onClose={() => {
+            console.log("Closing modal for ticket:", selectedTicket.id);
+            setSelectedTicket(null);
+          }}
           onSendMessage={async (msg, files) => {
             try {
+              console.log("Sending message for ticket:", selectedTicket.id);
               await sendTicketMessage(selectedTicket.id, {
                 message: msg,
                 attachments: files,
@@ -152,7 +212,7 @@ export default function Dashboard() {
               const response = await fetchTicketSessions({
                 id: selectedTicket.id,
               });
-              const updatedSession = response.results?.[0];
+              const updatedSession = response.results?.results?.[0];
               if (updatedSession) {
                 setSelectedTicket(updatedSession);
                 setTickets((prev) => ({
@@ -175,14 +235,14 @@ export default function Dashboard() {
 }
 
 function ProjectInfoCard({
-  requests = [],
+  requests = { results: [], stats: {} },
   projects = [],
   tickets = [],
   userId,
 }) {
   const [openAccordion, setOpenAccordion] = useState(null);
   const navigate = useNavigate();
-  const statusCounts = requests?.stats?.status_counts || {};
+  const statusCounts = requests.stats || {};
   const statusList = [
     {
       key: "all",
@@ -262,7 +322,16 @@ function ProjectInfoCard({
         (t) => getTicketStatus(t, userId) === "waiting_for_admin"
       ).length,
     },
-  ];
+    {
+      key: "closed",
+      label: "بسته شده",
+      color: "#e55039",
+      icon: <IoIosCloseCircleOutline size={24} />,
+      link: "/tickets?status=closed",
+      value: tickets.filter((t) => getTicketStatus(t, userId) === "closed")
+        .length,
+    },
+  ].filter((item) => item.value > 0);
 
   const iconVariants = {
     hover: { scale: 1.13, rotate: 6 },
@@ -375,6 +444,7 @@ function ProjectInfoCard({
 function SectionGrid({
   recentRequests = [],
   recentTickets = [],
+  requestsData = [],
   userId,
   onTicketClick,
   isMobile,
@@ -384,6 +454,21 @@ function SectionGrid({
     tickets: true,
   });
   const navigate = useNavigate();
+
+  const handleTicketNavigation = (ticketId) => {
+    console.log("Navigating to ticket ID:", ticketId);
+    if (isMobile) {
+      const ticket = recentTickets.find((t) => t.id === ticketId);
+      if (ticket) {
+        console.log("Opening modal for ticket:", ticketId);
+        onTicketClick(ticket);
+      }
+    } else {
+      const ticketUrl = `/tickets/session/${ticketId}`;
+      console.log("Navigating to URL:", ticketUrl);
+      navigate(ticketUrl);
+    }
+  };
 
   return (
     <div className="flex flex-col md:flex-row gap-5 mb-10">
@@ -400,13 +485,16 @@ function SectionGrid({
         {recentRequests.map((req) => (
           <div
             key={req.id}
-            onClick={() => navigate(`/requests/${req.id}`)}
-            className="flex justify-between items-center p-3 border-b border-gray-100 cursor-pointer hover:bg-orange-50 hover:rounded-md transition-colors"
+            onClick={() => {
+              console.log("Navigating to request:", req.id);
+              navigate(`/requests/${req.id}`);
+            }}
+            className="flex justify-between items-center p-3 border-b border-gray-100 cursor-pointer hover:bg-orange-50 hover:rounded-md transition-colors section-item"
           >
             <div className="flex flex-col flex-grow">
               <span className="font-medium">{req.project_title}</span>
               <span className="text-xs text-gray-500 mt-1">
-                {req.request_type === "survey" ? "نقشه‌برداری" : "کارشناسی"}
+                {getRequestTypeLabel(req.request_type)}
               </span>
             </div>
             <span
@@ -429,32 +517,53 @@ function SectionGrid({
         }
         isEmpty={recentTickets.length === 0}
       >
-        {recentTickets.map((ticket) => (
-          <div
-            key={ticket.id}
-            onClick={() =>
-              isMobile
-                ? onTicketClick(ticket)
-                : navigate(`/tickets/session/${ticket.id}`)
-            }
-            className="flex justify-between items-center p-3 border-b border-gray-100 cursor-pointer hover:bg-orange-50 hover:rounded-md transition-colors"
-          >
-            <div className="flex flex-col flex-grow">
-              <span className="font-medium">{ticket.title}</span>
-              <span className="text-xs text-gray-500 mt-1">
-                {new Date(ticket.created_at).toLocaleDateString("fa-IR")}
+        {recentTickets.map((ticket) => {
+          const relatedRequest = requestsData.find(
+            (req) => req.id === ticket.related_request_id
+          );
+          return (
+            <div
+              key={ticket.id}
+              onClick={() => handleTicketNavigation(ticket.id)}
+              className="flex justify-between items-center p-3 border-b border-gray-100 cursor-pointer hover:bg-orange-50 hover:rounded-md transition-colors section-item"
+            >
+              <div className="flex flex-col flex-grow">
+                <span className="font-medium">{ticket.title}</span>
+                <span className="text-xs text-gray-500 mt-1">
+                  {new Date(ticket.created_at).toLocaleDateString("fa-IR")}
+                </span>
+                <span className="text-xs text-gray-600 mt-1">
+                  {ticket.related_request_id &&
+                  ticket.session_type !== "general" ? (
+                    <>
+                      مرتبط با:{" "}
+                      {relatedRequest?.project_title || "درخواست نامشخص"} (
+                      {getRequestTypeLabel(ticket.session_type)})
+                      <br />
+                      <a
+                        href={`/requests/${ticket.related_request_id}`}
+                        className="text-orange-500 hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        مشاهده درخواست
+                      </a>
+                    </>
+                  ) : (
+                    "تیکت عمومی"
+                  )}
+                </span>
+              </div>
+              <span
+                className="px-2 py-1 rounded-lg text-xs font-bold text-white text-center min-w-[90px]"
+                style={{
+                  backgroundColor: getTicketStatusColor(ticket, userId),
+                }}
+              >
+                {getTicketStatusLabel(ticket, userId)}
               </span>
             </div>
-            <span
-              className="px-2 py-1 rounded-lg text-xs font-bold text-white text-center min-w-[90px]"
-              style={{
-                backgroundColor: getTicketStatusColor(ticket, userId),
-              }}
-            >
-              {getTicketStatusLabel(ticket, userId)}
-            </span>
-          </div>
-        ))}
+          );
+        })}
       </DashboardSection>
     </div>
   );
@@ -470,7 +579,7 @@ function DashboardSection({
   isEmpty,
 }) {
   return (
-    <div className="bg-white rounded-xl shadow p-4 border border-blue-100 flex-1 min-w-[300px]">
+    <div className="bg-white rounded-xl shadow p-4 border border-blue-100 flex-1 min-w-[300px] section-container">
       <button
         className="flex items-center justify-between w-full text-right font-bold text-blue-900 text-lg focus:outline-none"
         onClick={onToggle}
@@ -501,6 +610,18 @@ function DashboardSection({
           </a>
         </div>
       )}
+      <style>
+        {`
+        .section-container {
+          min-height: 300px;
+        }
+        .section-item {
+          min-height: 70px;
+          display: flex;
+          align-items: center;
+        }
+        `}
+      </style>
     </div>
   );
 }
