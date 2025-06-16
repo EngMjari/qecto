@@ -29,12 +29,11 @@ class TicketMessageSerializer(serializers.ModelSerializer):
 class TicketMessageCreateSerializer(serializers.Serializer):
     message = serializers.CharField(required=False, allow_blank=True)
     attachments = serializers.ListField(
-        child=serializers.FileField(),
-        required=False,
-    )
+        child=serializers.FileField(), required=False)
 
     def validate(self, data):
-        if not data.get('message') and not data.get('attachments'):
+        # اگر پیام خالی است و فایل هم وجود ندارد، خطا بده
+        if not data.get('message') and not data.get('attachments') and not self.context.get('has_files'):
             raise serializers.ValidationError('پیام یا فایل الزامی است.')
         return data
 
@@ -85,8 +84,10 @@ class TicketSessionSerializer(serializers.ModelSerializer):
 
 
 class TicketSessionCreateSerializer(serializers.ModelSerializer):
-    content_type = serializers.IntegerField(write_only=True)
-    object_id = serializers.UUIDField(write_only=True)
+    content_type = serializers.IntegerField(
+        write_only=True, required=False, allow_null=True)
+    object_id = serializers.UUIDField(
+        write_only=True, required=False, allow_null=True)
     attachments = MessageAttachmentCreateSerializer(many=True, required=False)
 
     class Meta:
@@ -95,6 +96,7 @@ class TicketSessionCreateSerializer(serializers.ModelSerializer):
                   'content_type', 'object_id', 'attachments']
 
     def validate(self, data):
+        session_type = data.get('session_type')
         content_type_id = data.get('content_type')
         object_id = data.get('object_id')
         model_map = {
@@ -104,28 +106,53 @@ class TicketSessionCreateSerializer(serializers.ModelSerializer):
             'execution': ExecutionRequest,
             'registration': RegistrationRequest,
         }
-        try:
-            content_type = ContentType.objects.get(pk=content_type_id)
-            model = content_type.model_class()
-            if model not in model_map.values():
-                raise serializers.ValidationError('نوع محتوا نامعتبر است.')
-            model.objects.get(pk=object_id)
-        except (ContentType.DoesNotExist, model.DoesNotExist):
-            raise serializers.ValidationError(
-                'شناسه محتوا یا نوع محتوا نامعتبر است.')
+
+        if session_type != 'general':
+            if not content_type_id or not object_id:
+                raise serializers.ValidationError(
+                    'برای سشن‌های غیرعمومی، content_type و object_id الزامی هستند.')
+            try:
+                content_type = ContentType.objects.get(pk=content_type_id)
+                print(
+                    f"ContentType found: id={content_type.id}, model={content_type.model}, app_label={content_type.app_label}")
+                model = content_type.model_class()
+                print(f"Model: {model.__name__}")
+                if model not in model_map.values():
+                    print(
+                        f"Model {model.__name__} not in model_map: {[m.__name__ for m in model_map.values()]}")
+                    raise serializers.ValidationError('نوع محتوا نامعتبر است.')
+                instance = model.objects.get(pk=object_id)
+                print(f"Object found: id={instance.id}")
+            except ContentType.DoesNotExist:
+                print(f"ContentType with id {content_type_id} does not exist")
+                raise serializers.ValidationError(
+                    'شناسه محتوا یا نوع محتوا نامعتبر است.')
+            except model.DoesNotExist:
+                print(
+                    f"Object with id {object_id} does not exist in model {model.__name__}")
+                raise serializers.ValidationError(
+                    'شناسه محتوا یا نوع محتوا نامعتبر است.')
+        else:
+            if content_type_id or object_id:
+                raise serializers.ValidationError(
+                    'سشن‌های عمومی نباید content_type یا object_id داشته باشند.')
+
         return data
 
     def create(self, validated_data):
         user = self.context['request'].user
         attachments_data = validated_data.pop('attachments', [])
-        ticket = TicketSession.objects.create(
-            user=user,
-            title=validated_data['title'],
-            session_type=validated_data['session_type'],
-            content_type=ContentType.objects.get(
-                pk=validated_data['content_type']),
-            object_id=validated_data['object_id']
-        )
+        ticket_data = {
+            'user': user,
+            'title': validated_data['title'],
+            'session_type': validated_data['session_type'],
+        }
+        if validated_data.get('content_type'):
+            ticket_data['content_type'] = ContentType.objects.get(
+                pk=validated_data['content_type'])
+            ticket_data['object_id'] = validated_data['object_id']
+
+        ticket = TicketSession.objects.create(**ticket_data)
         if attachments_data:
             message = TicketMessage.objects.create(
                 ticket=ticket,

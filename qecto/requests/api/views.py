@@ -4,9 +4,11 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.views import APIView
+from rest_framework.filters import SearchFilter
 from django.db.models import Q, Count
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import SearchFilter
+from django.contrib.contenttypes.models import ContentType
 from supervision.models import SupervisionRequest
 from expert.models import ExpertEvaluationRequest
 from execution.models import ExecutionRequest
@@ -236,3 +238,15 @@ class UserRequestsViewSet(viewsets.ViewSet):
         logger.error(
             f"Request {pk} not found or not authorized for user {user.id}")
         return Response({'error': 'Request not found or not authorized'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class ContentTypeListView(APIView):
+    def get(self, request):
+        content_types = ContentType.objects.filter(
+            model__in=['surveyrequest', 'expertevaluationrequest',
+                       'executionrequest', 'registrationrequest', 'supervisionrequest']
+        )
+        return Response([
+            {'id': ct.id, 'app_label': ct.app_label, 'model': ct.model}
+            for ct in content_types
+        ])

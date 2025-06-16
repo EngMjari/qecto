@@ -19,10 +19,10 @@ class TicketMessageInline(admin.TabularInline):
 
 @admin.register(TicketSession)
 class TicketSessionAdmin(admin.ModelAdmin):
-    list_display = [
-        'title', 'session_type', 'user', 'assigned_admin',
-        'status', 'reply_status', 'content_object_display', 'created_at'
-    ]
+    list_display = ['id',
+                    'title', 'session_type', 'user', 'assigned_admin',
+                    'status', 'reply_status', 'content_object_display', 'created_at'
+                    ]
     list_filter = ['session_type', 'status', 'reply_status', 'created_at']
     search_fields = ['title', 'user__username', 'assigned_admin__username']
     readonly_fields = ['created_at', 'updated_at']
