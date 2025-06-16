@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import {
   FaClipboardList,
   FaProjectDiagram,
@@ -11,9 +11,16 @@ import {
 } from "react-icons/fa";
 import { IoIosCloseCircleOutline, IoMdSettings } from "react-icons/io";
 import { motion } from "framer-motion";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import WelcomeCard from "./WelcomeCard";
-import { fetchProjects, fetchUserRequests } from "../../api";
+import TicketModal from "../Requests/Components/TicketModal";
+import {
+  fetchProjects,
+  fetchUserRequests,
+  fetchTicketSessions,
+  sendTicketMessage,
+} from "../../api";
+import { AuthContext } from "../../Contexts/AuthContext";
 
 // Utility functions for status
 const getStatusColor = (status) => {
@@ -38,16 +45,31 @@ const getStatusLabel = (status) => {
   return labels[status] || "نامشخص";
 };
 
-const getTicketStatusLabel = (status) => {
+const getTicketStatus = (ticket, userId) => {
+  if (ticket.status === "closed") {
+    return "closed";
+  }
+  if (!ticket.messages || ticket.messages.length === 0) {
+    return "waiting_for_admin";
+  }
+  const lastMessage = ticket.messages[ticket.messages.length - 1];
+  return lastMessage.sender.id === userId ? "waiting_for_admin" : "answered";
+};
+
+const getTicketStatusLabel = (ticket, userId) => {
+  const status = getTicketStatus(ticket, userId);
   const labels = {
+    closed: "بسته شد",
     waiting_for_admin: "در انتظار پاسخ",
     answered: "پاسخ داده شده",
   };
   return labels[status] || "نامشخص";
 };
 
-const getTicketStatusColor = (status) => {
+const getTicketStatusColor = (ticket, userId) => {
+  const status = getTicketStatus(ticket, userId);
   const colors = {
+    closed: "#e55039", // رنگ خاکستری برای بسته‌شده
     answered: "#28a745",
     waiting_for_admin: "#ffc107",
   };
@@ -55,17 +77,34 @@ const getTicketStatusColor = (status) => {
 };
 
 export default function Dashboard() {
+  const { userProfile } = useContext(AuthContext);
   const [projects, setProjects] = useState(null);
   const [requests, setRequests] = useState(null);
-
+  const [tickets, setTickets] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
 
   useEffect(() => {
-    Promise.all([fetchProjects(), fetchUserRequests()])
-      .then(([projectsData, requestsData]) => {
-        setRequests(requestsData);
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 1024);
+    };
+    window.addEventListener("resize", handleResize);
+    handleResize();
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    Promise.all([
+      fetchProjects(),
+      fetchUserRequests(),
+      fetchTicketSessions({ page_size: 5, ordering: "-updated_at" }),
+    ])
+      .then(([projectsData, requestsData, ticketsData]) => {
         setProjects(projectsData);
+        setRequests(requestsData);
+        setTickets(ticketsData);
         setLoading(false);
       })
       .catch((err) => {
@@ -74,6 +113,12 @@ export default function Dashboard() {
       });
   }, []);
 
+  const handleTicketClick = (ticket) => {
+    if (isMobile) {
+      setSelectedTicket(ticket);
+    }
+  };
+
   if (loading) return <p className="text-center py-8">در حال بارگذاری...</p>;
   if (error)
     return <p className="text-center text-red-500 py-8">خطا: {error}</p>;
@@ -81,16 +126,60 @@ export default function Dashboard() {
   return (
     <div className="font-vazir page-content text-gray-800 bg-gray-50 p-5">
       <WelcomeCard />
-      <ProjectInfoCard requests={requests} projects={projects} tickets={[]} />
+      <ProjectInfoCard
+        requests={requests}
+        projects={projects}
+        tickets={tickets?.results || []}
+        userId={userProfile?.id}
+      />
       <SectionGrid
         recentRequests={(requests?.results || []).slice(0, 5)}
-        recentTickets={[]}
+        recentTickets={(tickets?.results || []).slice(0, 5)}
+        userId={userProfile?.id}
+        onTicketClick={handleTicketClick}
+        isMobile={isMobile}
       />
+      {selectedTicket && isMobile && (
+        <TicketModal
+          session={selectedTicket}
+          onClose={() => setSelectedTicket(null)}
+          onSendMessage={async (msg, files) => {
+            try {
+              await sendTicketMessage(selectedTicket.id, {
+                message: msg,
+                attachments: files,
+              });
+              const response = await fetchTicketSessions({
+                id: selectedTicket.id,
+              });
+              const updatedSession = response.results?.[0];
+              if (updatedSession) {
+                setSelectedTicket(updatedSession);
+                setTickets((prev) => ({
+                  ...prev,
+                  results: prev.results.map((t) =>
+                    t.id === updatedSession.id ? updatedSession : t
+                  ),
+                }));
+              }
+            } catch (error) {
+              console.error("خطا در ارسال پیام:", error);
+              throw error;
+            }
+          }}
+          onPreview={() => {}}
+        />
+      )}
     </div>
   );
 }
 
-function ProjectInfoCard({ requests = [], projects = [], tickets = [] }) {
+function ProjectInfoCard({
+  requests = [],
+  projects = [],
+  tickets = [],
+  userId,
+}) {
   const [openAccordion, setOpenAccordion] = useState(null);
   const navigate = useNavigate();
   const statusCounts = requests?.stats?.status_counts || {};
@@ -101,7 +190,7 @@ function ProjectInfoCard({ requests = [], projects = [], tickets = [] }) {
       color: "#2563eb",
       icon: <FaClipboardList size={24} />,
       link: "/requests",
-      value: statusCounts,
+      value: statusCounts.total || 0,
     },
     {
       key: "pending",
@@ -109,7 +198,7 @@ function ProjectInfoCard({ requests = [], projects = [], tickets = [] }) {
       color: "#f1c40f",
       icon: <FaHourglassHalf size={24} />,
       link: "/requests?status=pending",
-      value: statusCounts["pending"] || 0,
+      value: statusCounts.pending || 0,
     },
     {
       key: "in_progress",
@@ -117,7 +206,7 @@ function ProjectInfoCard({ requests = [], projects = [], tickets = [] }) {
       color: "#1abc9c",
       icon: <IoMdSettings size={24} />,
       link: "/requests?status=in_progress",
-      value: statusCounts["in_progress"] || 0,
+      value: statusCounts.in_progress || 0,
     },
     {
       key: "completed",
@@ -125,7 +214,7 @@ function ProjectInfoCard({ requests = [], projects = [], tickets = [] }) {
       color: "#28a745",
       icon: <FaCheckCircle size={24} />,
       link: "/requests?status=completed",
-      value: statusCounts["completed"] || 0,
+      value: statusCounts.completed || 0,
     },
     {
       key: "incomplete",
@@ -133,7 +222,7 @@ function ProjectInfoCard({ requests = [], projects = [], tickets = [] }) {
       color: "#e67e22",
       icon: <FaExclamationCircle size={24} />,
       link: "/requests?status=incomplete",
-      value: statusCounts["incomplete"] || 0,
+      value: statusCounts.incomplete || 0,
     },
     {
       key: "rejected",
@@ -141,7 +230,7 @@ function ProjectInfoCard({ requests = [], projects = [], tickets = [] }) {
       color: "#dc3545",
       icon: <IoIosCloseCircleOutline size={24} />,
       link: "/requests?status=rejected",
-      value: statusCounts["rejected"] || 0,
+      value: statusCounts.rejected || 0,
     },
   ];
 
@@ -160,7 +249,7 @@ function ProjectInfoCard({ requests = [], projects = [], tickets = [] }) {
       color: "#28a745",
       icon: <FaCheckCircle size={24} />,
       link: "/tickets?status=answered",
-      value: tickets.filter((t) => t.session?.reply_status === "answered")
+      value: tickets.filter((t) => getTicketStatus(t, userId) === "answered")
         .length,
     },
     {
@@ -170,7 +259,7 @@ function ProjectInfoCard({ requests = [], projects = [], tickets = [] }) {
       icon: <FaHourglassHalf size={24} />,
       link: "/tickets?status=waiting_for_admin",
       value: tickets.filter(
-        (t) => t.session?.reply_status === "waiting_for_admin"
+        (t) => getTicketStatus(t, userId) === "waiting_for_admin"
       ).length,
     },
   ];
@@ -283,11 +372,18 @@ function ProjectInfoCard({ requests = [], projects = [], tickets = [] }) {
   );
 }
 
-function SectionGrid({ recentRequests = [], recentTickets = [] }) {
+function SectionGrid({
+  recentRequests = [],
+  recentTickets = [],
+  userId,
+  onTicketClick,
+  isMobile,
+}) {
   const [openSections, setOpenSections] = useState({
     requests: true,
     tickets: true,
   });
+  const navigate = useNavigate();
 
   return (
     <div className="flex flex-col md:flex-row gap-5 mb-10">
@@ -302,9 +398,9 @@ function SectionGrid({ recentRequests = [], recentTickets = [] }) {
         isEmpty={recentRequests.length === 0}
       >
         {recentRequests.map((req) => (
-          <Link
+          <div
             key={req.id}
-            to={`/requests/${req.id}`}
+            onClick={() => navigate(`/requests/${req.id}`)}
             className="flex justify-between items-center p-3 border-b border-gray-100 cursor-pointer hover:bg-orange-50 hover:rounded-md transition-colors"
           >
             <div className="flex flex-col flex-grow">
@@ -319,7 +415,7 @@ function SectionGrid({ recentRequests = [], recentTickets = [] }) {
             >
               {getStatusLabel(req.status)}
             </span>
-          </Link>
+          </div>
         ))}
       </DashboardSection>
 
@@ -334,13 +430,17 @@ function SectionGrid({ recentRequests = [], recentTickets = [] }) {
         isEmpty={recentTickets.length === 0}
       >
         {recentTickets.map((ticket) => (
-          <Link
+          <div
             key={ticket.id}
-            to={`/tickets/session/${ticket.session.id}`}
+            onClick={() =>
+              isMobile
+                ? onTicketClick(ticket)
+                : navigate(`/tickets/session/${ticket.id}`)
+            }
             className="flex justify-between items-center p-3 border-b border-gray-100 cursor-pointer hover:bg-orange-50 hover:rounded-md transition-colors"
           >
             <div className="flex flex-col flex-grow">
-              <span className="font-medium">{ticket.session.title}</span>
+              <span className="font-medium">{ticket.title}</span>
               <span className="text-xs text-gray-500 mt-1">
                 {new Date(ticket.created_at).toLocaleDateString("fa-IR")}
               </span>
@@ -348,14 +448,12 @@ function SectionGrid({ recentRequests = [], recentTickets = [] }) {
             <span
               className="px-2 py-1 rounded-lg text-xs font-bold text-white text-center min-w-[90px]"
               style={{
-                backgroundColor: getTicketStatusColor(
-                  ticket.session.reply_status
-                ),
+                backgroundColor: getTicketStatusColor(ticket, userId),
               }}
             >
-              {getTicketStatusLabel(ticket.session.reply_status)}
+              {getTicketStatusLabel(ticket, userId)}
             </span>
-          </Link>
+          </div>
         ))}
       </DashboardSection>
     </div>
@@ -395,12 +493,12 @@ function DashboardSection({
 
       {linkText && linkHref && (
         <div className="text-left mt-3">
-          <Link
-            to={linkHref}
+          <a
+            href={linkHref}
             className="text-orange-500 text-sm hover:underline"
           >
             {linkText}
-          </Link>
+          </a>
         </div>
       )}
     </div>

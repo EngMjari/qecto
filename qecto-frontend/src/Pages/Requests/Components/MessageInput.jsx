@@ -1,3 +1,4 @@
+// Pages/Requests/Components/MessageInput.jsx :
 import React, { useState, useRef } from "react";
 import { FaPaperclip, FaPaperPlane, FaLock } from "react-icons/fa";
 import FileItemForSelectedFiles from "./FileItemForSelectedFiles";

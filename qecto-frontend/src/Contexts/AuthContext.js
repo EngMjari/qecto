@@ -7,7 +7,7 @@ export const AuthContext = createContext();
 const BASE_URL =
   import.meta.env?.VITE_API_BASE_URL ||
   process.env.REACT_APP_API_BASE_URL ||
-  "https://192.168.1.3:8000";
+  "https://192.168.1.101:8000";
 
 export function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
