@@ -8,11 +8,12 @@ function TicketModal({ session, onClose, onSendMessage, onPreview }) {
 
   return (
     <div
-      className="fixed inset-0 page-content bg-black bg-opacity-50 flex items-center justify-center z-1000"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 md:hidden"
       onClick={onClose}
+      style={{ top: "64px", height: "calc(100vh - 160px)" }} // 64px navbar + 96px footer
     >
       <div
-        className="bg-white w-full max-w-md h-[80vh] flex flex-col rounded-lg shadow-2xl my-4"
+        className="bg-white w-full h-full flex flex-col rounded-none"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center p-4 border-b">
@@ -35,6 +36,31 @@ function TicketModal({ session, onClose, onSendMessage, onPreview }) {
           />
         </div>
       </div>
+      <style jsx global>{`
+        @media (min-width: 1025px) {
+          .ticket-modal {
+            display: none;
+          }
+        }
+        .ticket-modal::-webkit-scrollbar {
+          width: 8px;
+        }
+        .ticket-modal::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 12px;
+        }
+        .ticket-modal::-webkit-scrollbar-thumb {
+          background: #c7c7c7;
+          border-radius: 12px;
+        }
+        .ticket-modal::-webkit-scrollbar-thumb:hover {
+          background: #a3a3a3;
+        }
+        .ticket-modal {
+          scrollbar-width: thin;
+          scrollbar-color: #c7c7c7 #f1f1f1;
+        }
+      `}</style>
     </div>
   );
 }

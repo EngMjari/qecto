@@ -242,7 +242,9 @@ function ProjectInfoCard({
 }) {
   const [openAccordion, setOpenAccordion] = useState(null);
   const navigate = useNavigate();
-  const statusCounts = requests.stats || {};
+  const statusCounts = requests.stats?.status_counts || {};
+  console.log("Requests stats:", requests.stats); // لاگ برای دیباگ
+
   const statusList = [
     {
       key: "all",
@@ -250,7 +252,7 @@ function ProjectInfoCard({
       color: "#2563eb",
       icon: <FaClipboardList size={24} />,
       link: "/requests",
-      value: statusCounts.total || 0,
+      value: requests.stats?.total_requests || 0,
     },
     {
       key: "pending",
@@ -292,7 +294,7 @@ function ProjectInfoCard({
       link: "/requests?status=rejected",
       value: statusCounts.rejected || 0,
     },
-  ];
+  ].filter((item) => item.value > 0); // فقط آیتم‌های با مقدار غیرصفر
 
   const ticketStats = [
     {
@@ -410,31 +412,29 @@ function ProjectInfoCard({
             : openAccordion === "requests"
             ? statusList
             : ticketStats
-          )
-            .filter((item) => item.value > 0)
-            .map((item) => (
-              <motion.div
-                key={item.key}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.98 }}
-                className="flex items-center gap-3 bg-blue-50 rounded-xl shadow-sm p-3 border border-blue-100 cursor-pointer"
-                onClick={() => navigate(item.link)}
+          ).map((item) => (
+            <motion.div
+              key={item.key}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex items-center gap-3 bg-blue-50 rounded-xl shadow-sm p-3 border border-blue-100 cursor-pointer"
+              onClick={() => navigate(item.link)}
+            >
+              {item.icon}
+              <span className="font-medium text-gray-700 text-sm flex-grow">
+                {item.label}
+              </span>
+              <span
+                className="px-2 py-1 rounded-lg font-bold text-sm"
+                style={{
+                  background: `${item.color}22`,
+                  color: item.color,
+                }}
               >
-                {item.icon}
-                <span className="font-medium text-gray-700 text-sm flex-grow">
-                  {item.label}
-                </span>
-                <span
-                  className="px-2 py-1 rounded-lg font-bold text-sm"
-                  style={{
-                    background: `${item.color}22`,
-                    color: item.color,
-                  }}
-                >
-                  {item.value}
-                </span>
-              </motion.div>
-            ))}
+                {item.value}
+              </span>
+            </motion.div>
+          ))}
         </div>
       )}
     </div>
