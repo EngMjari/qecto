@@ -39,7 +39,6 @@ import {
   UserIcon,
   SettingsIcon,
   LucideLogIn,
-  MessageSquareIcon, // اضافه کردن آیکون برای تیکت‌ها
 } from "lucide-react";
 
 function ProtectedRoute({
@@ -101,12 +100,6 @@ function Router() {
   const userLinks = [
     ...desktopGuestLinks,
     { name: "پنل کاربری", page: "user", link: "/dashboard", Icon: UserIcon },
-    {
-      name: "تیکت‌ها",
-      page: "tickets",
-      link: "/tickets",
-      Icon: MessageSquareIcon,
-    }, // اضافه کردن لینک تیکت‌ها
   ];
 
   // لینک‌های ادمین
@@ -257,7 +250,7 @@ function Router() {
             <ProtectedRoute
               isAuthenticated={isAuthenticated}
               userRole={userRole}
-              allowedRoles={["user"]}
+              allowedRoles={["user", "admin", "superadmin"]}
             >
               <Dashboard showToast={showToast} />
             </ProtectedRoute>
@@ -281,7 +274,7 @@ function Router() {
             <ProtectedRoute
               isAuthenticated={isAuthenticated}
               userRole={userRole}
-              allowedRoles={["user"]}
+              allowedRoles={["user", "admin", "superadmin"]}
             >
               <RequestList showToast={showToast} />
             </ProtectedRoute>
@@ -293,7 +286,7 @@ function Router() {
             <ProtectedRoute
               isAuthenticated={isAuthenticated}
               userRole={userRole}
-              allowedRoles={["user"]}
+              allowedRoles={["user", "admin", "superadmin"]}
             >
               <RequestPage showToast={showToast} />
             </ProtectedRoute>

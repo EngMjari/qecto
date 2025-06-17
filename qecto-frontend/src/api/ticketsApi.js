@@ -85,3 +85,28 @@ export const getTicketSessionsByRequest = async (requestId, requestType) => {
     throw error.response?.data || { error: "خطای ناشناخته" };
   }
 };
+
+export const reopenTicketSession = async (sessionId) => {
+  try {
+    const response = await axiosInstance.post(
+      `/api/tickets/sessions/${sessionId}/reopen/`
+    );
+    return response.data;
+  } catch (error) {
+    console.error("خطا در باز کردن سشن تیکت:", error.response?.data || error);
+    throw error.response?.data || { error: "خطای ناشناخته" };
+  }
+};
+
+export const closeTicketSession = async (sessionId, data) => {
+  try {
+    const response = await axiosInstance.post(
+      `/api/tickets/sessions/${sessionId}/close/`,
+      data
+    );
+    return response.data;
+  } catch (error) {
+    console.error("خطا در بستن سشن تیکت:", error.response?.data || error);
+    throw error.response?.data || { error: "خطای ناشناخته" };
+  }
+};

@@ -117,11 +117,6 @@ export default function Dashboard() {
     ])
       .then(
         ([projectsData, requestsData, recentTicketsData, allTicketsData]) => {
-          console.log("Projects:", projectsData);
-          console.log("Requests:", requestsData);
-          console.log("Recent tickets:", recentTicketsData);
-          console.log("All tickets:", allTicketsData);
-
           // مدیریت پروژه‌ها
           setProjects(
             Array.isArray(projectsData.results)
@@ -157,7 +152,6 @@ export default function Dashboard() {
         }
       )
       .catch((err) => {
-        console.error("Error fetching data:", err);
         setError(err.message || "خطا در دریافت داده‌ها");
         setLoading(false);
       });
@@ -165,7 +159,6 @@ export default function Dashboard() {
 
   const handleTicketClick = (ticket) => {
     if (isMobile) {
-      console.log("Opening modal for ticket:", ticket.id);
       setSelectedTicket(ticket);
     }
   };
@@ -199,12 +192,10 @@ export default function Dashboard() {
         <TicketModal
           session={selectedTicket}
           onClose={() => {
-            console.log("Closing modal for ticket:", selectedTicket.id);
             setSelectedTicket(null);
           }}
           onSendMessage={async (msg, files) => {
             try {
-              console.log("Sending message for ticket:", selectedTicket.id);
               await sendTicketMessage(selectedTicket.id, {
                 message: msg,
                 attachments: files,
@@ -243,7 +234,6 @@ function ProjectInfoCard({
   const [openAccordion, setOpenAccordion] = useState(null);
   const navigate = useNavigate();
   const statusCounts = requests.stats?.status_counts || {};
-  console.log("Requests stats:", requests.stats); // لاگ برای دیباگ
 
   const statusList = [
     {
@@ -456,16 +446,13 @@ function SectionGrid({
   const navigate = useNavigate();
 
   const handleTicketNavigation = (ticketId) => {
-    console.log("Navigating to ticket ID:", ticketId);
     if (isMobile) {
       const ticket = recentTickets.find((t) => t.id === ticketId);
       if (ticket) {
-        console.log("Opening modal for ticket:", ticketId);
         onTicketClick(ticket);
       }
     } else {
       const ticketUrl = `/tickets/session/${ticketId}`;
-      console.log("Navigating to URL:", ticketUrl);
       navigate(ticketUrl);
     }
   };
@@ -486,7 +473,6 @@ function SectionGrid({
           <div
             key={req.id}
             onClick={() => {
-              console.log("Navigating to request:", req.id);
               navigate(`/requests/${req.id}`);
             }}
             className="flex justify-between items-center p-3 border-b border-gray-100 cursor-pointer hover:bg-orange-50 hover:rounded-md transition-colors section-item"

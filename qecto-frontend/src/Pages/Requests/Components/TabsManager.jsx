@@ -233,6 +233,7 @@ function TabsManager({
                           : null
                       }
                       userId={userProfile?.id}
+                      owenerId={session?.related_request.owner.id}
                       open={isMobile ? false : openTicketId === session.id}
                       onToggle={() => {
                         if (isMobile) {
@@ -267,6 +268,7 @@ function TabsManager({
                         <TicketConversation
                           session={session}
                           userId={userProfile?.id}
+                          owenerId={session?.related_request.owner.id}
                           onSendMessage={async (msg, files) => {
                             try {
                               await sendTicketMessage(session.id, {

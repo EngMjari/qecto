@@ -52,6 +52,7 @@ export function AuthProvider({ children }) {
       if (user.is_superuser) setUserRole("superadmin");
       else if (user.is_staff) setUserRole("admin");
       else setUserRole("user");
+      console.log(user);
     } catch (error) {
       console.error("خطا در دریافت اطلاعات کاربر:", error);
       if (error.response?.status === 401) logout();

@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
 from projects.models import Project
 from attachments.models import Attachment
-from core.models import User
+from core.models import User, AdminUser
 from requests.utils import generate_tracking_code
 
 
@@ -30,8 +30,9 @@ class ExpertEvaluationRequest(models.Model):
         Project, on_delete=models.CASCADE, related_name='expert_request')
     owner = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='expert_requests')
+
     assigned_admin = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        AdminUser,
         null=True, blank=True,
         on_delete=models.SET_NULL,
         related_name='assigned_expert_requests'

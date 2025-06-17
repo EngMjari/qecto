@@ -6,7 +6,7 @@ from django.contrib.contenttypes.fields import GenericRelation
 from projects.models import Project
 from attachments.models import Attachment
 from requests.utils import generate_tracking_code
-
+from core.models import AdminUser
 User = get_user_model()
 
 
@@ -26,8 +26,12 @@ class ExecutionRequest(models.Model):
     owner = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='execution_requests')
     assigned_admin = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='assigned_execution_requests', verbose_name="ادمین تخصیص‌یافته")
+        AdminUser,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='assigned_execution_requests',
+        verbose_name="ادمین تخصیص‌یافته"
+    )
     description = models.TextField(
         null=True, blank=True, verbose_name="توضیحات")
     area = models.FloatField(null=True, blank=True,

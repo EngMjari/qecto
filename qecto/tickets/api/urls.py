@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     TicketSessionListCreateView, TicketSessionDetailView,
     TicketSessionCloseView, TicketSessionsByRequestView,
-    TicketMessageAttachmentView
+    TicketMessageAttachmentView, TicketSessionReopenView
 )
 
 urlpatterns = [
@@ -16,4 +16,6 @@ urlpatterns = [
          TicketSessionsByRequestView.as_view(), name='tickets-sessions-by-request'),
     path('messages/<uuid:ticket_id>/<uuid:message_id>/attachments/',
          TicketMessageAttachmentView.as_view(), name='tickets-message-attachment'),
+    path('sessions/<uuid:session_id>/reopen/',
+         TicketSessionReopenView.as_view(), name='ticket-session-reopen'),
 ]

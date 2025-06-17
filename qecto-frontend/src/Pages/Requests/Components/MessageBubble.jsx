@@ -2,8 +2,8 @@
 import React from "react";
 import { FaShieldAlt, FaUser, FaFileAlt } from "react-icons/fa";
 
-function MessageBubble({ message, userId }) {
-  const isAdmin = message.sender.id !== userId;
+function MessageBubble({ message, userId, owenerId }) {
+  const isAdmin = message.sender.id !== owenerId;
 
   return (
     <div

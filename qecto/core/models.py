@@ -67,7 +67,14 @@ class OTP(models.Model):
         return str(random.randint(100000, 999999))
 
 
+class AdminUserManager(UserManager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_staff=True)
+
+
 class AdminUser(User):
+    objects = AdminUserManager()
+
     class Meta:
         proxy = True
         verbose_name = "ادمین"

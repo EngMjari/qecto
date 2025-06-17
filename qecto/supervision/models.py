@@ -6,7 +6,7 @@ from projects.models import Project
 from attachments.models import Attachment
 from core.utils import generate_tracking_code_base
 import datetime
-
+from core.models import AdminUser
 User = get_user_model()
 
 
@@ -35,8 +35,11 @@ class SupervisionRequest(models.Model):
     owner = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='supervision_requests')
     assigned_admin = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_supervision_requests')
-
+        AdminUser,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='assigned_supervision_requests'
+    )
     supervision_type = models.CharField(
         max_length=20, choices=SUPERVISION_TYPE_CHOICES)
 

@@ -5,7 +5,7 @@ from projects.models import Project
 from attachments.models import Attachment
 from django.contrib.contenttypes.fields import GenericRelation
 import uuid
-from core.models import User
+from core.models import User, AdminUser
 from requests.utils import generate_tracking_code
 
 
@@ -32,7 +32,7 @@ class SurveyRequest(models.Model):
         related_name='survey_request'
     )
     assigned_admin = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        AdminUser,
         null=True, blank=True,
         on_delete=models.SET_NULL,
         related_name='assigned_survey_requests'

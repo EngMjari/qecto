@@ -6,7 +6,7 @@ from django.contrib.contenttypes.fields import GenericRelation
 from projects.models import Project
 from attachments.models import Attachment
 from requests.utils import generate_tracking_code
-
+from core.models import AdminUser
 User = get_user_model()
 
 
@@ -35,8 +35,11 @@ class RegistrationRequest(models.Model):
     owner = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='registration_requests')
     assigned_admin = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='assigned_registration_requests', verbose_name="ادمین تخصیص‌یافته")
+        AdminUser,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='assigned_registration_requests', verbose_name="ادمین تخصیص‌یافته"
+    )
     property_type = models.CharField(
         max_length=20, choices=PROPERTY_TYPE_CHOICES, default='field', verbose_name="نوع ملک")
     ownership_status = models.CharField(

@@ -4,6 +4,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from attachments.models import Attachment
 import uuid
+from core.models import AdminUser
 
 
 class TicketSession(models.Model):
@@ -45,8 +46,11 @@ class TicketSession(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ticket_sessions')
     assigned_admin = models.ForeignKey(
-        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
-        related_name='assigned_ticket_sessions')
+        AdminUser,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='assigned_ticket_sessions'
+    )
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default='open')
     reply_status = models.CharField(
