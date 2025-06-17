@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { SiteConfigContext } from "Contexts/SiteConfigContext";
 import { ArrowLeftIcon, LogOutIcon } from "lucide-react";
 
@@ -54,7 +54,8 @@ const MobileTopNav = ({ isLoggedIn, onLogout, logoSrc }) => {
       >
         {/* لوگو */}
         <div className="flex items-center">
-          <div
+          <Link
+            to={"/"}
             className={`p-2 rounded-md shadow-md transition-all duration-300 ${
               isScrolled ? "bg-[#002a3a]" : ""
             }`}
@@ -62,9 +63,11 @@ const MobileTopNav = ({ isLoggedIn, onLogout, logoSrc }) => {
             <img
               src={siteConfig?.logo_url || logoSrc}
               alt="Logo"
-              className="h-10 w-auto rounded-md transition-transform duration-300 hover:scale-105"
+              className={`${
+                isScrolled ? "h-4" : "h-10"
+              } w-auto rounded-md transition-all duration-1000 hover:scale-105`}
             />
-          </div>
+          </Link>
         </div>
 
         {/* دکمه‌ها */}
@@ -81,12 +84,16 @@ const MobileTopNav = ({ isLoggedIn, onLogout, logoSrc }) => {
               aria-label="خروج"
               title="خروج"
             >
-              <LogOutIcon className="w-6 h-6" />
+              <LogOutIcon
+                className={`transition-all duration-1000 ${
+                  isScrolled ? "w-4 h-4" : "w-6 h-6"
+                }`}
+              />
             </button>
           )}
 
           {/* دکمه بازگشت */}
-          <button
+          {/* <button
             onClick={handleBack}
             className={`p-2 rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg ${
               isScrolled
@@ -97,7 +104,7 @@ const MobileTopNav = ({ isLoggedIn, onLogout, logoSrc }) => {
             title="بازگشت به صفحه قبلی"
           >
             <ArrowLeftIcon className="w-6 h-6" />
-          </button>
+          </button> */}
         </div>
       </nav>
 
