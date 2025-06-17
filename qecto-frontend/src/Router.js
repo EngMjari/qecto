@@ -23,6 +23,7 @@ import NewTicket from "./Pages/Tickets/NewTicket";
 import TicketSession from "./Pages/Tickets/TicketSession";
 import RequestList from "./Pages/Requests/RequestList";
 import RequestPage from "./Pages/Requests/RequestPage";
+import TicketListPage from "./Pages/Tickets/TicketListPage"; // اضافه کردن ایمپورت
 import Header from "./Components/Layouts/Header";
 import Footer from "./Components/Layouts/Footer";
 import MobileBottomNav from "./Components/Layouts/MobileBottomNav";
@@ -38,6 +39,7 @@ import {
   UserIcon,
   SettingsIcon,
   LucideLogIn,
+  MessageSquareIcon, // اضافه کردن آیکون برای تیکت‌ها
 } from "lucide-react";
 
 function ProtectedRoute({
@@ -89,20 +91,31 @@ function Router() {
     { name: "تماس با ما", page: "contact", link: "/contact", Icon: PhoneIcon },
   ];
 
-  // لینک‌های نسخه موبایل (با ورود)
+  // لینک‌های نسخه موبایل (بدون ورود)
   const mobileGuestLinks = [
     ...desktopGuestLinks,
     { name: "ورود", page: "login", link: "/login", Icon: LucideLogIn },
   ];
 
+  // لینک‌های کاربر عادی
   const userLinks = [
     ...desktopGuestLinks,
     { name: "پنل کاربری", page: "user", link: "/dashboard", Icon: UserIcon },
+    {
+      name: "تیکت‌ها",
+      page: "tickets",
+      link: "/tickets",
+      Icon: MessageSquareIcon,
+    }, // اضافه کردن لینک تیکت‌ها
   ];
+
+  // لینک‌های ادمین
   const adminLinks = [
     ...userLinks,
     { name: "مدیریت", page: "admin", link: "/admin-panel", Icon: SettingsIcon },
   ];
+
+  // لینک‌های سوپرادمین
   const superAdminLinks = [
     ...adminLinks,
     {
@@ -175,6 +188,18 @@ function Router() {
         <Route
           path="/request"
           element={<CreateRequest showToast={showToast} />}
+        />
+        <Route
+          path="/tickets"
+          element={
+            <ProtectedRoute
+              isAuthenticated={isAuthenticated}
+              userRole={userRole}
+              allowedRoles={["user", "admin", "superadmin"]}
+            >
+              <TicketListPage showToast={showToast} />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="/tickets/new"

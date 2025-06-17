@@ -9,6 +9,14 @@ from supervision.models import SupervisionRequest
 from expert.models import ExpertEvaluationRequest
 from execution.models import ExecutionRequest
 from registration.models import RegistrationRequest
+from requests.api.serializers import BaseRequestSerializer
+from requests.api.serializers import (
+    SupervisionRequestSerializer,
+    SurveyRequestSerializer,
+    ExpertEvaluationRequestSerializer,
+    ExecutionRequestSerializer,
+    RegistrationRequestSerializer,
+)
 
 
 class MessageAttachmentCreateSerializer(serializers.Serializer):
@@ -69,9 +77,49 @@ class TicketSessionSerializer(serializers.ModelSerializer):
     session_type_display = serializers.CharField(
         source='get_session_type_display', read_only=True)
     related_request_id = serializers.SerializerMethodField()
+    # فیلد جدید برای اطلاعات درخواست
+    related_request = serializers.SerializerMethodField()
 
     def get_related_request_id(self, obj):
         return str(obj.object_id)
+
+    def get_related_request(self, obj):
+        """
+        دریافت اطلاعات درخواست مرتبط با استفاده از content_type و object_id
+        """
+        if not obj.content_type or not obj.object_id:
+            return None
+
+        # دریافت مدل و سریالایزر مناسب
+        content_type = obj.content_type
+        model_class = content_type.model_class()
+        serializer_class = self._get_serializer_for_model(model_class)
+
+        if serializer_class:
+            try:
+                # دریافت شیء درخواست
+                request_instance = model_class.objects.get(id=obj.object_id)
+                # سریالایز کردن درخواست
+                serializer = serializer_class(
+                    request_instance, context=self.context)
+                return serializer.data
+            except model_class.DoesNotExist:
+                return None
+        return None
+
+    def _get_serializer_for_model(self, model_class):
+        """
+        انتخاب سریالایزر مناسب بر اساس مدل درخواست
+        """
+        serializer_map = {
+            'supervisionrequest': SupervisionRequestSerializer,
+            'surveyrequest': SurveyRequestSerializer,
+            'expertevaluationrequest': ExpertEvaluationRequestSerializer,
+            'executionrequest': ExecutionRequestSerializer,
+            'registrationrequest': RegistrationRequestSerializer,
+        }
+        model_name = model_class.__name__.lower()
+        return serializer_map.get(model_name)
 
     class Meta:
         model = TicketSession
@@ -79,7 +127,7 @@ class TicketSessionSerializer(serializers.ModelSerializer):
             'id', 'title', 'status', 'status_display', 'session_type',
             'session_type_display', 'created_at', 'updated_at', 'user',
             'assigned_admin', 'last_message_by', 'messages', 'related_request_id',
-            'closed_reason', 'content_type'
+            'closed_reason', 'content_type', 'related_request',  # اضافه کردن فیلد جدید
         ]
 
 
