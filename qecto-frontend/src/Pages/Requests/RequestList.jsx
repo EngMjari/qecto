@@ -1,36 +1,21 @@
 import React, { useState, useEffect, useRef } from "react";
-import { fetchUserRequests, fetchRequestDetail } from "../../api";
 import {
   FaSearch,
   FaFilter,
   FaTimes,
   FaChevronDown,
-  FaChevronUp,
   FaChartPie,
   FaUserCheck,
+  FaSpinner,
 } from "react-icons/fa";
+import { FiChevronsLeft } from "react-icons/fi";
 import { useLocation, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import DatePicker from "react-multi-date-picker";
 import persian from "react-date-object/calendars/persian";
 import persian_fa from "react-date-object/locales/persian_fa";
 import "react-multi-date-picker/styles/layouts/mobile.css";
-
-const FiChevronsLeft = () => (
-  <svg
-    stroke="currentColor"
-    fill="currentColor"
-    strokeWidth="2"
-    viewBox="0 0 24 24"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    height="1em"
-    width="1em"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <polyline points="11 17 6 12 11 7"></polyline>
-    <polyline points="18 17 13 12 18 7"></polyline>
-  </svg>
-);
+import { fetchUserRequests, fetchRequestDetail } from "../../api";
 
 // تابع برای دریافت نام نوع درخواست
 const getRequestTypeName = (type) => {
@@ -173,135 +158,207 @@ function RequestListPage() {
     }
   };
 
+  // انیمیشن‌های سایدبار
+  const sidebarVariants = {
+    hidden: { x: "100%" },
+    visible: { x: 0, transition: { duration: 0.3, ease: "easeOut" } },
+    exit: { x: "100%", transition: { duration: 0.3, ease: "easeIn" } },
+  };
+
   return (
-    <div className="bg-gray-100 page-content min-h-screen font-vazir" dir="rtl">
+    <div className="bg-gray-50 min-h-screen font-vazir" dir="rtl">
       <div className="flex">
-        <div className="w-72 flex-shrink-0 hidden md:block border-l border-gray-200 bg-white">
+        {/* سایدبار فیلتر در دسکتاپ */}
+        <div className="w-64 flex-shrink-0 hidden lg:block border-l border-gray-200 bg-white shadow-sm">
           <FilterSidebar
             filters={filters}
             onFilterChange={handleFilterChange}
             isMobile={false}
           />
         </div>
-        <div
-          className={`md:hidden fixed inset-0 z-30 transition-transform duration-300 ${
-            isFilterOpen ? "translate-x-0" : "translate-x-full"
-          }`}
-        >
-          <div
-            className="fixed inset-0 bg-black/40"
-            onClick={() => setIsFilterOpen(false)}
-          ></div>
-          <div className="relative w-72 h-full bg-white ml-auto">
-            <FilterSidebar
-              filters={filters}
-              onFilterChange={handleFilterChange}
-              setIsOpen={setIsFilterOpen}
-              isMobile={true}
-            />
-          </div>
-        </div>
-        <main className="flex-1 p-4 md:p-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex justify-between items-center mb-6">
+        {/* سایدبار فیلتر در موبایل */}
+        <AnimatePresence>
+          {isFilterOpen && (
+            <motion.div
+              variants={sidebarVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="lg:hidden fixed inset-0 z-1000"
+            >
+              <div
+                className="fixed inset-0 bg-black/50"
+                onClick={() => setIsFilterOpen(false)}
+              ></div>
+              <div className="relative w-4/5 max-w-xs h-full bg-white ml-auto">
+                <FilterSidebar
+                  filters={filters}
+                  onFilterChange={handleFilterChange}
+                  setIsOpen={setIsFilterOpen}
+                  isMobile={true}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        {/* محتوای اصلی */}
+        <main className="flex-1 p-3 sm:p-4 lg:p-6 page-content">
+          <div className="max-w-5xl mx-auto">
+            {/* هدر */}
+            <div className="flex justify-between items-center mb-4">
               <div>
-                <h1 className="text-2xl md:text-3xl font-extrabold text-gray-800">
+                <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">
                   لیست درخواست‌ها
                 </h1>
-                <p className="text-gray-500 mt-1 text-sm md:text-base">
-                  درخواست‌های ثبت شده را مدیریت کنید. (تعداد کل:{" "}
-                  {stats.total_requests})
+                <p className="text-gray-500 text-xs sm:text-sm mt-1">
+                  تعداد کل: {totalCount}
                 </p>
               </div>
               <button
                 onClick={() => setIsFilterOpen(true)}
-                className="md:hidden p-2 rounded-lg bg-white border border-gray-200 shadow-sm"
+                className="lg:hidden p-2 rounded-lg bg-white border border-gray-200 shadow-sm hover:bg-gray-100 transition-colors"
               >
-                <FaFilter />
+                <FaFilter className="text-gray-600" />
               </button>
             </div>
-            <div className="mb-6 bg-white rounded-xl shadow-sm overflow-hidden">
+            {/* بخش آمار */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="mb-4 bg-white rounded-xl shadow-sm overflow-hidden"
+            >
               <button
                 onClick={() => setIsStatsOpen(!isStatsOpen)}
-                className="w-full flex justify-between items-center p-4 bg-blue-50 hover:bg-blue-100 transition-colors"
+                className="w-full flex justify-between items-center p-3 sm:p-4 bg-blue-50 hover:bg-blue-100 transition-colors"
               >
                 <div className="flex items-center gap-2">
-                  <FaChartPie className="text-blue-600" />
-                  <h3 className="text-lg font-semibold text-gray-800">
+                  <FaChartPie className="text-blue-600 w-5 h-5" />
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-800">
                     آمار درخواست‌ها
                   </h3>
                 </div>
-                {isStatsOpen ? (
-                  <FaChevronUp className="text-gray-600" />
-                ) : (
+                <motion.div
+                  animate={{ rotate: isStatsOpen ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                >
                   <FaChevronDown className="text-gray-600" />
-                )}
+                </motion.div>
               </button>
-              {isStatsOpen && (
-                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {Object.entries(stats.request_type_counts || {}).map(
-                    ([type, count]) => (
-                      <div
-                        key={type}
-                        className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                      >
-                        <FaChartPie className="text-blue-500" />
-                        <div>
-                          <p className="text-sm text-gray-600">
-                            {getRequestTypeName(type)}
-                          </p>
-                          <p className="text-lg font-bold text-gray-800">
-                            {count}
-                          </p>
-                        </div>
+              <AnimatePresence>
+                {isStatsOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
+                  >
+                    <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                      <FaChartPie className="text-blue-500 w-5 h-5" />
+                      <div>
+                        <p className="text-xs text-gray-600">
+                          تعداد کل درخواست‌ها
+                        </p>
+                        <p className="text-base font-bold text-gray-800">
+                          {stats.total_requests}
+                        </p>
                       </div>
-                    )
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="relative mb-6">
+                    </div>
+                    {Object.entries(stats.status_counts).map(
+                      ([status, count]) => (
+                        <div
+                          key={status}
+                          className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                        >
+                          <FaChartPie className="text-blue-500 w-5 h-5" />
+                          <div>
+                            <p className="text-xs text-gray-600">
+                              {getStatusName(status)}
+                            </p>
+                            <p className="text-base font-bold text-gray-800">
+                              {count}
+                            </p>
+                          </div>
+                        </div>
+                      )
+                    )}
+                    {Object.entries(stats.request_type_counts).map(
+                      ([request_type, count]) => (
+                        <div
+                          key={request_type}
+                          className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                        >
+                          <FaChartPie className="text-blue-500 w-5 h-5" />
+                          <div>
+                            <p className="text-xs text-gray-600">
+                              {getRequestTypeName(request_type)}
+                            </p>
+                            <p className="text-base font-bold text-gray-800">
+                              {count}
+                            </p>
+                          </div>
+                        </div>
+                      )
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+            {/* نوار جستجو */}
+            <div className="relative mb-4">
               <input
                 type="text"
                 placeholder="جستجو بر اساس عنوان پروژه، توضیحات، شماره پروانه یا کد رهگیری..."
                 value={filters.search}
                 onChange={(e) => handleFilterChange({ search: e.target.value })}
-                className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow shadow-sm"
+                className="w-full pl-10 pr-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm text-sm"
               />
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                <FaSearch />
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <FaSearch className="w-4 h-4" />
               </div>
             </div>
+            {/* محتوای درخواست‌ها */}
             {loading ? (
-              <div className="text-center py-20">
-                <p className="text-gray-600 font-medium">در حال بارگذاری...</p>
-              </div>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-12 bg-white rounded-xl shadow-sm"
+              >
+                <FaSpinner className="w-6 h-6 text-blue-500 animate-spin mx-auto" />
+                <p className="text-sm text-gray-600 mt-2">در حال بارگذاری...</p>
+              </motion.div>
             ) : requests.length === 0 ? (
-              <div className="text-center py-20 bg-white rounded-xl shadow-sm">
-                <p className="text-lg text-gray-500">موردی یافت نشد.</p>
-              </div>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-12 bg-white rounded-xl shadow-sm"
+              >
+                <p className="text-sm text-gray-500">موردی یافت نشد.</p>
+              </motion.div>
             ) : (
-              <div className="grid grid-cols-1 gap-5">
+              <div className="grid grid-cols-1 gap-3">
                 {requests.map((req) => (
                   <RequestCard key={req.id} request={req} />
                 ))}
               </div>
             )}
-            <div className="mt-6 flex justify-center gap-2">
+            {/* صفحه‌بندی */}
+            <div className="mt-4 flex justify-center gap-2">
               <button
                 onClick={() => handlePageChange(page - 1)}
                 disabled={!previousPage}
-                className="px-4 py-2 bg-white border border-gray-200 rounded-lg disabled:opacity-50"
+                className="px-3 py-1.5 text-sm bg-white border border-gray-200 rounded-lg disabled:opacity-50 hover:bg-gray-100 transition-colors"
               >
                 قبلی
               </button>
-              <span className="px-4 py-2 bg-white border border-gray-200 rounded-lg">
+              <span className="px-3 py-1.5 text-sm bg-white border border-gray-200 rounded-lg">
                 صفحه {page} از {Math.ceil(totalCount / 10)}
               </span>
               <button
                 onClick={() => handlePageChange(page + 1)}
                 disabled={!nextPage}
-                className="px-4 py-2 bg-white border border-gray-200 rounded-lg disabled:opacity-50"
+                className="px-3 py-1.5 text-sm bg-white border border-gray-200 rounded-lg disabled:opacity-50 hover:bg-gray-100 transition-colors"
               >
                 بعدی
               </button>
@@ -323,12 +380,12 @@ function FilterSidebar({ filters, onFilterChange, setIsOpen, isMobile }) {
       tracking_code: "",
       search: filters.search,
     });
-    if (isMobile) setIsOpen(false); // بستن پنل در موبایل
+    if (isMobile) setIsOpen(false);
   };
 
   const handleApplyFilters = () => {
-    onFilterChange(filters); // اعمال فیلترهای فعلی
-    if (isMobile) setIsOpen(false); // بستن پنل در موبایل
+    onFilterChange(filters);
+    if (isMobile) setIsOpen(false);
   };
 
   const statusMap = {
@@ -341,9 +398,8 @@ function FilterSidebar({ filters, onFilterChange, setIsOpen, isMobile }) {
 
   const handleDateChange = (key, value) => {
     if (value) {
-      // تبدیل تاریخ شمسی به میلادی
       const gregorianDate = value.toDate();
-      const formattedDate = gregorianDate.toISOString().split("T")[0]; // yyyy-MM-dd
+      const formattedDate = gregorianDate.toISOString().split("T")[0];
       onFilterChange({ [key]: formattedDate });
     } else {
       onFilterChange({ [key]: "" });
@@ -353,18 +409,15 @@ function FilterSidebar({ filters, onFilterChange, setIsOpen, isMobile }) {
   return (
     <div
       className={`h-full flex flex-col bg-white ${
-        isMobile
-          ? "fixed inset-0 z-30 overflow-y-auto" // تمام‌صفحه در موبایل
-          : "p-5"
+        isMobile ? "fixed inset-0 z-30 overflow-y-auto" : "p-4"
       }`}
     >
-      {/* سربرگ */}
       <div
         className={`flex justify-between items-center border-b border-gray-200 ${
-          isMobile ? "p-4 sticky mt-16 bg-white z-10" : "mb-6"
+          isMobile ? "p-3 sticky top-0 bg-white z-10" : "mb-4"
         }`}
       >
-        <h2 className="text-lg font-bold text-gray-800">فیلترها</h2>
+        <h2 className="text-base font-bold text-gray-800">فیلترها</h2>
         {isMobile && (
           <button
             onClick={() => setIsOpen(false)}
@@ -374,22 +427,19 @@ function FilterSidebar({ filters, onFilterChange, setIsOpen, isMobile }) {
           </button>
         )}
       </div>
-
-      {/* بدنه فیلترها */}
       <div
-        className={`flex-grow space-y-4 ${isMobile ? "p-4 pt-2" : "space-y-6"}`}
+        className={`flex-grow space-y-3 ${isMobile ? "p-3 pt-2" : "space-y-4"}`}
       >
-        {/* نوع درخواست */}
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700">
             نوع درخواست
           </label>
-          <div className="flex bg-gray-100 p-1 rounded-xl flex-wrap gap-1.5">
+          <div className="flex bg-gray-100 p-1 rounded-lg flex-wrap gap-1">
             <button
               onClick={() => onFilterChange({ request_type: "all" })}
               className={`flex-1 py-1.5 px-2 text-xs rounded-lg transition-colors ${
                 filters.request_type === "all"
-                  ? "bg-white shadow-md font-semibold text-blue-600"
+                  ? "bg-white shadow-sm font-semibold text-blue-600"
                   : "hover:bg-gray-200 text-gray-600"
               }`}
             >
@@ -407,7 +457,7 @@ function FilterSidebar({ filters, onFilterChange, setIsOpen, isMobile }) {
                 onClick={() => onFilterChange({ request_type: type })}
                 className={`flex-1 py-1.5 px-2 text-xs rounded-lg transition-colors ${
                   filters.request_type === type
-                    ? "bg-white shadow-md font-semibold text-blue-600"
+                    ? "bg-white shadow-sm font-semibold text-blue-600"
                     : "hover:bg-gray-200 text-gray-600"
                 }`}
               >
@@ -416,8 +466,6 @@ function FilterSidebar({ filters, onFilterChange, setIsOpen, isMobile }) {
             ))}
           </div>
         </div>
-
-        {/* وضعیت درخواست */}
         <div className="space-y-2">
           <label
             htmlFor="status-filter"
@@ -429,7 +477,7 @@ function FilterSidebar({ filters, onFilterChange, setIsOpen, isMobile }) {
             id="status-filter"
             value={filters.status}
             onChange={(e) => onFilterChange({ status: e.target.value })}
-            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           >
             <option value="all">همه وضعیت‌ها</option>
             {Object.entries(statusMap).map(([fa, en]) => (
@@ -439,13 +487,11 @@ function FilterSidebar({ filters, onFilterChange, setIsOpen, isMobile }) {
             ))}
           </select>
         </div>
-
-        {/* تاریخ ثبت */}
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700">
             تاریخ ثبت (شمسی)
           </label>
-          <div className="grid grid-cols-1 gap-3">
+          <div className="grid grid-cols-1 gap-2">
             <div className="space-y-1">
               <label className="block text-xs font-medium text-gray-600">
                 از تاریخ
@@ -456,7 +502,7 @@ function FilterSidebar({ filters, onFilterChange, setIsOpen, isMobile }) {
                 format="YYYY/MM/DD"
                 value={filters.start_date ? new Date(filters.start_date) : null}
                 onChange={(value) => handleDateChange("start_date", value)}
-                inputClassName="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                inputClassName="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 containerClassName="w-full"
               />
             </div>
@@ -470,14 +516,12 @@ function FilterSidebar({ filters, onFilterChange, setIsOpen, isMobile }) {
                 format="YYYY/MM/DD"
                 value={filters.end_date ? new Date(filters.end_date) : null}
                 onChange={(value) => handleDateChange("end_date", value)}
-                inputClassName="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                inputClassName="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 containerClassName="w-full"
               />
             </div>
           </div>
         </div>
-
-        {/* کد رهگیری */}
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700">
             کد رهگیری
@@ -487,24 +531,22 @@ function FilterSidebar({ filters, onFilterChange, setIsOpen, isMobile }) {
             placeholder="مثال: REQ-20250613-SUR-001"
             value={filters.tracking_code}
             onChange={(e) => onFilterChange({ tracking_code: e.target.value })}
-            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           />
         </div>
       </div>
-
-      {/* دکمه‌ها */}
       {isMobile && (
-        <div className="sticky bottom-0 mb-24 bg-white p-4 border-t border-gray-200 flex-shrink-0">
-          <div className="flex space-x-2">
+        <div className="sticky bottom-0 bg-white p-3 border-t border-gray-200 flex-shrink-0">
+          <div className="flex gap-2">
             <button
               onClick={handleApplyFilters}
-              className="flex-1 py-2.5 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              className="flex-1 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
             >
               اعمال فیلتر
             </button>
             <button
               onClick={handleResetFilters}
-              className="flex-1 py-2.5 text-sm text-red-500 border border-red-200 rounded-lg hover:bg-red-50 hover:border-red-300 transition-colors"
+              className="flex-1 py-2 text-sm text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
             >
               پاک کردن
             </button>
@@ -512,10 +554,10 @@ function FilterSidebar({ filters, onFilterChange, setIsOpen, isMobile }) {
         </div>
       )}
       {!isMobile && (
-        <div className="flex-shrink-0 pt-4">
+        <div className="flex-shrink-0 pt-3">
           <button
             onClick={handleResetFilters}
-            className="w-full py-2.5 text-sm text-red-500 font-semibold hover:bg-red-50 rounded-lg transition-colors border border-red-200 hover:border-red-300"
+            className="w-full py-2 text-sm text-red-500 font-semibold hover:bg-red-50 rounded-lg transition-colors border border-red-200"
           >
             پاک کردن فیلترها
           </button>
@@ -528,7 +570,8 @@ function FilterSidebar({ filters, onFilterChange, setIsOpen, isMobile }) {
 function RequestCard({ request }) {
   const navigate = useNavigate();
 
-  const handleCardClick = async () => {
+  const handleCardClick = async (e) => {
+    e.stopPropagation();
     try {
       const res = await fetchRequestDetail(request.id);
       navigate(`/requests/${request.id}`, { state: { request: res } });
@@ -557,67 +600,91 @@ function RequestCard({ request }) {
     tracking_code,
   } = request;
 
+  // انیمیشن‌های کارت
+  const cardVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+    hover: { scale: 1.02, boxShadow: "0 8px 16px rgba(0, 0, 0, 0.1)" },
+  };
+
+  // انیمیشن‌های دکمه
+  const buttonVariants = {
+    hover: { scale: 1.05, transition: { duration: 0.2 } },
+    tap: { scale: 0.95 },
+  };
+
   return (
-    <div
-      onClick={handleCardClick}
-      className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition-shadow duration-300 cursor-pointer overflow-hidden flex flex-col md:flex-row"
+    <motion.div
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      whileHover="hover"
+      className="bg-white rounded-xl shadow-sm overflow-hidden flex flex-col border border-gray-100"
     >
-      <div className="w-full h-48 md:w-52 md:h-auto flex-shrink-0">
-        <MiniMap lat={location_lat} long={location_lng} />
-      </div>
-      <div className="p-5 flex-1 flex flex-col justify-between">
+      <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between">
         <div>
-          <div className="flex justify-between items-start mb-3">
+          {/* سربرگ: وضعیت و نوع درخواست */}
+          <div className="flex flex-col sm:flex-row justify-between items-start mb-2 gap-2">
             <span
-              className={`text-xs font-semibold px-3 py-1 rounded-full ${getStatusBadge(
+              className={`text-xs font-semibold px-2 py-1 rounded-full ${getStatusBadge(
                 status
               )}`}
             >
               {getStatusName(status)}
             </span>
-            <span className="text-xs font-medium bg-gray-100 text-gray-600 px-3 py-1 rounded-full ring-1 ring-inset ring-gray-200">
+            <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-1 rounded-full ring-1 ring-inset ring-gray-200">
               {getRequestTypeName(request_type)}
             </span>
           </div>
-          <h3 className="text-lg font-bold text-gray-800 mb-1">
+
+          {/* عنوان */}
+          <h3 className="text-sm sm:text-base font-bold text-gray-800 mb-2 line-clamp-2">
             {project_title || "بدون عنوان"}
           </h3>
-          <p className="text-xs text-gray-400 mb-4">
-            تاریخ ثبت: {new Date(created_at).toLocaleDateString("fa-IR")}
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-700">
+
+          {/* اطلاعات متا */}
+          <div className="space-y-1 mb-3">
+            <p className="text-xs text-gray-400">
+              تاریخ ثبت: {new Date(created_at).toLocaleDateString("fa-IR")}
+            </p>
+            {tracking_code && (
+              <p className="text-xs text-gray-400">
+                کد رهگیری: {tracking_code}
+              </p>
+            )}
+          </div>
+
+          {/* شبکه اطلاعات */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 text-xs sm:text-sm text-gray-700">
             <div className="flex items-center gap-2">
-              <strong className="font-semibold text-gray-800">
-                کد رهگیری:
-              </strong>{" "}
-              <span>{tracking_code || "در انتظار تخصیص"}</span>
+              <strong className="font-semibold text-gray-800">نوع ملک:</strong>
+              <span>{getPropertyTypeName(property_type)}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <strong className="font-semibold text-gray-800">نوع ملک:</strong>{" "}
-              {getPropertyTypeName(property_type)}
-            </div>
-            {request_type === "survey" && area ? (
+            {area && (
               <div className="flex items-center gap-2">
-                <strong className="font-semibold text-gray-800">مساحت:</strong>{" "}
+                <strong className="font-semibold text-gray-800">مساحت:</strong>
                 <span>{area.toLocaleString("fa-IR")} متر مربع</span>
               </div>
-            ) : (request_type === "expert" ||
-                request_type === "registration") &&
-              main_parcel_number ? (
-              <div className="flex items-center gap-2">
-                <strong className="font-semibold text-gray-800">
-                  پلاک ثبتی:
-                </strong>{" "}
-                <span>
-                  {main_parcel_number} / {sub_parcel_number || "بدون پلاک فرعی"}
-                </span>
-              </div>
-            ) : null}
+            )}
+            {(request_type === "survey" ||
+              request_type === "expert" ||
+              request_type === "registration") &&
+              main_parcel_number && (
+                <div className="flex items-center gap-2">
+                  <strong className="font-semibold text-gray-800">
+                    پلاک ثبتی:
+                  </strong>
+                  <span>
+                    {main_parcel_number} /{" "}
+                    {sub_parcel_number || "بدون پلاک فرعی"}
+                  </span>
+                </div>
+              )}
             {building_area && (
               <div className="flex items-center gap-2">
                 <strong className="font-semibold text-gray-800">
                   مساحت ساختمان:
-                </strong>{" "}
+                </strong>
                 <span>{building_area.toLocaleString("fa-IR")} متر مربع</span>
               </div>
             )}
@@ -625,18 +692,18 @@ function RequestCard({ request }) {
               <div className="flex items-center gap-2">
                 <strong className="font-semibold text-gray-800">
                   توضیحات:
-                </strong>{" "}
-                <span>{description}</span>
+                </strong>
+                <span className="line-clamp-1">{description}</span>
               </div>
             )}
             <div className="flex items-center gap-2">
               <strong className="font-semibold text-gray-800">
                 وضعیت ارجاع:
-              </strong>{" "}
+              </strong>
               <span className="flex items-center gap-1">
                 {assigned_admin ? (
                   <>
-                    <FaUserCheck className="text-green-600" />
+                    <FaUserCheck className="text-green-600 w-4 h-4" />
                     {assigned_admin.full_name || "نامشخص"}
                   </>
                 ) : (
@@ -646,18 +713,31 @@ function RequestCard({ request }) {
             </div>
           </div>
         </div>
-        <div className="mt-4 flex justify-end items-center">
-          <span className="text-blue-600 text-sm font-semibold flex items-center gap-1 group">
+
+        {/* بخش اقدامات */}
+        <div className="mt-3 flex justify-end items-center gap-2 pt-3 border-t border-gray-100">
+          <motion.button
+            variants={buttonVariants}
+            whileHover="hover"
+            whileTap="tap"
+            onClick={handleCardClick}
+            className="px-3 py-1.5 text-xs sm:text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1"
+          >
             مشاهده جزئیات
-            <FiChevronsLeft className="transition-transform group-hover:-translate-x-1" />
-          </span>
+            <FiChevronsLeft className="w-4 h-4" />
+          </motion.button>
         </div>
       </div>
-    </div>
+      {location_lat && location_lng && (
+        <div className="w-full h-48">
+          <MiniMap lat={location_lat} lng={location_lng} />
+        </div>
+      )}
+    </motion.div>
   );
 }
 
-function MiniMap({ lat, long }) {
+function MiniMap({ lat, lng }) {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
 
@@ -665,7 +745,7 @@ function MiniMap({ lat, long }) {
     if (typeof window.L === "undefined" || !mapRef.current) return;
     if (mapInstance.current) mapInstance.current.remove();
 
-    if (lat && long) {
+    if (lat && lng) {
       delete window.L.Icon.Default.prototype._getIconUrl;
       window.L.Icon.Default.mergeOptions({
         iconRetinaUrl:
@@ -675,7 +755,7 @@ function MiniMap({ lat, long }) {
           "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
       });
 
-      const position = [lat, long];
+      const position = [lat, lng];
       mapInstance.current = window.L.map(mapRef.current, {
         center: position,
         zoom: 13,
@@ -696,11 +776,11 @@ function MiniMap({ lat, long }) {
         mapInstance.current = null;
       }
     };
-  }, [lat, long]);
+  }, [lat, lng]);
 
-  if (!lat || !long) {
+  if (!lat || !lng) {
     return (
-      <div className="w-full h-full bg-gray-200 flex items-center justify-center text-xs text-gray-500">
+      <div className="w-full h-48 bg-gray-200 flex items-center justify-center text-xs text-gray-500">
         موقعیت ثبت نشده
       </div>
     );
