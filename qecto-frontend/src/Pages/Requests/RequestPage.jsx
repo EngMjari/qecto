@@ -7,6 +7,7 @@ import MapView from "./Components/MapView";
 import TabsManager from "./Components/TabsManager";
 import PreviewModal from "./Components/PreviewModal";
 import FileUploadTable from "../../Components/FileUpload/FileUploadTable";
+import LoadingScreen from "Pages/LoadingScreen/LoadingScreen";
 import {
   fetchRequestDetail,
   getTicketSessionsByRequest,
@@ -136,20 +137,7 @@ function RequestPage() {
     setPreviewOpen(true);
   };
 
-  if (loading) {
-    return (
-      <div className="page-content flex items-center justify-center min-h-screen bg-gradient-to-b from-gray-50 to-orange-50">
-        <div className="flex flex-col items-center">
-          <Spinner
-            animation="border"
-            className="text-orange-600 mb-2"
-            aria-label="در حال بارگذاری"
-          />
-          <span className="text-gray-600 text-lg">در حال بارگذاری...</span>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return LoadingScreen;
 
   if (!requestData) {
     return <Navigate to="/404" replace />;

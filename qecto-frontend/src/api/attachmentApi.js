@@ -1,5 +1,5 @@
 import axiosInstance from "../utils/axiosInstance";
-
+import API_ENDPOINTS from "./apiEndpoints";
 export const uploadInitialAttachment = async (
   contentType,
   objectId,
@@ -21,9 +21,13 @@ export const uploadInitialAttachment = async (
     formData.append("title", title || file.name);
     formData.append("content_type", contentType);
     formData.append("object_id", objectId);
-    const response = await axiosInstance.post("/api/attachments/", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    const response = await axiosInstance.post(
+      API_ENDPOINTS.ATTACHMENT.UPLOAD_INIT,
+      formData,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+      }
+    );
     return response.data;
   } catch (error) {
     console.error("خطا در آپلود فایل اولیه:", error);
@@ -53,7 +57,7 @@ export const uploadAdminAttachment = async (
     formData.append("content_type", contentType);
     formData.append("object_id", objectId);
     const response = await axiosInstance.post(
-      `/api/attachments/upload-admin/${contentType}/${objectId}/`,
+      (API_ENDPOINTS.ATTACHMENT.UPLOAD_ADMIN, contentType, objectId),
       formData,
       { headers: { "Content-Type": "multipart/form-data" } }
     );
@@ -84,7 +88,7 @@ export const uploadTicketAttachment = async (
     formData.append("file", file);
     formData.append("title", title || file.name);
     const response = await axiosInstance.post(
-      `/api/tickets/messages/${ticketId}/${messageId}/attach/`,
+      API_ENDPOINTS.TICKETS.UPLOAD_ATTACHMENT,
       formData,
       { headers: { "Content-Type": "multipart/form-data" } }
     );
@@ -98,7 +102,7 @@ export const uploadTicketAttachment = async (
 export const fetchRequestFiles = async (contentType, uuid) => {
   try {
     const response = await axiosInstance.get(
-      `/api/attachments/request-files/${contentType}/${uuid}/`
+      (API_ENDPOINTS.ATTACHMENT.REQUESTS_FILES, contentType, uuid)
     );
     return response.data;
   } catch (error) {
@@ -110,7 +114,7 @@ export const fetchRequestFiles = async (contentType, uuid) => {
 export const fetchTicketSessionFiles = async (ticketId) => {
   try {
     const response = await axiosInstance.get(
-      `/api/attachments/ticket-session-files/${ticketId}/`
+      (API_ENDPOINTS.ATTACHMENT.TICKET_SESSION_FILES, ticketId)
     );
     return response.data;
   } catch (error) {
@@ -121,12 +125,9 @@ export const fetchTicketSessionFiles = async (ticketId) => {
 
 export const getFilePreview = async (attachmentId) => {
   try {
-    const response = await axiosInstance.get(
-      `/api/attachments/${attachmentId}/preview/`,
-      {
-        responseType: "blob",
-      }
-    );
+    const response = await axiosInstance.get(API_ENDPOINTS.ATTACHMENT.PREVIEW, {
+      responseType: "blob",
+    });
     const blob = response.data;
     const contentType = response.headers["content-type"];
     if (contentType === "application/json") {

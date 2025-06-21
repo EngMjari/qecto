@@ -11,4 +11,3 @@ export * from "./ticketsApi";
 export * from "./apiEndpoints";
 export * from "./requestsApi";
 export * from "./attachmentApi";
-export * from "./oldApi";

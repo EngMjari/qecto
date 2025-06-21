@@ -72,7 +72,6 @@ function TabsManager({
       });
     });
     setTicketFiles(allFiles);
-    console.log("AllFiles : ", allFiles);
   }, [sessions, setTicketFiles]);
 
   const hasOpenTicket = sessions.some((t) => t.status === "open");
@@ -233,7 +232,7 @@ function TabsManager({
                           : null
                       }
                       userId={userProfile?.id}
-                      owenerId={session?.related_request.owner.id}
+                      ownerId={session?.related_request.owner.id}
                       open={isMobile ? false : openTicketId === session.id}
                       onToggle={() => {
                         if (isMobile) {
@@ -268,7 +267,7 @@ function TabsManager({
                         <TicketConversation
                           session={session}
                           userId={userProfile?.id}
-                          owenerId={session?.related_request.owner.id}
+                          ownerId={session?.related_request.owner.id}
                           onSendMessage={async (msg, files) => {
                             try {
                               await sendTicketMessage(session.id, {

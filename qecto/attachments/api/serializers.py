@@ -36,7 +36,7 @@ class AttachmentSerializer(serializers.ModelSerializer):
 class AttachmentCreateSerializer(serializers.ModelSerializer):
     file = serializers.FileField()
     title = serializers.CharField(
-        max_length=255, required=False, allow_blank=True)
+        max_length=100, required=False, allow_blank=True)
     content_type = serializers.CharField(write_only=True)
     object_id = serializers.UUIDField(write_only=True)
 

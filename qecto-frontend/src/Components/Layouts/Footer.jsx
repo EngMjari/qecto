@@ -8,7 +8,7 @@ const Footer = () => {
 
   return (
     <footer
-      className="bg-gray-800 text-white mt-auto"
+      className="bg-dark text-white mt-auto  border-t-2 border-orange-600"
       style={{ direction: "rtl" }}
     >
       <div className="container mx-auto px-6 py-8">
@@ -58,7 +58,7 @@ const Footer = () => {
           </div>
         </div>
 
-        <div className="mt-8 pt-6 border-t border-gray-700 text-center text-gray-500">
+        <div className="mt-8 pt-6 border-t border-orange-800 text-center text-gray-500">
           <p>
             &copy; {new Date().getFullYear()}{" "}
             <Link className="text-reset" to={"/"}>

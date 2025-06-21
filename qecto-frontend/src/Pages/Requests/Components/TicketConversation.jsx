@@ -94,13 +94,13 @@ function TicketConversation({
       >
         {session.messages?.length > 0 ? (
           session.messages.map((message) => {
-            const isAdminMessage = message.sender.id !== ownerId;
+            const isUserMessage = message.sender.id !== ownerId;
 
             return (
               <div
                 key={message.id}
                 className={`flex ${
-                  isAdminMessage ? "justify-start" : "justify-end"
+                  isUserMessage ? "justify-start" : "justify-end"
                 }`}
               >
                 <div className="max-w-[80%]">
@@ -108,6 +108,7 @@ function TicketConversation({
                     message={message}
                     ownerId={ownerId}
                     userId={userId}
+                    isAdmin={isUserMessage}
                   />
                 </div>
               </div>

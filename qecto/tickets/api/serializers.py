@@ -161,23 +161,14 @@ class TicketSessionCreateSerializer(serializers.ModelSerializer):
                     'برای سشن‌های غیرعمومی، content_type و object_id الزامی هستند.')
             try:
                 content_type = ContentType.objects.get(pk=content_type_id)
-                print(
-                    f"ContentType found: id={content_type.id}, model={content_type.model}, app_label={content_type.app_label}")
                 model = content_type.model_class()
-                print(f"Model: {model.__name__}")
                 if model not in model_map.values():
-                    print(
-                        f"Model {model.__name__} not in model_map: {[m.__name__ for m in model_map.values()]}")
                     raise serializers.ValidationError('نوع محتوا نامعتبر است.')
                 instance = model.objects.get(pk=object_id)
-                print(f"Object found: id={instance.id}")
             except ContentType.DoesNotExist:
-                print(f"ContentType with id {content_type_id} does not exist")
                 raise serializers.ValidationError(
                     'شناسه محتوا یا نوع محتوا نامعتبر است.')
             except model.DoesNotExist:
-                print(
-                    f"Object with id {object_id} does not exist in model {model.__name__}")
                 raise serializers.ValidationError(
                     'شناسه محتوا یا نوع محتوا نامعتبر است.')
         else:

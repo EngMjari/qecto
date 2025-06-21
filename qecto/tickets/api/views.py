@@ -32,14 +32,12 @@ class TicketSessionListCreateView(APIView):
 
     def get(self, request):
         user = request.user
-        print(f"User: {user}, Query params: {request.query_params}")
         if user.is_superuser:
             sessions = TicketSession.objects.all()
         elif user.is_staff:
             sessions = TicketSession.objects.filter(assigned_admin=user)
         else:
             sessions = TicketSession.objects.filter(user=user)
-        print(f"Sessions count before filters: {sessions.count()}")
 
         # اعمال فیلترها
         if 'session_type' in request.query_params:
@@ -64,8 +62,6 @@ class TicketSessionListCreateView(APIView):
             except ContentType.DoesNotExist:
                 sessions = sessions.none()
 
-        print(f"Sessions count after filters: {sessions.count()}")
-
         # محاسبه آمار
         stats = {
             'total_tickets': sessions.count(),
@@ -81,17 +77,14 @@ class TicketSessionListCreateView(APIView):
             'results': serializer.data,
             'stats': stats,
         }
-        print(f"Response data: {response_data}")
         return paginator.get_paginated_response(response_data)
 
     def post(self, request):
-        print(f"Creating ticket with data: {request.data}")
         serializer = TicketSessionCreateSerializer(
             data=request.data, context={'request': request})
         if serializer.is_valid():
             ticket = serializer.save()
             return Response(TicketSessionSerializer(ticket).data, status=status.HTTP_201_CREATED)
-        print(f"Serializer errors: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -99,7 +92,6 @@ class TicketSessionDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, session_id):
-        print("Received data:", request.data)
         try:
             session = TicketSession.objects.get(id=session_id, status='open')
             user = request.user
@@ -111,9 +103,7 @@ class TicketSessionDetailView(APIView):
             )
             if serializer.is_valid():
                 message = serializer.save()
-                print("Created message:", message.id)
                 return Response(TicketMessageSerializer(message).data, status=status.HTTP_201_CREATED)
-            print("Serializer errors:", serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except TicketSession.DoesNotExist:
             return Response({'error': 'سشن یافت نشد یا بسته است'}, status=status.HTTP_404_NOT_FOUND)
@@ -151,23 +141,16 @@ class TicketSessionsByRequestView(APIView):
             }
             model = model_map.get(request_type)
             if not model:
-                print(f"Invalid request_type: {request_type}")
                 return Response({'error': 'نوع درخواست نامعتبر'}, status=status.HTTP_400_BAD_REQUEST)
 
-            print(f"Looking for {model.__name__} with id {request_id}")
             request_obj = model.objects.get(id=request_id)
-            print(f"Found object: {request_obj.id}")
 
             # بررسی دسترسی
             if not user.is_superuser:
                 if hasattr(request_obj, 'owner'):
                     if request_obj.owner != user and request_obj.assigned_admin != user:
-                        print(
-                            f"User {user} is not owner or assigned admin of {request_obj.id}")
                         return Response({'error': 'عدم دسترسی'}, status=status.HTTP_403_FORBIDDEN)
                 elif request_obj.project.owner != user:
-                    print(
-                        f"User {user} is not project owner of {request_obj.id}")
                     return Response({'error': 'عدم دسترسی'}, status=status.HTTP_403_FORBIDDEN)
 
             content_type = ContentType.objects.get_for_model(model)
@@ -176,44 +159,43 @@ class TicketSessionsByRequestView(APIView):
             serializer = TicketSessionSerializer(sessions, many=True)
             return Response({'results': serializer.data})
         except model.DoesNotExist:
-            print(f"{model.__name__} with id {request_id} does not exist")
             return Response({'error': 'درخواست یافت نشد'}, status=status.HTTP_404_NOT_FOUND)
-            user = request.user
-            try:
-                model_map = {
-                    'survey': SurveyRequest,
-                    'supervision': SupervisionRequest,
-                    'expert': ExpertEvaluationRequest,
-                    'execution': ExecutionRequest,
-                    'registration': RegistrationRequest,
-                }
-                model = model_map.get(request_type)
-                if not model:
-                    print(f"Invalid request_type: {request_type}")
-                    return Response({'error': 'نوع درخواست نامعتبر'}, status=status.HTTP_400_BAD_REQUEST)
+        # user = request.user
+        # try:
+        #     model_map = {
+        #         'survey': SurveyRequest,
+        #         'supervision': SupervisionRequest,
+        #         'expert': ExpertEvaluationRequest,
+        #         'execution': ExecutionRequest,
+        #         'registration': RegistrationRequest,
+        #     }
+        #     model = model_map.get(request_type)
+        #     if not model:
+        #         print(f"Invalid request_type: {request_type}")
+        #         return Response({'error': 'نوع درخواست نامعتبر'}, status=status.HTTP_400_BAD_REQUEST)
 
-                print(f"Looking for {model.__name__} with id {request_id}")
-                request_obj = model.objects.get(id=request_id)
-                print(f"Found object: {request_obj.id}")
-                if not user.is_superuser:
-                    if hasattr(request_obj, 'owner'):
-                        if request_obj.owner != user:
-                            print(
-                                f"User {user} is not owner of {request_obj.id}")
-                            return Response({'error': 'عدم دسترسی'}, status=status.HTTP_403_FORBIDDEN)
-                    elif request_obj.project.owner != user:
-                        print(
-                            f"User {user} is not project owner of {request_obj.id}")
-                        return Response({'error': 'عدم دسترسی'}, status=status.HTTP_403_FORBIDDEN)
+        #     print(f"Looking for {model.__name__} with id {request_id}")
+        #     request_obj = model.objects.get(id=request_id)
+        #     print(f"Found object: {request_obj.id}")
+        #     if not user.is_superuser:
+        #         if hasattr(request_obj, 'owner'):
+        #             if request_obj.owner != user:
+        #                 print(
+        #                     f"User {user} is not owner of {request_obj.id}")
+        #                 return Response({'error': 'عدم دسترسی'}, status=status.HTTP_403_FORBIDDEN)
+        #         elif request_obj.project.owner != user:
+        #             print(
+        #                 f"User {user} is not project owner of {request_obj.id}")
+        #             return Response({'error': 'عدم دسترسی'}, status=status.HTTP_403_FORBIDDEN)
 
-                content_type = ContentType.objects.get_for_model(model)
-                sessions = TicketSession.objects.filter(
-                    content_type=content_type, object_id=request_id)
-                serializer = TicketSessionSerializer(sessions, many=True)
-                return Response({'results': serializer.data})
-            except model.DoesNotExist:
-                print(f"{model.__name__} with id {request_id} does not exist")
-                return Response({'error': 'درخواست یافت نشد'}, status=status.HTTP_404_NOT_FOUND)
+        #     content_type = ContentType.objects.get_for_model(model)
+        #     sessions = TicketSession.objects.filter(
+        #         content_type=content_type, object_id=request_id)
+        #     serializer = TicketSessionSerializer(sessions, many=True)
+        #     return Response({'results': serializer.data})
+        # except model.DoesNotExist:
+        #     print(f"{model.__name__} with id {request_id} does not exist")
+        #     return Response({'error': 'درخواست یافت نشد'}, status=status.HTTP_404_NOT_FOUND)
 
 
 class TicketMessageAttachmentView(APIView):

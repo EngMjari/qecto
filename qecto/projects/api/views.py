@@ -18,5 +18,4 @@ class ProjectViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(projects, many=True)
             return Response(serializer.data)
         except Exception as e:
-            print(f"Error in ProjectViewSet.list: {str(e)}")
             raise

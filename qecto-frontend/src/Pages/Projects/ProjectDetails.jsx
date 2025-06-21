@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { fetchProjectDetails } from "../../api";
+// import { fetchProjectDetails } from "../../api";
 
 const ProjectDetails = () => {
   const { id } = useParams();
   const [project, setProject] = useState(null);
 
   useEffect(() => {
-    fetchProjectDetails(id).then((res) => setProject(res.data));
+    // fetchProjectDetails(id).then((res) => setProject(res.data));
   }, [id]);
 
   if (!project) return <div className="text-white p-4">در حال بارگذاری...</div>;

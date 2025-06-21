@@ -16,7 +16,7 @@ import persian from "react-date-object/calendars/persian";
 import persian_fa from "react-date-object/locales/persian_fa";
 import "react-multi-date-picker/styles/layouts/mobile.css";
 import { fetchUserRequests, fetchRequestDetail } from "../../api";
-
+import LoadingScreen from "Pages/LoadingScreen/LoadingScreen";
 // تابع برای دریافت نام نوع درخواست
 const getRequestTypeName = (type) => {
   const types = {
@@ -164,6 +164,7 @@ function RequestListPage() {
     visible: { x: 0, transition: { duration: 0.3, ease: "easeOut" } },
     exit: { x: "100%", transition: { duration: 0.3, ease: "easeIn" } },
   };
+  if (loading) return <LoadingScreen />;
 
   return (
     <div className="bg-gray-50 min-h-screen font-vazir" dir="rtl">
@@ -581,7 +582,6 @@ function RequestCard({ request }) {
   };
 
   const {
-    id,
     project_title,
     request_type,
     status,

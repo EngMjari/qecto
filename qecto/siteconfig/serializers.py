@@ -1,7 +1,7 @@
 # siteconfig/serializers.py
 
 from rest_framework import serializers
-from .models import SiteConfig
+from .models import SiteConfig, HomePage
 
 
 class SiteConfigSerializer(serializers.ModelSerializer):
@@ -36,4 +36,45 @@ class SiteConfigSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(obj.favicon.url)
         elif obj.favicon:
             return obj.favicon.url
+        return None
+
+
+class HomePageSerializer(serializers.ModelSerializer):
+    bgImage_url = serializers.SerializerMethodField()
+    bgRequest_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = HomePage
+        fields = [
+            'header_title',
+            'header_description',
+            'our_projects_title',
+            'our_projects_description',
+            'complete_requests',
+            'user',
+            'tickets',
+            'services_title',
+            'services',
+            'services_description',
+            'request_title',
+            'request_description',
+            'request_bgColor',
+            'bgImage_url',
+            'bgRequest_url',
+        ]
+
+    def get_bgImage_url(self, obj):
+        request = self.context.get('request')
+        if obj.header_image and request:
+            return request.build_absolute_uri(obj.header_image.url)
+        elif obj.header_image:
+            return obj.header_image.url
+        return None
+
+    def get_bgRequest_url(self, obj):
+        request = self.context.get('request')
+        if obj.request_bgImage and request:
+            return request.build_absolute_uri(obj.request_bgImage.url)
+        elif obj.request_bgImage:
+            return obj.request_bgImage.url
         return None

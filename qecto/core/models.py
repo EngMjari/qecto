@@ -35,6 +35,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     national_id = models.CharField(max_length=10, unique=True, null=True)
     full_name = models.CharField(max_length=100, name="full_name")
     email = models.EmailField(blank=True, null=True)
+    whatsapp = models.URLField(blank=True, null=True)
+    telegram = models.URLField(blank=True, null=True)
     profile_image = models.ImageField(upload_to='profile_images/', null=True, blank=True, default='profile_images/default.png'
                                       )
     is_active = models.BooleanField(default=True)
@@ -69,7 +71,7 @@ class OTP(models.Model):
 
 class AdminUserManager(UserManager):
     def get_queryset(self):
-        return super().get_queryset().filter(is_staff=True)
+        return super().get_queryset().filter(is_staff=True, is_superuser=False)
 
 
 class AdminUser(User):

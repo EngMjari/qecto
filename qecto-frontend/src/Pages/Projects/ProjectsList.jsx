@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { fetchProjects } from "api/projectsApi";
+import { fetchProjects, fetchProjectById } from "../../api";
 import { FaChevronDown, FaChevronUp, FaFilter, FaTimes } from "react-icons/fa";
 
 // وضعیت پروژه به فارسی
@@ -106,7 +106,7 @@ function ProjectsList() {
       if (filters.request_status !== "all")
         params.request_status = filters.request_status; // وضعیت درخواست
       const res = await fetchProjects(params);
-      setProjects(res.data?.results || res.data);
+      setProjects(res?.results || res);
     } catch (err) {
       setProjects([]);
     } finally {
@@ -116,7 +116,6 @@ function ProjectsList() {
 
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line
   }, [filters]);
 
   const handleFilterChange = (newFilters) => {
@@ -208,13 +207,13 @@ function ProjectsList() {
               <div className="text-center py-10 text-gray-600">
                 در حال بارگذاری...
               </div>
-            ) : projects.length === 0 ? (
+            ) : projects?.length === 0 ? (
               <div className="text-center py-10 bg-white rounded-xl shadow-sm">
                 <p className="text-lg text-gray-500">پروژه‌ای یافت نشد.</p>
               </div>
             ) : (
               <div className="space-y-6">
-                {projects.map((project) => (
+                {projects?.map((project) => (
                   <div
                     key={project.id}
                     className="bg-white rounded-2xl shadow p-5"
@@ -266,12 +265,12 @@ function ProjectsList() {
                     {openProjectId === project.id && (
                       <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="md:col-span-2 space-y-4">
-                          {project.requests.length === 0 ? (
+                          {project?.requests.length === 0 ? (
                             <div className="text-gray-500 text-center">
                               درخواستی برای این پروژه ثبت نشده است.
                             </div>
                           ) : (
-                            project.requests.map((req) => (
+                            project?.requests.map((req) => (
                               <RequestCard key={req.id} request={req} />
                             ))
                           )}

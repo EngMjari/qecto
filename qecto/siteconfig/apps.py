@@ -3,9 +3,15 @@ from django.db.models.signals import post_migrate
 
 
 def create_site_config(sender, **kwargs):
-    from siteconfig.models import SiteConfig
+    from siteconfig.models import SiteConfig, HomePage, AboutUs, ContactUs
     if not SiteConfig.objects.exists():
         SiteConfig.objects.create(site_name="سایت من")
+    if not HomePage.objects.exists():
+        HomePage.objects.create()
+    if not AboutUs.objects.exists():
+        AboutUs.objects.create()
+    if not ContactUs.objects.exists():
+        ContactUs.objects.create()
 
 
 class SiteconfigConfig(AppConfig):

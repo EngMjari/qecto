@@ -20,6 +20,7 @@ import {
   fetchTicketSessions,
   sendTicketMessage,
 } from "../../api";
+import LoadingScreen from "Pages/LoadingScreen/LoadingScreen";
 import { AuthContext } from "../../Contexts/AuthContext";
 
 // Utility functions for status
@@ -163,7 +164,7 @@ export default function Dashboard() {
     }
   };
 
-  if (loading) return <p className="text-center py-8">در حال بارگذاری...</p>;
+  if (loading) return <LoadingScreen />;
   if (error)
     return <p className="text-center text-red-500 py-8">خطا: {error}</p>;
 
@@ -479,7 +480,10 @@ function SectionGrid({
           >
             <div className="flex flex-col flex-grow">
               <span className="font-medium">{req.project_title}</span>
-              <span className="text-xs text-gray-500 mt-1">
+              <span className="text-xs text-gray-500 mt-2">
+                {new Date(req.created_at).toLocaleDateString("fa-IR")}
+              </span>
+              <span className="text-xs text-gray-500 mt-2">
                 {getRequestTypeLabel(req.request_type)}
               </span>
             </div>
@@ -599,10 +603,10 @@ function DashboardSection({
       <style>
         {`
         .section-container {
-          min-height: 300px;
+          {/* min-height: 300px; */}
         }
         .section-item {
-          min-height: 70px;
+          min-height: 112.8px;
           display: flex;
           align-items: center;
         }

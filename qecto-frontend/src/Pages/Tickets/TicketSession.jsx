@@ -17,7 +17,6 @@ function TicketSession() {
   const messagesContainerRef = useRef(null);
   const messagesEndRef = useRef(null);
   const navigate = useNavigate();
-
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener("resize", handleResize);
@@ -211,6 +210,10 @@ function TicketSession() {
                       <MessageBubble
                         message={message}
                         userId={userProfile?.id}
+                        isAdmin={
+                          message.sender.id !==
+                          ticketInfo.related_request.owner.id
+                        }
                       />
                     </div>
                   </div>

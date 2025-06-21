@@ -33,6 +33,7 @@ function TicketModal({ session, onClose, onSendMessage, onPreview }) {
             onSendMessage={onSendMessage}
             onPreview={onPreview}
             userId={userProfile?.id}
+            ownerId={session?.related_request.owner.id}
           />
         </div>
       </div>

@@ -40,7 +40,7 @@ export default function Header({ isAuthenticated, role, logout, navLinks }) {
   return (
     <header
       className={cx(
-        "hidden lg:flex fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+        "hidden lg:flex fixed top-0 left-0 right-0 z-50 transition-all duration-300  border-b-2 border-orange-600",
         isScrolled
           ? "bg-dark opacity-95 shadow-md backdrop-blur-sm"
           : "bg-dark bg-opacity-85"
@@ -71,10 +71,10 @@ export default function Header({ isAuthenticated, role, logout, navLinks }) {
                   currentPath === link.link
                     ? isScrolled
                       ? "text-orange-600"
-                      : "text-white bg-white/20"
+                      : "text-dark bg-orange-600"
                     : isScrolled
-                    ? "text-gray-600 hover:text-orange-500"
-                    : "text-gray-200 hover:text-white hover:bg-white/20"
+                    ? "text-gray-500 hover:text-orange-500"
+                    : "text-gray-200 hover:text-orange-600"
                 )}
               >
                 {link.name}
@@ -92,8 +92,8 @@ export default function Header({ isAuthenticated, role, logout, navLinks }) {
                 className={cx(
                   "flex items-center gap-2 font-semibold py-2 px-4 rounded-lg transition-all duration-300",
                   isScrolled
-                    ? "bg-orange-500 text-white hover:bg-orange-600"
-                    : "bg-white/20 text-white hover:bg-white/40"
+                    ? "bg-orange-500 hover:bg-orange-600 text-gray-200"
+                    : "bg-white/20 text-orange-600 hover:text-gray-200 hover:bg-white/40"
                 )}
               >
                 <LogInIcon className="w-5 h-5" />
@@ -111,8 +111,8 @@ export default function Header({ isAuthenticated, role, logout, navLinks }) {
                 className={cx(
                   "flex items-center gap-2 py-2 px-4 rounded-lg font-semibold transition-all duration-300",
                   isScrolled
-                    ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    : "bg-white/20 text-white hover:bg-white/30"
+                    ? "bg-orange-500 hover:bg-orange-600 text-gray-200"
+                    : "bg-white/20 text-orange-600 hover:text-gray-200 hover:bg-white/40"
                 )}
               >
                 <UserIcon className="w-5 h-5" />
@@ -125,7 +125,7 @@ export default function Header({ isAuthenticated, role, logout, navLinks }) {
                     to="/dashboard"
                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                   >
-                    داشبورد من
+                    پنل کاربری
                   </Link>
                   <button
                     onClick={handleLogout}

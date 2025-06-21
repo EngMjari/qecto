@@ -12,6 +12,7 @@ const AccordionSection = React.forwardRef(function AccordionSection(
     userId,
     className = "",
     headerClassName = "",
+    ownerId,
   },
   ref
 ) {
@@ -63,7 +64,7 @@ const AccordionSection = React.forwardRef(function AccordionSection(
         </div>
       </button>
       <div
-        className={`overflow-hidden transition-all duration-300 ${
+        className={`overflow-hidden overflow-y-scroll transition-all duration-300 ${
           open ? "max-h-screen" : "max-h-0"
         }`}
       >
