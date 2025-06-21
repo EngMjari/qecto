@@ -1,4 +1,3 @@
-# core/models.py :
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 import random
@@ -31,14 +30,34 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
+    # تعریف انتخاب‌ها برای نقش
+    ROLE_CHOICES = (
+        ('civil_engineer', 'کارشناس عمران'),
+        ('project_manager', 'مدیر پروژه'),
+        ('surveyor', 'نقشه‌بردار'),
+        ('technical_support', 'پشتیبانی فنی'),
+        ('other', 'سایر'),
+    )
+
     phone = models.CharField(max_length=11, unique=True)
     national_id = models.CharField(max_length=10, unique=True, null=True)
     full_name = models.CharField(max_length=100, name="full_name")
     email = models.EmailField(blank=True, null=True)
     whatsapp = models.URLField(blank=True, null=True)
     telegram = models.URLField(blank=True, null=True)
-    profile_image = models.ImageField(upload_to='profile_images/', null=True, blank=True, default='profile_images/default.png'
-                                      )
+    profile_image = models.ImageField(
+        upload_to='profile_images/',
+        null=True,
+        blank=True,
+        default='profile_images/default.png'
+    )
+    role = models.CharField(
+        max_length=50,
+        choices=ROLE_CHOICES,
+        blank=True,
+        null=True,
+        verbose_name="نقش"
+    )
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
@@ -53,7 +72,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     class Meta:
         verbose_name = 'کاربر'
-        verbose_name_plural = 'کاربر ها'
+        verbose_name_plural = 'کاربرها'
 
 
 class OTP(models.Model):

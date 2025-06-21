@@ -27,23 +27,27 @@ const iconAnimation = {
   tap: { scale: 0.95 },
 };
 
-export default function StatsSection() {
+export default function StatsSection({
+  userCount,
+  ticketCount,
+  completedRequests,
+}) {
   const stats = [
     {
       icon: FaBriefcase,
-      number: 128,
-      label: "پروژه تکمیل شده",
+      number: ticketCount,
+      label: "تیکت ها",
       color: "from-orange-500 to-orange-600",
     },
     {
       icon: FaUsers,
-      number: 340,
+      number: userCount,
       label: "کاربران فعال",
       color: "from-teal-500 to-teal-600",
     },
     {
       icon: FaFileAlt,
-      number: 1500,
+      number: completedRequests,
       label: "درخواست ثبت شده",
       color: "from-blue-500 to-blue-600",
     },

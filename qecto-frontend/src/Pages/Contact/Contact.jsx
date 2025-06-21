@@ -8,7 +8,7 @@ import {
   FaUser,
   FaComment,
 } from "react-icons/fa";
-
+// TODO: fix fetch data from api
 export default function Contact({ showToast }) {
   const { siteConfig } = useContext(SiteConfigContext);
   const [formData, setFormData] = useState({

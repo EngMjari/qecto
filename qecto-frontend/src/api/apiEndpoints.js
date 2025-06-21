@@ -4,7 +4,7 @@ const API_ENDPOINTS = {
   AUTH: {
     LOGIN: "/api/token/", // ورود و دریافت توکن
     REFRESH: "/api/token/refresh/", // تازه کردن توکن
-    LOGOUT: "/api/logout/", // خروج (اگر داری)
+    LOGOUT: "/api/logout/", // خروج
     USER_INFO: "/api/user-info/", // گرفتن اطلاعات کاربر جاری
     OTP: "/api/send-otp/",
     VERIFY: "/api/verify-otp/",
@@ -51,7 +51,12 @@ const API_ENDPOINTS = {
     LIST: "/api/requests/user/all/",
     DETAIL: "/api/requests/user/",
   },
-  SITECONFIG: `api/site/config/`,
+  SITECONFIG: {
+    CONFIG: "/api/site/config/", // تنظیمات سایت (SiteConfig)
+    HOMEPAGE: "/api/site/homepage/", // تنظیمات صفحه اصلی
+    ABOUTUS: "/api/site/aboutus/", // تنظیمات درباره ما
+    CONTACTUS: "/api/site/contactus/", // تنظیمات تماس با ما
+  },
 };
 
 export default API_ENDPOINTS;

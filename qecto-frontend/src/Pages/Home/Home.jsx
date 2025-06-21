@@ -1,38 +1,55 @@
-import React from "react";
+import React, { useContext, useState, useEffect } from "react";
 import StatsSection from "./StatsSection";
 import { Link } from "react-router-dom";
-import { SiteConfigContext } from "Contexts/SiteConfigContext";
+import { SiteConfigContext } from "../../Contexts/SiteConfigContext";
 import { motion } from "framer-motion";
+import { fetchHomePageConfig } from "../../api";
+import LoadingScreen from "../LoadingScreen/LoadingScreen";
 
 export default function Home() {
-  const { siteConfig } = React.useContext(SiteConfigContext);
+  const { siteConfig } = useContext(SiteConfigContext);
+  const [homePageConfig, setHomePageConfig] = useState({
+    header_title: "",
+    services: [],
+    user: 0,
+    tickets: 0,
+    complete_requests: 0,
+  });
+  const [loading, setLoading] = useState(true);
 
-  const services = [
-    {
-      icon: "📐",
-      title: "نقشه‌برداری دقیق",
-      description:
-        "خدمات جامع نقشه‌برداری با تجهیزات مدرن برای پروژه‌های عمرانی و ثبتی.",
-    },
-    {
-      icon: "⚖️",
-      title: "کارشناسی امور ثبتی",
-      description:
-        "مشاوره و انجام کلیه امور تفکیک، افراز و تهیه نقشه‌های UTM ثبتی.",
-    },
-    {
-      icon: "🏗️",
-      title: "نظارت پروژه",
-      description:
-        "نظارت دقیق بر اجرای پروژه‌های ساختمانی مطابق با استانداردها و مقررات.",
-    },
-    {
-      icon: "👷",
-      title: "اجرای پروژه",
-      description:
-        "مدیریت و اجرای پروژه‌های عمرانی و ساختمانی با بالاترین کیفیت.",
-    },
-  ];
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const data = await fetchHomePageConfig();
+        console.log("data: ", data);
+        setHomePageConfig(
+          data || {
+            header_title: "",
+            services: [],
+            user: 0,
+            tickets: 0,
+            complete_requests: 0,
+          }
+        );
+        setLoading(false);
+      } catch (error) {
+        console.error("خطا در بارگذاری تنظیمات صفحه اصلی:", error);
+        setHomePageConfig({
+          header_title: "",
+          services: [],
+          user: 0,
+          tickets: 0,
+          complete_requests: 0,
+        });
+        setLoading(false);
+      }
+    };
+    loadConfig();
+  }, []);
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <div className="animate-fade-in page-content" dir="rtl">
@@ -47,7 +64,7 @@ export default function Home() {
             transition={{ duration: 0.5 }}
             className="text-4xl md:text-5xl lg:text-6xl font-black leading-tight mb-4 drop-shadow-lg"
           >
-            {siteConfig?.site_name || "بدون نام"}
+            {homePageConfig.header_title || siteConfig?.site_name || "بدون نام"}
           </motion.h1>
 
           <motion.p
@@ -56,7 +73,8 @@ export default function Home() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="text-lg md:text-xl lg:text-2xl mb-8 font-light max-w-3xl mx-auto drop-shadow"
           >
-            {siteConfig?.description ||
+            {homePageConfig.header_description ||
+              siteConfig?.description ||
               "ما با ارائه خدمات مهندسی و مشاوره، به شما در تحقق پروژه‌های عمرانی و ثبتی کمک می‌کنیم."}
           </motion.p>
 
@@ -74,7 +92,11 @@ export default function Home() {
         </div>
       </section>
 
-      <StatsSection />
+      <StatsSection
+        userCount={homePageConfig.user || 0}
+        ticketCount={homePageConfig.tickets || 0}
+        completedRequests={homePageConfig.complete_requests || 0}
+      />
 
       {/* Services Section */}
       <section
@@ -90,7 +112,7 @@ export default function Home() {
               transition={{ duration: 0.4 }}
               className="text-3xl md:text-4xl font-bold text-gray-800"
             >
-              خدمات ما
+              {homePageConfig.services_title || "خدمات ما"}
             </motion.h2>
             <motion.div
               initial={{ width: 0 }}
@@ -106,33 +128,39 @@ export default function Home() {
               transition={{ duration: 0.4, delay: 0.3 }}
               className="text-gray-600 mt-6 max-w-2xl mx-auto"
             >
-              ما با بهره‌گیری از دانش روز و تیم مجرب، آماده ارائه بهترین خدمات
-              مهندسی به شما هستیم.
+              {homePageConfig.services_description ||
+                "ما با بهره‌گیری از دانش روز و تیم مجرب، آماده ارائه بهترین خدمات مهندسی به شما هستیم."}
             </motion.p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-            {services.map((service, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                whileHover={{ y: -10 }}
-                className="bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-center border border-gray-100 group"
-              >
-                <div className="text-5xl mb-5 flex justify-center items-center h-16 transition-transform duration-300 group-hover:scale-110">
-                  {service.icon}
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">
-                  {service.title}
-                </h3>
-                <p className="text-gray-600 text-sm md:text-base leading-relaxed">
-                  {service.description}
-                </p>
-              </motion.div>
-            ))}
+            {homePageConfig.services?.length > 0 ? (
+              homePageConfig.services.map((service, index) => (
+                <motion.div
+                  key={service.id || index}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  whileHover={{ y: -10 }}
+                  className="bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-center border border-gray-100 group"
+                >
+                  <div className="text-5xl mb-5 flex justify-center items-center h-16 transition-transform duration-300 group-hover:scale-110">
+                    {service.icon || "📐"}
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-3">
+                    {service.title || "بدون عنوان"}
+                  </h3>
+                  <p className="text-gray-600 text-sm md:text-base leading-relaxed">
+                    {service.description || "بدون توضیحات"}
+                  </p>
+                </motion.div>
+              ))
+            ) : (
+              <p className="text-center text-gray-600 col-span-full">
+                سرویسی یافت نشد
+              </p>
+            )}
           </div>
         </div>
       </section>
@@ -148,11 +176,11 @@ export default function Home() {
             className="max-w-3xl mx-auto"
           >
             <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-4">
-              آماده ثبت درخواست خود هستید؟
+              {homePageConfig.request_title || "آماده ثبت درخواست خود هستید؟"}
             </h2>
             <p className="text-teal-100 mb-8 max-w-2xl mx-auto">
-              با ثبت درخواست، پروژه‌های خود را به دست تیم حرفه‌ای ما بسپارید و
-              از کیفیت و سرعت خدمات ما بهره‌مند شوید.
+              {homePageConfig.request_description ||
+                "با ثبت درخواست، پروژه‌های خود را به دست تیم حرفه‌ای ما بسپارید و از کیفیت و سرعت خدمات ما بهره‌مند شوید."}
             </p>
             <Link to="/request">
               <button className="bg-white text-teal-700 hover:bg-gray-100 font-bold py-3 px-8 rounded-xl text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl active:scale-95">

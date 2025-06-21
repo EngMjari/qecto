@@ -1,3 +1,4 @@
+# core/admin.py :
 from django import forms
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
@@ -13,7 +14,8 @@ class UserCreationForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ('phone', 'national_id', 'full_name')
+        fields = ('phone', 'national_id', 'full_name', 'email',
+                  'whatsapp', 'telegram', 'profile_image', 'role')
 
     def clean_password2(self):
         pw1 = self.cleaned_data.get('password1')
@@ -36,8 +38,10 @@ class UserChangeForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ('phone', 'national_id', 'full_name', 'email', 'whatsapp', 'telegram', 'password',
-                  'is_active', 'is_staff', 'is_superuser')
+        fields = (
+            'phone', 'national_id', 'full_name', 'email', 'whatsapp', 'telegram',
+            'profile_image', 'role', 'password', 'is_active', 'is_staff', 'is_superuser'
+        )
 
     def clean_password(self):
         return self.initial["password"]
@@ -45,6 +49,12 @@ class UserChangeForm(forms.ModelForm):
 
 # فرم ایجاد ادمین (AdminUser)
 class AdminUserCreationForm(UserCreationForm):
+    def clean_role(self):
+        role = self.cleaned_data.get('role')
+        if not role:
+            raise forms.ValidationError("نقش برای ادمین الزامی است")
+        return role
+
     def save(self, commit=True):
         user = super().save(commit=False)
         user.is_staff = True
@@ -82,23 +92,33 @@ class AdminUserAdmin(BaseUserAdmin):
     form = AdminUserChangeForm
     model = AdminUser
 
-    list_display = ('phone', 'full_name', 'is_active',
-                    'is_staff', 'is_superuser', 'date_joined')
-    list_filter = ('is_active',)
+    list_display = ('phone', 'full_name', 'role_display',
+                    'is_active', 'date_joined')
+    list_filter = ('role', 'is_active')
     ordering = ('phone',)
     search_fields = ('phone', 'full_name', 'national_id')
 
     fieldsets = (
-        (None, {'fields': ('phone', 'full_name', 'national_id', 'password')}),
+        (None, {'fields': ('phone', 'national_id', 'full_name', 'password')}),
+        ('اطلاعات تماس', {'fields': ('email', 'whatsapp', 'telegram')}),
+        ('تصویر پروفایل', {'fields': ('profile_image',)}),
+        ('نقش', {'fields': ('role',)}),
         ('دسترسی‌ها', {'fields': ('is_active', 'is_staff', 'is_superuser')}),
     )
 
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('phone', 'national_id', 'full_name', 'password1', 'password2'),
+            'fields': (
+                'phone', 'national_id', 'full_name', 'email', 'whatsapp',
+                'telegram', 'profile_image', 'role', 'password1', 'password2'
+            ),
         }),
     )
+
+    def role_display(self, obj):
+        return obj.get_role_display() or "بدون نقش"
+    role_display.short_description = "نقش"
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -112,23 +132,33 @@ class SuperAdminUserAdmin(BaseUserAdmin):
     form = SuperAdminUserChangeForm
     model = SuperAdminUser
 
-    list_display = ('phone', 'full_name', 'is_active',
-                    'is_staff', 'is_superuser', 'date_joined')
-    list_filter = ('is_active',)
+    list_display = ('phone', 'full_name', 'role_display',
+                    'is_active', 'date_joined')
+    list_filter = ('role', 'is_active')
     ordering = ('phone',)
     search_fields = ('phone', 'full_name', 'national_id')
 
     fieldsets = (
-        (None, {'fields': ('phone', 'full_name', 'national_id', 'password')}),
+        (None, {'fields': ('phone', 'national_id', 'full_name', 'password')}),
+        ('اطلاعات تماس', {'fields': ('email', 'whatsapp', 'telegram')}),
+        ('تصویر پروفایل', {'fields': ('profile_image',)}),
+        ('نقش', {'fields': ('role',)}),
         ('دسترسی‌ها', {'fields': ('is_active', 'is_staff', 'is_superuser')}),
     )
 
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('phone', 'national_id', 'full_name', 'password1', 'password2'),
+            'fields': (
+                'phone', 'national_id', 'full_name', 'email', 'whatsapp',
+                'telegram', 'profile_image', 'role', 'password1', 'password2'
+            ),
         }),
     )
+
+    def role_display(self, obj):
+        return obj.get_role_display() or "بدون نقش"
+    role_display.short_description = "نقش"
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -142,23 +172,33 @@ class UserAdmin(BaseUserAdmin):
     form = UserChangeForm
     model = User
 
-    list_display = ('phone', 'full_name', 'is_active',
-                    'is_staff', 'is_superuser', 'date_joined')
-    list_filter = ('is_staff', 'is_superuser', 'is_active')
+    list_display = ('phone', 'full_name', 'role_display',
+                    'is_active', 'date_joined')
+    list_filter = ('is_staff', 'is_superuser', 'is_active', 'role')
     ordering = ('phone',)
     search_fields = ('phone', 'full_name', 'national_id')
 
     fieldsets = (
-        (None, {'fields': ('phone', 'full_name', 'national_id', 'password')}),
+        (None, {'fields': ('phone', 'national_id', 'full_name', 'password')}),
+        ('اطلاعات تماس', {'fields': ('email', 'whatsapp', 'telegram')}),
+        ('تصویر پروفایل', {'fields': ('profile_image',)}),
+        ('نقش', {'fields': ('role',)}),
         ('دسترسی‌ها', {'fields': ('is_active', 'is_staff', 'is_superuser')}),
     )
 
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('phone', 'national_id', 'full_name', 'password1', 'password2'),
+            'fields': (
+                'phone', 'national_id', 'full_name', 'email', 'whatsapp',
+                'telegram', 'profile_image', 'role', 'password1', 'password2'
+            ),
         }),
     )
+
+    def role_display(self, obj):
+        return obj.get_role_display() or "بدون نقش"
+    role_display.short_description = "نقش"
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
