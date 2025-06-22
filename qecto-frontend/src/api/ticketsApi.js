@@ -110,3 +110,16 @@ export const closeTicketSession = async (sessionId, data) => {
     throw error.response?.data || { error: "خطای ناشناخته" };
   }
 };
+
+export const createPublicTicket = async (data) => {
+  try {
+    const response = await axiosInstance.post(
+      "/api/tickets/public-ticket/",
+      data
+    );
+    return response.data;
+  } catch (error) {
+    console.error("خطا در ایجاد تیکت عمومی:", error.response?.data || error);
+    throw error.response?.data || { error: "خطای ناشناخته" };
+  }
+};

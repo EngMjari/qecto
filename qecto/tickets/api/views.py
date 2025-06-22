@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.pagination import PageNumberPagination
 from tickets.models import TicketSession, TicketMessage
 from attachments.models import Attachment
@@ -18,6 +18,8 @@ from execution.models import ExecutionRequest
 from registration.models import RegistrationRequest
 from attachments.api.serializers import AttachmentSerializer
 from django.db.models import Count
+from django.contrib.auth import authenticate, login
+from core.models import User
 
 
 class StandardPagination(PageNumberPagination):
@@ -254,3 +256,82 @@ class TicketSessionReopenView(APIView):
             return Response({'message': 'سشن باز شد'}, status=status.HTTP_200_OK)
         except TicketSession.DoesNotExist:
             return Response({'error': 'سشن یافت نشد یا باز است'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class PublicTicketCreateView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        subject = request.data.get('subject')
+        message = request.data.get('message')
+
+        # اعتبارسنجی ورودی‌های مشترک
+        if not all([subject, message]):
+            return Response({'error': 'موضوع و متن پیام الزامی هستند.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = None
+        phone = None
+        name = None
+
+        if request.user.is_authenticated:
+            # کاربر لاگین کرده است، اطلاعات از request.user گرفته می‌شود
+            user = request.user
+            phone = user.phone
+            name = user.full_name or "کاربر بدون نام"
+        else:
+            # کاربر لاگین نکرده است، باید phone و name را از درخواست بگیرد
+            phone = request.data.get('phone')
+            name = request.data.get('name')
+
+            # اعتبارسنجی ورودی‌های اضافی برای کاربران غیرلاگین
+            if not all([phone, name]):
+                return Response({'error': 'نام و شماره موبایل الزامی هستند.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # اعتبارسنجی شماره موبایل
+            if not phone.startswith('09') or len(phone) != 11 or not phone.isdigit():
+                return Response({'error': 'شماره موبایل معتبر نیست.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # بررسی وجود کاربر
+            try:
+                user = User.objects.get(phone=phone)
+                return Response(
+                    {'error': 'کاربر با این شماره ثبت شده است. لطفاً لاگین کنید.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            except User.DoesNotExist:
+                # ایجاد کاربر جدید
+                user = User.objects.create_user(
+                    phone=phone,
+                    password=None,
+                    full_name=name
+                )
+                # لاگین خودکار کاربر
+                login(request, user,
+                      backend='django.contrib.auth.backends.ModelBackend')
+
+        # ایجاد تیکت عمومی
+        ticket_data = {
+            'title': subject,
+            'session_type': 'general',
+        }
+        serializer = TicketSessionCreateSerializer(
+            data=ticket_data, context={'request': request}
+        )
+        if serializer.is_valid():
+            ticket = serializer.save()
+
+            # ایجاد پیام برای تیکت
+            message_data = {'message': message}
+            message_serializer = TicketMessageCreateSerializer(
+                data=message_data, context={
+                    'request': request, 'ticket': ticket}
+            )
+            if message_serializer.is_valid():
+                message_serializer.save()
+                return Response(
+                    {'message': 'تیکت با موفقیت ایجاد شد.',
+                        'ticket': serializer.data},
+                    status=status.HTTP_201_CREATED
+                )
+            return Response(message_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

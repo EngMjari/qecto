@@ -1,5 +1,7 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { SiteConfigContext } from "Contexts/SiteConfigContext";
+import { AuthContext } from "Contexts/AuthContext";
+import { fetchContactUsConfig, createPublicTicket } from "api";
 import {
   FaMagic,
   FaEnvelope,
@@ -8,9 +10,14 @@ import {
   FaUser,
   FaComment,
 } from "react-icons/fa";
-// TODO: fix fetch data from api
+import LoadingScreen from "Pages/LoadingScreen/LoadingScreen";
+import { useNavigate } from "react-router-dom";
+
 export default function Contact({ showToast }) {
   const { siteConfig } = useContext(SiteConfigContext);
+  const { userProfile } = useContext(AuthContext);
+  const [contactConfig, setContactConfig] = useState({});
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -22,6 +29,7 @@ export default function Contact({ showToast }) {
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [projectIdea, setProjectIdea] = useState("");
   const [isFormalizing, setIsFormalizing] = useState(false);
+  const navigate = useNavigate();
 
   const validatePhone = (phone) => /^09\d{9}$/.test(phone);
 
@@ -31,33 +39,60 @@ export default function Contact({ showToast }) {
     setErrors({ ...errors, [name]: "" });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const newErrors = {};
-    if (!formData.name) newErrors.name = "نام الزامی است.";
-    if (!validatePhone(formData.phone))
-      newErrors.phone = "شماره موبایل معتبر نیست.";
+
+    // اعتبارسنجی برای کاربران غیرلاگین
+    if (!userProfile) {
+      if (!formData.name) newErrors.name = "نام الزامی است.";
+      if (!validatePhone(formData.phone))
+        newErrors.phone = "شماره موبایل معتبر نیست.";
+    }
+    // اعتبارسنجی مشترک
     if (!formData.subject) newErrors.subject = "موضوع الزامی است.";
     if (!formData.message) newErrors.message = "متن پیام الزامی است.";
 
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
-      showToast("پیام شما با موفقیت ارسال شد!");
-      setFormData({ name: "", phone: "", subject: "", message: "" });
+      try {
+        // فقط subject و message برای کاربران لاگین‌شده ارسال می‌شوند
+        const payload = userProfile
+          ? { subject: formData.subject, message: formData.message }
+          : formData;
+        await createPublicTicket(payload);
+        showToast("پیام شما با موفقیت ارسال شد!", "success");
+        setFormData({
+          name: "",
+          phone: "",
+          subject: "",
+          message: "",
+        });
+      } catch (error) {
+        const errorMessage =
+          error.error || "خطا در ارسال پیام. لطفاً دوباره تلاش کنید.";
+        if (
+          errorMessage === "کاربر با این شماره ثبت شده است. لطفاً لاگین کنید."
+        ) {
+          showToast(errorMessage, "error");
+          navigate("/login", { state: { phone: formData.phone } });
+        } else {
+          showToast(errorMessage, "error");
+        }
+      }
     } else {
-      showToast("لطفا خطاهای فرم را برطرف کنید.", "error");
+      showToast("لطفاً خطاهای فرم را برطرف کنید.", "error");
     }
   };
 
   const handleGenerateSuggestion = async () => {
     if (!projectIdea) {
-      showToast("لطفا ایده پروژه خود را وارد کنید.", "error");
+      showToast("لطفاً ایده پروژه خود را وارد کنید.", "error");
       return;
     }
     setIsSuggesting(true);
     setSuggestion("");
-
     const prompt = `شما یک مشاور متخصص در یک شرکت مهندسی ایرانی به نام "ککتوسازه هیرکاسب" هستید. یک کاربر ایده پروژه خود را شرح داده است. بر اساس توضیحات کاربر، سرویس‌های مهندسی لازم را از لیست زیر پیشنهاد دهید: [نقشه‌برداری دقیق, کارشناسی امور ثبتی, نظارت پروژه, اجرای پروژه]. برای هر سرویس پیشنهادی، یک توضیح کوتاه و واضح به زبان فارسی ارائه دهید که چرا آن سرویس برای پروژه کاربر ضروری است. پاسخ شما باید به فرمت مارک‌داون باشد. توضیحات کاربر: "${projectIdea}"`;
 
     try {
@@ -75,10 +110,10 @@ export default function Contact({ showToast }) {
       if (result.candidates?.[0]?.content?.parts[0]?.text) {
         setSuggestion(result.candidates[0].content.parts[0].text);
       } else {
-        throw new Error("Invalid API response");
+        throw new Error("پاسخ نامعتبر از API");
       }
     } catch (error) {
-      showToast("خطا در دریافت پیشنهاد. لطفا دوباره تلاش کنید.", "error");
+      showToast("خطا در دریافت پیشنهاد. لطفاً دوباره تلاش کنید.", "error");
     } finally {
       setIsSuggesting(false);
     }
@@ -86,11 +121,10 @@ export default function Contact({ showToast }) {
 
   const handleFormalizeRequest = async () => {
     if (!formData.message) {
-      showToast("لطفا ابتدا پیام خود را بنویسید.", "error");
+      showToast("لطفاً ابتدا پیام خود را بنویسید.", "error");
       return;
     }
     setIsFormalizing(true);
-
     const prompt = `پیام غیررسمی زیر را از یک کاربر به یک درخواست پروژه رسمی، ساختاریافته و مودبانه برای یک شرکت مهندسی ایرانی تبدیل کن. متن باید مختصر و حرفه‌ای باشد. توضیحاتی اضافه نکن فقط پیام را بنویس. پیام کاربر: "${formData.message}"`;
 
     try {
@@ -110,28 +144,43 @@ export default function Contact({ showToast }) {
           ...formData,
           message: result.candidates[0].content.parts[0].text,
         });
-        showToast("پیام شما به حالت رسمی تبدیل شد.");
+        showToast("پیام شما به حالت رسمی تبدیل شد.", "success");
       } else {
-        throw new Error("Invalid API response");
+        throw new Error("پاسخ نامعتبر از API");
       }
     } catch (error) {
-      showToast("خطا در رسمی‌سازی پیام. لطفا دوباره تلاش کنید.", "error");
+      showToast("خطا در رسمی‌سازی پیام. لطفاً دوباره تلاش کنید.", "error");
     } finally {
       setIsFormalizing(false);
     }
   };
 
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const data = await fetchContactUsConfig();
+        setContactConfig(data || {});
+        setLoading(false);
+      } catch (error) {
+        console.error("خطا در بارگذاری تنظیمات تماس:", error);
+        setContactConfig({});
+        setLoading(false);
+      }
+    };
+    loadConfig();
+  }, []);
+
+  if (loading) return <LoadingScreen />;
   return (
     <div className="page-content bg-gray-50 text-right font-sans">
       {/* Header */}
       <header className="bg-gradient-to-b from-gray-800 to-gray-900 text-white py-16 md:py-24 relative">
         <div className="container mx-auto px-6 text-center">
           <h1 className="text-3xl md:text-5xl font-bold drop-shadow-md">
-            تماس با ما
+            {contactConfig.header_title || "تماس با ما"}
           </h1>
           <p className="text-lg text-gray-300 mt-4 max-w-2xl mx-auto">
-            از طریق فرم زیر با ما در ارتباط باشید یا از راهنمای هوشمند پروژه
-            استفاده کنید.
+            {contactConfig.header_description || "با ما در ارتباط باشید"}
           </p>
         </div>
       </header>
@@ -142,11 +191,12 @@ export default function Contact({ showToast }) {
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-800 flex items-center justify-center gap-2">
               <FaMagic className="w-8 h-8 text-orange-500" />
-              راهنمای هوشمند پروژه
+              {contactConfig.ai_title || "راهنمای هوشمند پروژه"}
             </h2>
             <div className="mt-4 h-1 w-20 bg-orange-500 mx-auto rounded-full"></div>
             <p className="text-gray-600 mt-4 max-w-xl mx-auto">
-              ایده پروژه خود را بنویسید تا خدمات مهندسی مناسب پیشنهاد شود.
+              {contactConfig.ai_descriptions ||
+                "ایده پروژه خود را وارد کنید تا پیشنهادات مناسب دریافت کنید."}
             </p>
           </div>
           <div className="max-w-3xl mx-auto bg-white p-6 rounded-xl shadow-lg animate-fade-in">
@@ -154,7 +204,10 @@ export default function Contact({ showToast }) {
               value={projectIdea}
               onChange={(e) => setProjectIdea(e.target.value)}
               rows="4"
-              placeholder="مثال: قصد ساخت ویلای دوبلکس در زمین 1000 متری در شمال دارم."
+              placeholder={
+                contactConfig.ai_placeholder ||
+                "ایده پروژه خود را اینجا بنویسید..."
+              }
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 transition-all"
             />
             <button
@@ -193,52 +246,60 @@ export default function Contact({ showToast }) {
                 ارسال پیام
               </h2>
               <form onSubmit={handleSubmit} noValidate className="space-y-6">
-                <div className="relative">
-                  <input
-                    type="text"
-                    name="name"
-                    id="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    className={`peer w-full bg-transparent border-b-2 px-4 pt-4 pb-1 text-right text-sm text-gray-900 focus:border-orange-500 focus:outline-none transition-all ${
-                      errors.name ? "border-red-500" : "border-gray-300"
-                    }`}
-                    placeholder=" "
-                  />
-                  <FaUser className="absolute left-2 top-4 text-gray-400 peer-focus:text-orange-500" />
-                  <label
-                    htmlFor="name"
-                    className="absolute right-4 top-1 text-sm text-gray-500 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-focus:top-1 peer-focus:text-sm peer-focus:text-orange-500"
-                  >
-                    نام
-                  </label>
-                  {errors.name && (
-                    <p className="text-red-500 text-sm mt-1">{errors.name}</p>
-                  )}
-                </div>
-                <div className="relative">
-                  <input
-                    type="tel"
-                    name="phone"
-                    id="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    className={`peer w-full bg-transparent border-b-2 px-4 pt-4 pb-1 text-right text-sm text-gray-900 focus:border-orange-500 focus:outline-none transition-all ${
-                      errors.phone ? "border-red-500" : "border-gray-300"
-                    }`}
-                    placeholder=" "
-                  />
-                  <FaPhone className="absolute left-2 top-4 text-gray-400 peer-focus:text-orange-500" />
-                  <label
-                    htmlFor="phone"
-                    className="absolute right-4 top-1 text-sm text-gray-500 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-focus:top-1 peer-focus:text-sm peer-focus:text-orange-500"
-                  >
-                    شماره موبایل
-                  </label>
-                  {errors.phone && (
-                    <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
-                  )}
-                </div>
+                {!userProfile && (
+                  <>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        name="name"
+                        id="name"
+                        value={formData.name}
+                        onChange={handleChange}
+                        className={`peer w-full bg-transparent border-b-2 px-4 pt-4 pb-1 text-right text-sm text-gray-900 focus:border-orange-500 focus:outline-none transition-all ${
+                          errors.name ? "border-red-500" : "border-gray-300"
+                        }`}
+                        placeholder=" "
+                      />
+                      <FaUser className="absolute left-2 top-4 text-gray-400 peer-focus:text-orange-500" />
+                      <label
+                        htmlFor="name"
+                        className="absolute right-4 top-1 text-sm text-gray-500 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-focus:top-1 peer-focus:text-sm peer-focus:text-orange-500"
+                      >
+                        نام
+                      </label>
+                      {errors.name && (
+                        <p className="text-red-500 text-sm mt-1">
+                          {errors.name}
+                        </p>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="tel"
+                        name="phone"
+                        id="phone"
+                        value={formData.phone}
+                        onChange={handleChange}
+                        className={`peer w-full bg-transparent border-b-2 px-4 pt-4 pb-1 text-right text-sm text-gray-900 focus:border-orange-500 focus:outline-none transition-all ${
+                          errors.phone ? "border-red-500" : "border-gray-300"
+                        }`}
+                        placeholder=" "
+                      />
+                      <FaPhone className="absolute left-2 top-4 text-gray-400 peer-focus:text-orange-500" />
+                      <label
+                        htmlFor="phone"
+                        className="absolute right-4 top-1 text-sm text-gray-500 transition-all peer-placeholder-shown:top-4 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-focus:top-1 peer-focus:text-sm peer-focus:text-orange-500"
+                      >
+                        شماره موبایل
+                      </label>
+                      {errors.phone && (
+                        <p className="text-red-500 text-sm mt-1">
+                          {errors.phone}
+                        </p>
+                      )}
+                    </div>
+                  </>
+                )}
                 <div className="relative">
                   <input
                     type="text"
@@ -295,7 +356,9 @@ export default function Contact({ showToast }) {
                       ) : (
                         <FaMagic className="w-4 h-4" />
                       )}
-                      {isFormalizing ? "..." : "ایجاد درخواست رسمی"}
+                      {isFormalizing
+                        ? "در حال پردازش..."
+                        : "ایجاد درخواست رسمی"}
                     </button>
                   </div>
                   {errors.message && (
@@ -340,7 +403,7 @@ export default function Contact({ showToast }) {
                   </li>
                 </ul>
                 <div className="mt-6 pt-4 border-t border-teal-600/50">
-                  <p>ساعات کاری: شنبه تا چهارشنبه، ۹ صبح تا ۵ عصر</p>
+                  <p>ساعات کاری: {contactConfig.contact_time || "نامشخص"}</p>
                 </div>
               </div>
             </div>
