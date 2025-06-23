@@ -46,13 +46,17 @@ a {
 }
 
 .page-content {
-  margin-top: 80px; /* فاصله از بالا برای دسکتاپ */
+  margin-top: 80px !important;
+  min-height: calc(100vh - 80px); /* اطمینان از پر بودن صفحه */
+  background-color: inherit; /* هم‌رنگ با بدنه */
 }
 
 @media (max-width: 1024px) {
   .page-content {
-    margin-top: 64px;
-    margin-bottom: 96px;
+    margin-top: 64px !important;
+    margin-bottom: 96px !important;
+    padding-bottom: 96px !important;
+    min-height: calc(100vh - 160px); /* همزمان top + bottom */
   }
 }
 
@@ -83,4 +87,16 @@ a {
 }
 .z-1000 {
   z-index: 1000;
+}
+
+html,
+body {
+  background-color: #002a3a; /* یا #002a3a اگر رنگ سایتت اینه */
+  overscroll-behavior: none;
+  scroll-behavior: smooth;
+}
+html,
+body,
+#root {
+  height: 100%;
 }

@@ -15,5 +15,4 @@ export const footerLinks = [
   { name: "صفحه اصلی", href: "/" },
   { name: "درباره ما", href: "/about" },
   { name: "تماس با ما", href: "/contact" },
-  { name: "نمونه کارها", href: "/portfolio" },
 ];

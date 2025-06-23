@@ -12,7 +12,7 @@ import {
 } from "react-icons/fa";
 import LoadingScreen from "Pages/LoadingScreen/LoadingScreen";
 import { useNavigate } from "react-router-dom";
-
+import ReactMarkdown from "react-markdown";
 export default function Contact({ showToast }) {
   const { siteConfig } = useContext(SiteConfigContext);
   const { userProfile } = useContext(AuthContext);
@@ -93,7 +93,12 @@ export default function Contact({ showToast }) {
     }
     setIsSuggesting(true);
     setSuggestion("");
-    const prompt = `شما یک مشاور متخصص در یک شرکت مهندسی ایرانی به نام "ککتوسازه هیرکاسب" هستید. یک کاربر ایده پروژه خود را شرح داده است. بر اساس توضیحات کاربر، سرویس‌های مهندسی لازم را از لیست زیر پیشنهاد دهید: [نقشه‌برداری دقیق, کارشناسی امور ثبتی, نظارت پروژه, اجرای پروژه]. برای هر سرویس پیشنهادی، یک توضیح کوتاه و واضح به زبان فارسی ارائه دهید که چرا آن سرویس برای پروژه کاربر ضروری است. پاسخ شما باید به فرمت مارک‌داون باشد. توضیحات کاربر: "${projectIdea}"`;
+
+    // پرامپت پیش‌فرض در صورت عدم وجود ai_text
+    const defaultPrompt = `شما یک مشاور متخصص در یک شرکت مهندسی ایرانی به نام "ککتوسازه هیرکاسب" هستید. یک کاربر ایده پروژه خود را شرح داده است. بر اساس توضیحات کاربر، سرویس‌های مهندسی لازم را از لیست زیر پیشنهاد دهید: [نقشه‌برداری دقیق, کارشناسی امور ثبتی, نظارت پروژه, اجرای پروژه]. برای هر سرویس پیشنهادی، یک توضیح کوتاه و واضح به زبان فارسی ارائه دهید که چرا آن سرویس برای پروژه کاربر ضروری است. پاسخ شما باید به فرمت مارک‌داون باشد. توضیحات کاربر: "${projectIdea}"`;
+    const prompt = contactConfig.ai_text
+      ? contactConfig.ai_text.replace("{projectIdea}", projectIdea)
+      : defaultPrompt;
 
     try {
       const response = await fetch(
@@ -125,7 +130,12 @@ export default function Contact({ showToast }) {
       return;
     }
     setIsFormalizing(true);
-    const prompt = `پیام غیررسمی زیر را از یک کاربر به یک درخواست پروژه رسمی، ساختاریافته و مودبانه برای یک شرکت مهندسی ایرانی تبدیل کن. متن باید مختصر و حرفه‌ای باشد. توضیحاتی اضافه نکن فقط پیام را بنویس. پیام کاربر: "${formData.message}"`;
+
+    // پرامپت پیش‌فرض در صورت عدم وجود ai_request_text
+    const defaultPrompt = `پیام غیررسمی زیر را از یک کاربر به یک درخواست پروژه رسمی، ساختاریافته و مودبانه برای یک شرکت مهندسی ایرانی تبدیل کن. متن باید مختصر و حرفه‌ای باشد. توضیحاتی اضافه نکن فقط پیام را بنویس. پیام کاربر: "${formData.message}"`;
+    const prompt = contactConfig.ai_request_text
+      ? contactConfig.ai_request_text.replace("{message}", formData.message)
+      : defaultPrompt;
 
     try {
       const response = await fetch(
@@ -174,7 +184,14 @@ export default function Contact({ showToast }) {
   return (
     <div className="page-content bg-gray-50 text-right font-sans">
       {/* Header */}
-      <header className="bg-gradient-to-b from-gray-800 to-gray-900 text-white py-16 md:py-24 relative">
+      <header
+        className="relative bg-gradient-to-br from-orange-900 to-teal-800 text-white py-24 lg:py-40 bg-cover bg-center"
+        style={{
+          backgroundImage: contactConfig.header_image_url
+            ? `url(${contactConfig.header_image_url})`
+            : "url('https://placehold.co/1920x400/2d3748/cccccc?text=About+Us')",
+        }}
+      >
         <div className="container mx-auto px-6 text-center">
           <h1 className="text-3xl md:text-5xl font-bold drop-shadow-md">
             {contactConfig.header_title || "تماس با ما"}
@@ -228,7 +245,7 @@ export default function Contact({ showToast }) {
                   پیشنهاد هوش مصنوعی:
                 </h4>
                 <div className="text-gray-700 text-sm leading-relaxed">
-                  {suggestion}
+                  <ReactMarkdown>{suggestion}</ReactMarkdown>
                 </div>
               </div>
             )}

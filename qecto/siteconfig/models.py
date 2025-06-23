@@ -2,6 +2,12 @@
 
 from django.db import models
 from core.models import AdminUser
+from django.core.files.base import ContentFile
+from django.db.models.signals import pre_save, post_delete
+from django.dispatch import receiver
+from PIL import Image
+import io
+import os
 
 
 class SiteConfig(models.Model):
@@ -72,12 +78,108 @@ class HomePage(models.Model):
     request_bgImage = models.ImageField(
         upload_to="site/homePage", blank=True, null=True, verbose_name=" پس زمینه درخواست")
 
+    def save(self, *args, **kwargs):
+        # ذخیره اولیه برای دسترسی به instance قبلی
+        old_instance = HomePage.objects.get(pk=self.pk) if self.pk else None
+
+        super().save(*args, **kwargs)
+
+        # پردازش header_image
+        if self.header_image and hasattr(self.header_image, 'file'):
+            img = Image.open(self.header_image.file)
+            original_width, original_height = img.size
+            target_ratio = 16 / 9
+            current_ratio = original_width / original_height
+
+            if current_ratio != target_ratio:
+                if current_ratio > target_ratio:
+                    new_height = int(original_width / target_ratio)
+                    img = img.resize((original_width, new_height),
+                                     Image.Resampling.LANCZOS)
+                else:
+                    new_width = int(original_height * target_ratio)
+                    img = img.resize((new_width, original_height),
+                                     Image.Resampling.LANCZOS)
+
+            if img.mode == 'RGBA':
+                img = img.convert('RGB')
+
+            img_io = io.BytesIO()
+            original_format = img.format if img.format else 'JPEG'
+            img.save(img_io, format=original_format, quality=95)
+            self.header_image.save(
+                f"header_{self.id}.{original_format.lower()}",
+                ContentFile(img_io.getvalue()),
+                save=False
+            )
+
+        # پردازش request_bgImage
+        if self.request_bgImage and hasattr(self.request_bgImage, 'file'):
+            img = Image.open(self.request_bgImage.file)
+            original_width, original_height = img.size
+            target_ratio = 16 / 9
+            current_ratio = original_width / original_height
+
+            if current_ratio != target_ratio:
+                if current_ratio > target_ratio:
+                    new_height = int(original_width / target_ratio)
+                    img = img.resize((original_width, new_height),
+                                     Image.Resampling.LANCZOS)
+                else:
+                    new_width = int(original_height * target_ratio)
+                    img = img.resize((new_width, original_height),
+                                     Image.Resampling.LANCZOS)
+
+            if img.mode == 'RGBA':
+                img = img.convert('RGB')
+
+            img_io = io.BytesIO()
+            original_format = img.format if img.format else 'JPEG'
+            img.save(img_io, format=original_format, quality=95)
+            self.request_bgImage.save(
+                f"request_{self.id}.{original_format.lower()}",
+                ContentFile(img_io.getvalue()),
+                save=False
+            )
+
+        super().save(update_fields=['header_image', 'request_bgImage'])
+
     def __str__(self):
         return "تنظیمات صفحه اصلی"
 
     class Meta:
         verbose_name = 'صفحه اصلی'
         verbose_name_plural = 'صفحه اصلی'
+
+
+@receiver(post_delete, sender=HomePage)
+def delete_old_file(sender, instance, **kwargs):
+    # حذف فایل header_image هنگام حذف شیء
+    if instance.header_image:
+        if os.path.isfile(instance.header_image.path):
+            os.remove(instance.header_image.path)
+
+    # حذف فایل request_bgImage هنگام حذف شیء
+    if instance.request_bgImage:
+        if os.path.isfile(instance.request_bgImage.path):
+            os.remove(instance.request_bgImage.path)
+
+
+@receiver(pre_save, sender=HomePage)
+def delete_old_file_on_update(sender, instance, **kwargs):
+    if instance.pk:
+        try:
+            old_instance = HomePage.objects.get(pk=instance.pk)
+            # حذف فایل header_image قدیمی اگر تغییر کرده یا خالی شده
+            if old_instance.header_image and (not instance.header_image or old_instance.header_image != instance.header_image):
+                if os.path.isfile(old_instance.header_image.path):
+                    os.remove(old_instance.header_image.path)
+            # حذف فایل request_bgImage قدیمی اگر تغییر کرده یا خالی شده
+            if old_instance.request_bgImage and (not instance.request_bgImage or old_instance.request_bgImage != instance.request_bgImage):
+                if os.path.isfile(old_instance.request_bgImage.path):
+                    os.remove(old_instance.request_bgImage.path)
+        except HomePage.DoesNotExist:
+            pass
 
 
 class AboutUs(models.Model):

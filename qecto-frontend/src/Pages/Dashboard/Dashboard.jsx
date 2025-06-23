@@ -169,7 +169,7 @@ export default function Dashboard() {
     return <p className="text-center text-red-500 py-8">خطا: {error}</p>;
 
   return (
-    <div className="font-vazir page-content text-gray-800 bg-gray-50 p-5">
+    <div className="font-vazir px-3 pt-3 md:px-16 md:py-8 page-content text-gray-800 bg-gray-50 ">
       <WelcomeCard />
       <ProjectInfoCard
         requests={requests}
