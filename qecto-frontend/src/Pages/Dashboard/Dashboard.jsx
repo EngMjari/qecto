@@ -18,6 +18,7 @@ import {
   fetchProjects,
   fetchUserRequests,
   fetchTicketSessions,
+  fetchAllTicketSessions,
   sendTicketMessage,
 } from "../../api";
 import LoadingScreen from "Pages/LoadingScreen/LoadingScreen";
@@ -114,7 +115,7 @@ export default function Dashboard() {
       fetchProjects(),
       fetchUserRequests(),
       fetchTicketSessions({ page_size: 5, ordering: "-updated_at" }),
-      fetchTicketSessions({ ordering: "-updated_at" }),
+      fetchAllTicketSessions({ ordering: "-updated_at" }),
     ])
       .then(
         ([projectsData, requestsData, recentTicketsData, allTicketsData]) => {
@@ -139,6 +140,8 @@ export default function Dashboard() {
           setTickets({
             results: Array.isArray(recentTicketsData.results?.results)
               ? recentTicketsData.results.results
+              : Array.isArray(recentTicketsData.results)
+              ? recentTicketsData.results
               : [],
           });
 
@@ -146,13 +149,17 @@ export default function Dashboard() {
           setAllTickets({
             results: Array.isArray(allTicketsData.results?.results)
               ? allTicketsData.results.results
+              : Array.isArray(allTicketsData.results)
+              ? allTicketsData.results
               : [],
           });
+          console.log("All tickets:", allTicketsData);
 
           setLoading(false);
         }
       )
       .catch((err) => {
+        console.error("Error fetching data:", err);
         setError(err.message || "خطا در دریافت داده‌ها");
         setLoading(false);
       });
@@ -169,7 +176,7 @@ export default function Dashboard() {
     return <p className="text-center text-red-500 py-8">خطا: {error}</p>;
 
   return (
-    <div className="font-vazir px-3 pt-3 md:px-16 md:py-8 page-content text-gray-800 bg-gray-50 ">
+    <div className="font-vazir px-3 pt-3 md:px-16 md:py-8 page-content text-gray-800 bg-gray-50">
       <WelcomeCard />
       <ProjectInfoCard
         requests={requests}
@@ -192,9 +199,7 @@ export default function Dashboard() {
       {selectedTicket && isMobile && (
         <TicketModal
           session={selectedTicket}
-          onClose={() => {
-            setSelectedTicket(null);
-          }}
+          onClose={() => setSelectedTicket(null)}
           onSendMessage={async (msg, files) => {
             try {
               await sendTicketMessage(selectedTicket.id, {
@@ -285,7 +290,7 @@ function ProjectInfoCard({
       link: "/requests?status=rejected",
       value: statusCounts.rejected || 0,
     },
-  ].filter((item) => item.value > 0); // فقط آیتم‌های با مقدار غیرصفر
+  ].filter((item) => item.value > 0);
 
   const ticketStats = [
     {
@@ -408,7 +413,7 @@ function ProjectInfoCard({
               key={item.key}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-3 bg-blue-50 rounded-xl shadow-sm p-3 border border-blue-100 cursor-pointer"
+              className="flex items-center gap-3 bg-blue-50 rounded-xl p-3 border shadow-sm cursor-pointer border-blue-100"
               onClick={() => navigate(item.link)}
             >
               {item.icon}
@@ -603,7 +608,7 @@ function DashboardSection({
       <style>
         {`
         .section-container {
-          {/* min-height: 300px; */}
+          /* min-height: 300px; */
         }
         .section-item {
           min-height: 112.8px;
