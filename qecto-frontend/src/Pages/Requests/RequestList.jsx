@@ -285,22 +285,23 @@ function RequestListPage() {
                       )
                     )}
                     {Object.entries(stats.request_type_counts).map(
-                      ([request_type, count]) => (
-                        <div
-                          key={request_type}
-                          className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                        >
-                          <FaChartPie className="text-blue-500 w-5 h-5" />
-                          <div>
-                            <p className="text-xs text-gray-600">
-                              {getRequestTypeName(request_type)}
-                            </p>
-                            <p className="text-base font-bold text-gray-800">
-                              {count}
-                            </p>
+                      ([request_type, count]) =>
+                        count > 0 && (
+                          <div
+                            key={request_type}
+                            className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                          >
+                            <FaChartPie className="text-blue-500 w-5 h-5" />
+                            <div>
+                              <p className="text-xs text-gray-600">
+                                {getRequestTypeName(request_type)}
+                              </p>
+                              <p className="text-base font-bold text-gray-800">
+                                {count}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      )
+                        )
                     )}
                   </motion.div>
                 )}
