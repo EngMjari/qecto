@@ -18,7 +18,6 @@ import CreateRequest from "./Pages/Requests/CreateRequest";
 import NotFound from "./Pages/NotFound";
 import Forbidden from "./Pages/Forbidden";
 import ProjectsList from "./Pages/Projects/ProjectsList";
-import ProjectDetails from "./Pages/Projects/ProjectDetails";
 import NewTicket from "./Pages/Tickets/NewTicket";
 import TicketSession from "./Pages/Tickets/TicketSession";
 import RequestList from "./Pages/Requests/RequestList";
@@ -229,18 +228,6 @@ function Router() {
               allowedRoles={["user", "admin", "superadmin"]}
             >
               <ProjectsList showToast={showToast} />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/projects/:id"
-          element={
-            <ProtectedRoute
-              isAuthenticated={isAuthenticated}
-              userRole={userRole}
-              allowedRoles={["user", "admin", "superadmin"]}
-            >
-              <ProjectDetails showToast={showToast} />
             </ProtectedRoute>
           }
         />
