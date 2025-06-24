@@ -1,5 +1,3 @@
-import { HomeIcon, InfoIcon, PhoneIcon, UserIcon } from "lucide-react";
-
 export const siteInfo = {
   title: "ککتوسازه هیرکاسب",
   description:

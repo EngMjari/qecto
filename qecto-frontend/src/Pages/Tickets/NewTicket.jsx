@@ -23,7 +23,6 @@ function NewTicket() {
   const [isDragging, setIsDragging] = useState(false);
   const [contentTypes, setContentTypes] = useState({});
   const [showRedirectPrompt, setShowRedirectPrompt] = useState(false);
-  const [existingTicketId, setExistingTicketId] = useState(null);
   const [requestIdToRedirect, setRequestIdToRedirect] = useState(null);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
@@ -145,7 +144,6 @@ function NewTicket() {
         (ticket) => ticket.status === "open"
       );
       if (openTickets.length > 0) {
-        setExistingTicketId(openTickets[0].id);
         setRequestIdToRedirect(requestId);
         setShowRedirectPrompt(true);
         return true;
@@ -167,7 +165,6 @@ function NewTicket() {
       navigate(`/requests/${requestIdToRedirect}`);
     }
     setShowRedirectPrompt(false);
-    setExistingTicketId(null);
     setRequestIdToRedirect(null);
   };
 
@@ -247,183 +244,185 @@ function NewTicket() {
   };
 
   return (
-    <div
-      className="w-full page-content max-w-2xl mx-auto my-4 p-4 sm:p-6 bg-white rounded-xl shadow-lg font-vazir text-gray-900 animate-fade-in min-h-[calc(100%-2rem)]"
-      dir="rtl"
-    >
-      <h2 className="text-center text-2xl font-bold text-orange-500 mb-8 animate-pulse">
-        ارسال تیکت جدید
-      </h2>
+    <div className="page-content pt-0.5 pb-24 md:pb-4 md:pt-6 bg-white">
+      <div
+        className="w-full max-w-2xl p-3 mx-auto bg-white rounded-xl shadow-lg font-vazir text-gray-900 animate-fade-in"
+        dir="rtl"
+      >
+        <h2 className="text-center text-2xl font-bold text-orange-500 mb-8 animate-pulse">
+          ارسال تیکت جدید
+        </h2>
 
-      {error && (
-        <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-6 text-center animate-shake">
-          {error}
-        </div>
-      )}
+        {error && (
+          <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-6 text-center animate-shake">
+            {error}
+          </div>
+        )}
 
-      {showRedirectPrompt && (
-        <div className="bg-blue-100 text-gray-900 p-3 rounded-lg mb-4 text-center animate-slide-in">
-          <p className="font-medium mb-3">
-            تیکت باز برای این درخواست وجود دارد. آیا می‌خواهید به صفحه درخواست
-            منتقل شوید؟
-          </p>
-          <button
-            onClick={() => handleRedirectConfirm(true)}
-            className="bg-orange-500 text-white px-4 py-2 rounded-lg mx-2 hover:bg-orange-600 transition-colors duration-200"
-          >
-            بله
-          </button>
-          <button
-            onClick={() => handleRedirectConfirm(false)}
-            className="bg-gray-400 text-gray-900 px-4 py-2 rounded-lg mx-2 hover:bg-gray-200 transition-colors duration-200"
-          >
-            خیر
-          </button>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-5 w-full">
-        <div className="flex flex-col">
-          <label className="mb-2 font-semibold text-gray-900">
-            موضوع تیکت:
-          </label>
-          <input
-            id="title"
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            disabled={loading}
-            placeholder="موضوع تیکت را وارد کنید"
-            required
-            className="w-full p-3 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-200 box-border"
-          />
-        </div>
-        <div className="flex flex-col">
-          <label className="mb-2 font-semibold text-gray-900">
-            فیلتر درخواست‌ها:
-          </label>
-          <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
-            <select
-              value={requestTypeFilter}
-              onChange={(e) => setRequestTypeFilter(e.target.value)}
-              disabled={loading}
-              className="flex-1 min-w-[150px] p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-200 box-border"
+        {showRedirectPrompt && (
+          <div className="bg-blue-100 text-gray-900 p-3 rounded-lg mb-4 text-center animate-slide-in">
+            <p className="font-medium mb-3">
+              تیکت باز برای این درخواست وجود دارد. آیا می‌خواهید به صفحه درخواست
+              منتقل شوید؟
+            </p>
+            <button
+              onClick={() => handleRedirectConfirm(true)}
+              className="bg-orange-500 text-white px-4 py-2 rounded-lg mx-2 hover:bg-orange-600 transition-colors duration-200"
             >
-              <option value="">همه انواع</option>
-              {Object.entries(requestTypes).map(([key, label]) => (
-                <option key={key} value={key}>
-                  {label}
+              بله
+            </button>
+            <button
+              onClick={() => handleRedirectConfirm(false)}
+              className="bg-gray-400 text-gray-900 px-4 py-2 rounded-lg mx-2 hover:bg-gray-200 transition-colors duration-200"
+            >
+              خیر
+            </button>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5 w-full">
+          <div className="flex flex-col">
+            <label className="mb-2 font-semibold text-gray-900">
+              موضوع تیکت:
+            </label>
+            <input
+              id="title"
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              disabled={loading}
+              placeholder="موضوع تیکت را وارد کنید"
+              required
+              className="w-full p-3 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-200 box-border"
+            />
+          </div>
+          <div className="flex flex-col">
+            <label className="mb-2 font-semibold text-gray-900">
+              فیلتر درخواست‌ها:
+            </label>
+            <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
+              <select
+                value={requestTypeFilter}
+                onChange={(e) => setRequestTypeFilter(e.target.value)}
+                disabled={loading}
+                className="flex-1 min-w-[150px] p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-200 box-border"
+              >
+                <option value="">همه انواع</option>
+                {Object.entries(requestTypes).map(([key, label]) => (
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <div className="relative flex-2 min-w-[200px]">
+                <FaSearch className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-500" />
+                <input
+                  type="text"
+                  value={projectNameFilter}
+                  onChange={(e) => setProjectNameFilter(e.target.value)}
+                  placeholder="جستجوی نام پروژه..."
+                  disabled={loading}
+                  className="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-200 box-border"
+                />
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col">
+            <label className="mb-2 font-semibold text-gray-900">
+              درخواست مرتبط (اختیاری):
+            </label>
+            <select
+              id="relatedRequest"
+              value={relatedRequestId}
+              onChange={(e) => setRelatedRequestId(e.target.value)}
+              disabled={loading}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-200 box-border"
+            >
+              <option value="">عمومی</option>
+              {filteredRequests.map((req) => (
+                <option key={req.id} value={req.id}>
+                  {req?.project_title} (
+                  {requestTypes[req.request_type] || req.request_type})
                 </option>
               ))}
             </select>
-            <div className="relative flex-2 min-w-[200px]">
-              <FaSearch className="absolute top-1/2 left-3 transform -translate-y-1/2 text-gray-500" />
+          </div>
+          <div className="flex flex-col">
+            <label className="mb-2 font-semibold text-gray-900">
+              متن پیام اولیه (اختیاری):
+            </label>
+            <textarea
+              id="content"
+              rows="6"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              disabled={loading}
+              placeholder="پیام خود را بنویسید..."
+              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-200 box-border resize-vertical max-h-60"
+            ></textarea>
+          </div>
+          <div className="flex flex-col">
+            <label className="mb-2 font-semibold text-gray-900">
+              فایل‌های ضمیمه (اختیاری):
+            </label>
+            <div
+              className={`border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer transition-all duration-300 ${
+                isDragging
+                  ? "border-orange-500 bg-orange-50 shadow-lg"
+                  : "hover:border-orange-500 hover:bg-orange-50"
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current.click()}
+            >
+              <FaUpload className="text-orange-500 text-3xl mx-auto mb-2 animate-bounce" />
+              <p className="text-gray-600">
+                فایل‌ها را اینجا بکشید و رها کنید یا کلیک کنید برای انتخاب
+              </p>
               <input
-                type="text"
-                value={projectNameFilter}
-                onChange={(e) => setProjectNameFilter(e.target.value)}
-                placeholder="جستجوی نام پروژه..."
+                id="files"
+                type="file"
+                multiple
+                ref={fileInputRef}
+                onChange={handleFileChange}
                 disabled={loading}
-                className="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-200 box-border"
+                accept=".dwg,.dxf,.xlsx,.xls,.pdf,.jpg,.jpeg,.png"
+                className="hidden"
               />
             </div>
-          </div>
-        </div>
-        <div className="flex flex-col">
-          <label className="mb-2 font-semibold text-gray-900">
-            درخواست مرتبط (اختیاری):
-          </label>
-          <select
-            id="relatedRequest"
-            value={relatedRequestId}
-            onChange={(e) => setRelatedRequestId(e.target.value)}
-            disabled={loading}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-200 box-border"
-          >
-            <option value="">عمومی</option>
-            {filteredRequests.map((req) => (
-              <option key={req.id} value={req.id}>
-                {req?.project_title} (
-                {requestTypes[req.request_type] || req.request_type})
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex flex-col">
-          <label className="mb-2 font-semibold text-gray-900">
-            متن پیام اولیه (اختیاری):
-          </label>
-          <textarea
-            id="content"
-            rows="6"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            disabled={loading}
-            placeholder="پیام خود را بنویسید..."
-            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 transition-all duration-200 box-border resize-vertical max-h-60"
-          ></textarea>
-        </div>
-        <div className="flex flex-col">
-          <label className="mb-2 font-semibold text-gray-900">
-            فایل‌های ضمیمه (اختیاری):
-          </label>
-          <div
-            className={`border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer transition-all duration-300 ${
-              isDragging
-                ? "border-orange-500 bg-orange-50 shadow-lg"
-                : "hover:border-orange-500 hover:bg-orange-50"
-            }`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current.click()}
-          >
-            <FaUpload className="text-orange-500 text-3xl mx-auto mb-2 animate-bounce" />
-            <p className="text-gray-600">
-              فایل‌ها را اینجا بکشید و رها کنید یا کلیک کنید برای انتخاب
-            </p>
-            <input
-              id="files"
-              type="file"
-              multiple
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              disabled={loading}
-              accept=".dwg,.dxf,.xlsx,.xls,.pdf,.jpg,.jpeg,.png"
-              className="hidden"
-            />
-          </div>
-          {files.length > 0 && (
-            <ul className="mt-4 space-y-2 max-h-40 overflow-y-auto w-full">
-              {files.map((file, index) => (
-                <li
-                  key={index}
-                  className="flex justify-between items-center p-2 bg-gray-100 rounded-lg animate-slide-in"
-                >
-                  <span className="text-gray-700 text-sm truncate">
-                    {file.name}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveFile(index)}
-                    className="text-red-600 hover:text-red-800 disabled:text-gray-400 disabled:cursor-not-allowed p-1 transition-colors duration-300"
-                    disabled={loading}
+            {files.length > 0 && (
+              <ul className="mt-4 space-y-2 max-h-40 overflow-y-auto w-full">
+                {files.map((file, index) => (
+                  <li
+                    key={index}
+                    className="flex justify-between items-center p-2 bg-gray-100 rounded-lg animate-slide-in"
                   >
-                    <FaTimes />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-orange-500 text-white p-4 rounded-lg font-semibold hover:bg-orange-600 disabled:bg-orange-300 disabled:cursor-not-allowed transition-all duration-200 animate-pulse"
-        >
-          {loading ? "در حال ارسال..." : "ارسال تیکت"}
-        </button>
-      </form>
+                    <span className="text-gray-700 text-sm truncate">
+                      {file.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveFile(index)}
+                      className="text-red-600 hover:text-red-800 disabled:text-gray-400 disabled:cursor-not-allowed p-1 transition-colors duration-300"
+                      disabled={loading}
+                    >
+                      <FaTimes />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-orange-500 text-white p-4 rounded-lg font-semibold hover:bg-orange-600 disabled:bg-orange-300 disabled:cursor-not-allowed transition-all duration-200 animate-pulse"
+          >
+            {loading ? "در حال ارسال..." : "ارسال تیکت"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
