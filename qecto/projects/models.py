@@ -22,8 +22,6 @@ class Project(models.Model):
     def all_requests(self):
         """
         متدی برای دسترسی به تمام درخواست‌های پروژه از تمام اپ‌ها.
-        این متد لیستی از تمام درخواست‌های مربوط به پروژه در اپ‌های مختلف برمی‌گرداند.
-        پشتیبانی از روابط OneToOneField و ForeignKey.
         """
         requests = []
 
@@ -37,7 +35,7 @@ class Project(models.Model):
         if hasattr(self, 'registration_request') and self.registration_request:
             requests.append(self.registration_request)
 
-        # درخواست‌های احتمالی ForeignKey یا ManyToMany
+        # درخواست‌های ForeignKey یا ManyToMany
         try:
             requests.extend(self.supervision_requests.all())
         except AttributeError:

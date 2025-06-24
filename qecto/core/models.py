@@ -40,7 +40,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
 
     phone = models.CharField(max_length=11, unique=True)
-    national_id = models.CharField(max_length=10, unique=True, null=True)
+    national_id = models.CharField(
+        max_length=10, unique=True, null=True, blank=True)
     full_name = models.CharField(max_length=100, name="full_name")
     email = models.EmailField(blank=True, null=True)
     whatsapp = models.URLField(blank=True, null=True)

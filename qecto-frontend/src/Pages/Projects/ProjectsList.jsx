@@ -1,311 +1,377 @@
-import React, { useState, useEffect, useRef } from "react";
-import { fetchProjects, fetchProjectById } from "../../api";
-import { FaChevronDown, FaChevronUp, FaFilter, FaTimes } from "react-icons/fa";
-
-// وضعیت پروژه به فارسی
-const getProjectStatusName = (status) => {
-  switch (status) {
-    case "pending":
-      return "در حال بررسی";
-    case "in_progress":
-      return "در حال انجام";
-    case "completed":
-      return "تکمیل شده";
-    case "rejected":
-      return "رد شده";
-    case "assigned":
-      return "ارجاع داده‌شده";
-    case "incomplete":
-      return "ناقص";
-    default:
-      return "نامشخص";
-  }
+import React, { useState, useEffect, useRef, useContext } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  FaSearch,
+  FaFilter,
+  FaTimes,
+  FaChevronDown,
+  FaChartPie,
+  FaUserCheck,
+  FaSpinner,
+} from "react-icons/fa";
+import DatePicker from "react-multi-date-picker";
+import persian from "react-date-object/calendars/persian";
+import persian_fa from "react-date-object/locales/persian_fa";
+import "react-multi-date-picker/styles/layouts/mobile.css";
+import { fetchProjects, fetchRequestDetail } from "../../api";
+import LoadingScreen from "Pages/LoadingScreen/LoadingScreen";
+import { AuthContext } from "Contexts/AuthContext";
+// تابع برای دریافت نام نوع درخواست
+const getRequestTypeName = (type) => {
+  const types = {
+    survey: "نقشه‌برداری",
+    supervision: "نظارت",
+    expert: "کارشناسی",
+    execution: "اجرا",
+    registration: "ثبت",
+  };
+  return types[type] || "نامشخص";
 };
 
+// تابع برای دریافت نام وضعیت درخواست
+const getRequestStatusName = (status) => {
+  const statuses = {
+    pending: "در حال بررسی",
+    in_progress: "در حال انجام",
+    completed: "تکمیل شده",
+    rejected: "رد شده",
+    incomplete: "ناقص",
+  };
+  return statuses[status] || "نامشخص";
+};
+
+// تابع برای دریافت کلاس‌های استایل وضعیت درخواست
 const getStatusBadge = (status) => {
-  switch (status) {
-    case "pending":
-      return "bg-yellow-100 text-yellow-800 ring-1 ring-inset ring-yellow-200";
-    case "in_progress":
-      return "bg-blue-100 text-blue-800 ring-1 ring-inset ring-blue-200";
-    case "completed":
-      return "bg-green-100 text-green-800 ring-1 ring-inset ring-green-200";
-    case "rejected":
-      return "bg-orange-100 text-orange-800 ring-1 ring-inset ring-orange-200";
-    case "assigned":
-      return "bg-purple-100 text-purple-800 ring-1 ring-inset ring-purple-200";
-    case "incomplete":
-      return "bg-red-100 text-red-800 ring-1 ring-inset ring-red-200";
-    default:
-      return "bg-gray-100 text-gray-800 ring-1 ring-inset ring-gray-200";
-  }
+  const badges = {
+    pending: "bg-yellow-100 text-yellow-800 ring-1 ring-inset ring-yellow-200",
+    in_progress: "bg-blue-100 text-blue-800 ring-1 ring-inset ring-blue-200",
+    completed: "bg-green-100 text-green-800 ring-1 ring-inset ring-green-200",
+    rejected: "bg-orange-100 text-orange-800 ring-1 ring-inset ring-orange-200",
+    incomplete: "bg-red-100 text-red-800 ring-1 ring-inset ring-red-200",
+  };
+  return (
+    badges[status] ||
+    "bg-gray-100 text-gray-800 ring-1 ring-inset ring-gray-200"
+  );
 };
 
-const requestTypeOptions = [
-  { value: "all", label: "همه انواع درخواست" },
-  { value: "survey", label: "نقشه‌برداری" },
-  { value: "expert", label: "کارشناسی" },
-];
-
-const statusOptions = [
-  { value: "all", label: "همه وضعیت‌های پروژه" },
-  { value: "pending", label: "در حال بررسی" },
-  { value: "assigned", label: "ارجاع داده‌شده" },
-  { value: "rejected", label: "ردشده یا نیاز به اصلاح" },
-  { value: "in_progress", label: "در حال انجام" },
-  { value: "completed", label: "اتمام‌یافته" },
-];
-
-const requestStatusOptions = [
-  { value: "all", label: "همه وضعیت‌های درخواست" },
-  { value: "pending", label: "در حال بررسی" },
-  { value: "in_progress", label: "در حال انجام" },
-  { value: "completed", label: "تکمیل شده" },
-  { value: "rejected", label: "رد شده" },
-  { value: "incomplete", label: "ناقص" },
-];
-
+// تابع برای دریافت نام نوع ملک
 const getPropertyTypeName = (type) => {
-  switch (type) {
-    case "field":
-      return "زمین";
-    case "building":
-      return "ساختمان";
-    default:
-      return "نامشخص";
-  }
+  const types = {
+    field: "زمین",
+    building: "ساختمان",
+    other: "سایر",
+  };
+  return types[type] || "نامشخص";
 };
 
 function ProjectsList() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { isAdmin } = useContext(AuthContext);
+
+  const getInitialFilters = () => {
+    const params = new URLSearchParams(location.search);
+    return {
+      search: params.get("search") || "",
+      request_type: params.get("request_type") || "all",
+      request_status: params.get("request_status") || "all",
+      start_date: params.get("start_date") || "",
+      end_date: params.get("end_date") || "",
+      main_parcel_number: params.get("main_parcel_number") || "",
+      sub_parcel_number: params.get("sub_parcel_number") || "",
+    };
+  };
+
+  const [filters, setFilters] = useState(getInitialFilters);
   const [projects, setProjects] = useState([]);
-  const [filters, setFilters] = useState({
-    title: "",
-    main_parcel_number: "",
-    sub_parcel_number: "",
-    request_type: "all",
-    status: "all", // وضعیت پروژه
-    request_status: "all", // وضعیت درخواست
+  const [stats, setStats] = useState({
+    total_projects: 0,
+    status_counts: {},
+    request_type_counts: {},
   });
   const [loading, setLoading] = useState(true);
-  const [openProjectId, setOpenProjectId] = useState(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [nextPage, setNextPage] = useState(null);
+  const [previousPage, setPreviousPage] = useState(null);
+  const [isStatsOpen, setIsStatsOpen] = useState(false);
+  const [openProjectId, setOpenProjectId] = useState(null);
 
-  // گرفتن پروژه‌ها با فیلتر
-  const fetchData = async () => {
+  const fetchData = async (pageNum = 1) => {
     setLoading(true);
     try {
-      const params = {};
-      if (filters.title) params.title = filters.title;
+      const params = { page: pageNum };
+      if (filters.search) params.title = filters.search;
+      if (filters.request_type !== "all")
+        params.request_type = filters.request_type;
+      if (filters.request_status !== "all")
+        params.request_status = filters.request_status;
+      if (filters.start_date) params.start_date = filters.start_date;
+      if (filters.end_date) params.end_date = filters.end_date;
       if (filters.main_parcel_number)
         params.main_parcel_number = filters.main_parcel_number;
       if (filters.sub_parcel_number)
         params.sub_parcel_number = filters.sub_parcel_number;
-      if (filters.request_type !== "all")
-        params.request_type = filters.request_type;
-      if (filters.status !== "all") params.status = filters.status; // وضعیت پروژه
-      if (filters.request_status !== "all")
-        params.request_status = filters.request_status; // وضعیت درخواست
+
       const res = await fetchProjects(params);
-      setProjects(res?.results || res);
+      setProjects(res.results || []);
+      setStats(res.stats || {});
+      setTotalCount(res.count || 0);
+      setNextPage(res.next);
+      setPreviousPage(res.previous);
+      console.log("fetchproject : ", res.results);
     } catch (err) {
+      console.error("Error fetching projects:", err);
       setProjects([]);
+      setStats({
+        total_projects: 0,
+        status_counts: {},
+        request_type_counts: {},
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  const updateUrlWithFilters = () => {
+    const params = new URLSearchParams();
+    if (filters.search) params.set("search", filters.search);
+    if (filters.request_type !== "all")
+      params.set("request_type", filters.request_type);
+    if (filters.request_status !== "all")
+      params.set("request_status", filters.request_status);
+    if (filters.start_date) params.set("start_date", filters.start_date);
+    if (filters.end_date) params.set("end_date", filters.end_date);
+    if (filters.main_parcel_number)
+      params.set("main_parcel_number", filters.main_parcel_number);
+    if (filters.sub_parcel_number)
+      params.set("sub_parcel_number", filters.sub_parcel_number);
+    navigate({ search: params.toString() });
+  };
+
   useEffect(() => {
-    fetchData();
-  }, [filters]);
+    fetchData(page);
+    updateUrlWithFilters();
+  }, [filters, page]);
 
   const handleFilterChange = (newFilters) => {
     setFilters((prev) => ({ ...prev, ...newFilters }));
+    setPage(1);
   };
 
-  const handleResetFilters = () => {
-    setFilters({
-      title: "",
-      main_parcel_number: "",
-      sub_parcel_number: "",
-      request_type: "all",
-      status: "all",
-      request_status: "all",
-    });
+  const handlePageChange = (newPage) => {
+    if (newPage > 0 && newPage <= Math.ceil(totalCount / 10)) {
+      setPage(newPage);
+    }
   };
+
+  const sidebarVariants = {
+    hidden: { x: "100%" },
+    visible: { x: 0, transition: { duration: 0.3, ease: "easeOut" } },
+    exit: { x: "100%", transition: { duration: 0.3, ease: "easeIn" } },
+  };
+
+  if (loading) return <LoadingScreen />;
 
   return (
-    <div className="bg-gray-100 min-h-screen font-vazir" dir="rtl">
+    <div className="bg-gray-50 min-h-screen font-vazir" dir="rtl">
       <div className="flex">
-        {/* سایدبار فیلتر دسکتاپ */}
-        <div className="w-72 flex-shrink-0 hidden md:block border-l border-gray-200 bg-white">
+        <div className="w-64 flex-shrink-0 hidden lg:block border-l border-gray-200 bg-white shadow-sm">
           <FilterSidebar
             filters={filters}
             onFilterChange={handleFilterChange}
-            onReset={handleResetFilters}
+            isMobile={false}
           />
         </div>
-        {/* پنل فیلتر موبایل */}
-        <div
-          className={`md:hidden fixed inset-0 z-30 transition-transform duration-300 ${
-            isFilterOpen ? "translate-x-0" : "translate-x-full"
-          }`}
-        >
-          <div
-            className="fixed inset-0 bg-black/40"
-            onClick={() => setIsFilterOpen(false)}
-          ></div>
-          <div className="relative w-72 h-full bg-white ml-auto">
-            <FilterSidebar
-              filters={filters}
-              onFilterChange={handleFilterChange}
-              onReset={handleResetFilters}
-              setIsOpen={setIsFilterOpen}
-              isMobile={true}
-            />
-          </div>
-        </div>
-        {/* محتوای اصلی */}
-        <main className="flex-1 p-4 md:p-8">
-          <div className="max-w-7xl mx-auto">
-            {/* جستجو بر اساس نام پروژه بالای لیست */}
-            <div className="flex justify-center mb-8">
-              <div className="relative w-full md:w-1/2">
-                <input
-                  type="text"
-                  placeholder="جستجو بر اساس عنوان پروژه..."
-                  value={filters.title}
-                  onChange={(e) =>
-                    handleFilterChange({ title: e.target.value })
-                  }
-                  className="w-full pr-10 pl-4 py-3 rounded-xl border border-gray-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition text-base bg-white shadow-sm"
-                  style={{ fontFamily: "inherit" }}
+        <AnimatePresence>
+          {isFilterOpen && (
+            <motion.div
+              variants={sidebarVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="lg:hidden fixed inset-0 z-1000"
+            >
+              <div
+                className="fixed inset-0 bg-black/50"
+                onClick={() => setIsFilterOpen(false)}
+              ></div>
+              <div className="relative w-4/5 max-w-xs h-full bg-white ml-auto">
+                <FilterSidebar
+                  filters={filters}
+                  onFilterChange={handleFilterChange}
+                  setIsOpen={setIsFilterOpen}
+                  isMobile={true}
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-                  <svg
-                    width="20"
-                    height="20"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="M21 21l-3.5-3.5" />
-                  </svg>
-                </span>
-                <button
-                  onClick={() => setIsFilterOpen(true)}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 md:hidden p-2 rounded-lg bg-white border border-gray-200 shadow-sm"
-                  aria-label="فیلتر"
-                  type="button"
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <main className="flex-1 p-3 sm:p-4 lg:p-6 page-content">
+          <div className="max-w-5xl mx-auto">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">
+                  لیست پروژه‌ها
+                </h1>
+                <p className="text-gray-500 text-xs sm:text-sm mt-1">
+                  تعداد کل: {totalCount}
+                </p>
+              </div>
+              <button
+                onClick={() => setIsFilterOpen(true)}
+                className="lg:hidden p-2 rounded-lg bg-white border border-gray-200 shadow-sm hover:bg-gray-100 transition-colors"
+              >
+                <FaFilter className="text-gray-600" />
+              </button>
+            </div>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="mb-4 bg-white rounded-xl shadow-sm overflow-hidden"
+            >
+              <button
+                onClick={() => setIsStatsOpen(!isStatsOpen)}
+                className="w-full flex justify-between items-center p-3 sm:p-4 bg-blue-50 hover:bg-blue-100 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <FaChartPie className="text-blue-600 w-5 h-5" />
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-800">
+                    آمار پروژه‌ها
+                  </h3>
+                </div>
+                <motion.div
+                  animate={{ rotate: isStatsOpen ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
                 >
-                  <FaFilter />
-                </button>
+                  <FaChevronDown className="text-gray-600" />
+                </motion.div>
+              </button>
+              <AnimatePresence>
+                {isStatsOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"
+                  >
+                    <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                      <FaChartPie className="text-blue-500 w-5 h-5" />
+                      <div>
+                        <p className="text-xs text-gray-600">
+                          تعداد کل پروژه‌ها
+                        </p>
+                        <p className="text-base font-bold text-gray-800">
+                          {stats.total_projects}
+                        </p>
+                      </div>
+                    </div>
+                    {Object.entries(stats.status_counts).map(
+                      ([status, count]) => (
+                        <div
+                          key={status}
+                          className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                        >
+                          <FaChartPie className="text-blue-500 w-5 h-5" />
+                          <div>
+                            <p className="text-xs text-gray-600">
+                              {getRequestStatusName(status)}
+                            </p>
+                            <p className="text-base font-bold text-gray-800">
+                              {count}
+                            </p>
+                          </div>
+                        </div>
+                      )
+                    )}
+                    {Object.entries(stats.request_type_counts).map(
+                      ([request_type, count]) => (
+                        <div
+                          key={request_type}
+                          className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                        >
+                          <FaChartPie className="text-blue-500 w-5 h-5" />
+                          <div>
+                            <p className="text-xs text-gray-600">
+                              {getRequestTypeName(request_type)}
+                            </p>
+                            <p className="text-base font-bold text-gray-800">
+                              {count}
+                            </p>
+                          </div>
+                        </div>
+                      )
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+            <div className="relative mb-4">
+              <input
+                type="text"
+                placeholder="جستجو بر اساس عنوان پروژه..."
+                value={filters.search}
+                onChange={(e) => handleFilterChange({ search: e.target.value })}
+                className="w-full pl-10 pr-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all shadow-sm text-sm"
+              />
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <FaSearch className="w-4 h-4" />
               </div>
             </div>
             {loading ? (
-              <div className="text-center py-10 text-gray-600">
-                در حال بارگذاری...
-              </div>
-            ) : projects?.length === 0 ? (
-              <div className="text-center py-10 bg-white rounded-xl shadow-sm">
-                <p className="text-lg text-gray-500">پروژه‌ای یافت نشد.</p>
-              </div>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-12 bg-white rounded-xl shadow-sm"
+              >
+                <FaSpinner className="w-6 h-6 text-blue-500 animate-spin mx-auto" />
+                <p className="text-sm text-gray-600 mt-2">در حال بارگذاری...</p>
+              </motion.div>
+            ) : projects.length === 0 ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-12 bg-white rounded-xl shadow-sm"
+              >
+                <p className="text-sm text-gray-500">موردی یافت نشد.</p>
+              </motion.div>
             ) : (
-              <div className="space-y-6">
-                {projects?.map((project) => (
-                  <div
+              <div className="grid grid-cols-1 gap-3">
+                {projects.map((project) => (
+                  <ProjectCard
                     key={project.id}
-                    className="bg-white rounded-2xl shadow p-5"
-                  >
-                    <div
-                      className="flex items-center justify-between cursor-pointer"
-                      onClick={() =>
-                        setOpenProjectId(
-                          openProjectId === project.id ? null : project.id
-                        )
-                      }
-                    >
-                      <div>
-                        <h2 className="text-lg font-bold text-gray-800 mb-1">
-                          {project.title}
-                        </h2>
-                        <div className="flex gap-4 text-sm text-gray-600 flex-wrap">
-                          <span>
-                            تاریخ ساخت:{" "}
-                            {new Date(project.created_at).toLocaleDateString(
-                              "fa-IR"
-                            )}
-                          </span>
-                          {project.assigned_to && (
-                            <span>
-                              ارجاع به:{" "}
-                              {project.assigned_to?.full_name || "نامشخص"}
-                            </span>
-                          )}
-                          <span>
-                            وضعیت: {getProjectStatusName(project.status)}
-                          </span>
-                          <span>
-                            تعداد درخواست‌ها:{" "}
-                            <span className="font-bold text-blue-700">
-                              {project.request_count}
-                            </span>
-                          </span>
-                        </div>
-                      </div>
-                      <span className="text-blue-600 flex items-center gap-1">
-                        {openProjectId === project.id ? (
-                          <FaChevronUp />
-                        ) : (
-                          <FaChevronDown />
-                        )}
-                      </span>
-                    </div>
-                    {openProjectId === project.id && (
-                      <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="md:col-span-2 space-y-4">
-                          {project?.requests.length === 0 ? (
-                            <div className="text-gray-500 text-center">
-                              درخواستی برای این پروژه ثبت نشده است.
-                            </div>
-                          ) : (
-                            project?.requests.map((req) => (
-                              <RequestCard key={req.id} request={req} />
-                            ))
-                          )}
-                        </div>
-                        <div>
-                          {/* نقشه: مختصات را از اولین درخواست دارای مختصات معتبر بگیر */}
-                          {(() => {
-                            const firstWithLocation = project.requests.find(
-                              (r) =>
-                                (r.location_lat || r.lat) &&
-                                (r.location_lng || r.lng) &&
-                                !isNaN(Number(r.location_lat || r.lat)) &&
-                                !isNaN(Number(r.location_lng || r.lng))
-                            );
-                            const lat = firstWithLocation
-                              ? Number(
-                                  firstWithLocation.location_lat ||
-                                    firstWithLocation.lat
-                                )
-                              : null;
-                            const long = firstWithLocation
-                              ? Number(
-                                  firstWithLocation.location_lng ||
-                                    firstWithLocation.lng
-                                )
-                              : null;
-                            return <MiniMap lat={lat} long={long} />;
-                          })()}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                    project={project}
+                    openProjectId={openProjectId}
+                    setOpenProjectId={setOpenProjectId}
+                    isAdmin={isAdmin}
+                  />
                 ))}
               </div>
             )}
+            <div className="mt-4 flex justify-center gap-2">
+              <button
+                onClick={() => handlePageChange(page - 1)}
+                disabled={!previousPage}
+                className="px-3 py-1.5 text-sm bg-white border border-gray-200 rounded-lg disabled:opacity-50 hover:bg-gray-100 transition-colors"
+              >
+                قبلی
+              </button>
+              <span className="px-3 py-1.5 text-sm bg-white border border-gray-200 rounded-lg">
+                صفحه {page} از {Math.ceil(totalCount / 10)}
+              </span>
+              <button
+                onClick={() => handlePageChange(page + 1)}
+                disabled={!nextPage}
+                className="px-3 py-1.5 text-sm bg-white border border-gray-200 rounded-lg disabled:opacity-50 hover:bg-gray-100 transition-colors"
+              >
+                بعدی
+              </button>
+            </div>
           </div>
         </main>
       </div>
@@ -313,184 +379,440 @@ function ProjectsList() {
   );
 }
 
-// سایدبار فیلتر پروژه‌ها
-function FilterSidebar({
-  filters,
-  onFilterChange,
-  onReset,
-  setIsOpen,
-  isMobile,
-}) {
+function FilterSidebar({ filters, onFilterChange, setIsOpen, isMobile }) {
+  const handleResetFilters = () => {
+    onFilterChange({
+      search: "",
+      request_type: "all",
+      request_status: "all",
+      start_date: "",
+      end_date: "",
+      main_parcel_number: "",
+      sub_parcel_number: "",
+    });
+    if (isMobile) setIsOpen(false);
+  };
+
+  const handleApplyFilters = () => {
+    onFilterChange(filters);
+    if (isMobile) setIsOpen(false);
+  };
+
+  const statusMap = {
+    "در حال بررسی": "pending",
+    "در حال انجام": "in_progress",
+    "تکمیل شده": "completed",
+    "رد شده": "rejected",
+    ناقص: "incomplete",
+  };
+
+  const handleDateChange = (key, value) => {
+    if (value) {
+      const gregorianDate = value.toDate();
+      const formattedDate = gregorianDate.toISOString().split("T")[0];
+      onFilterChange({ [key]: formattedDate });
+    } else {
+      onFilterChange({ [key]: "" });
+    }
+  };
+
   return (
-    <div className="p-5 space-y-7 h-full flex flex-col">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-bold text-gray-800">فیلترها</h2>
+    <div
+      className={`h-full flex flex-col bg-white ${
+        isMobile ? "fixed inset-0 z-30 overflow-y-auto" : "p-4"
+      }`}
+    >
+      <div
+        className={`flex justify-between items-center border-b border-gray-200 ${
+          isMobile ? "p-3 sticky top-0 bg-white z-10" : "mb-4"
+        }`}
+      >
+        <h2 className="text-base font-bold text-gray-800">فیلترها</h2>
         {isMobile && (
-          <button onClick={() => setIsOpen(false)} className="p-1">
-            <FaTimes />
+          <button
+            onClick={() => setIsOpen(false)}
+            className="p-1 text-gray-600"
+          >
+            <FaTimes className="w-5 h-5" />
           </button>
         )}
       </div>
-      <div className="flex-grow space-y-6">
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
-            عنوان پروژه
-          </label>
-          <input
-            type="text"
-            placeholder="جستجو بر اساس عنوان پروژه..."
-            value={filters.title}
-            onChange={(e) => onFilterChange({ title: e.target.value })}
-            className="w-full px-3 py-2 rounded-lg border border-gray-300"
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
-            پلاک اصلی درخواست
-          </label>
-          <input
-            type="text"
-            placeholder="پلاک اصلی"
-            value={filters.main_parcel_number}
-            onChange={(e) =>
-              onFilterChange({ main_parcel_number: e.target.value })
-            }
-            className="w-full px-3 py-2 rounded-lg border border-gray-300"
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
-            پلاک فرعی درخواست
-          </label>
-          <input
-            type="text"
-            placeholder="پلاک فرعی"
-            value={filters.sub_parcel_number}
-            onChange={(e) =>
-              onFilterChange({ sub_parcel_number: e.target.value })
-            }
-            className="w-full px-3 py-2 rounded-lg border border-gray-300"
-          />
-        </div>
+      <div
+        className={`flex-grow space-y-3 ${isMobile ? "p-3 pt-2" : "space-y-4"}`}
+      >
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700">
             نوع درخواست
           </label>
-          <select
-            value={filters.request_type}
-            onChange={(e) => onFilterChange({ request_type: e.target.value })}
-            className="w-full px-3 py-2 rounded-lg border border-gray-300"
-          >
-            {requestTypeOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
+          <div className="flex bg-gray-100 p-1 rounded-lg flex-wrap gap-1">
+            <button
+              onClick={() => onFilterChange({ request_type: "all" })}
+              className={`flex-1 py-1.5 px-2 text-xs rounded-lg transition-colors ${
+                filters.request_type === "all"
+                  ? "bg-white shadow-sm font-semibold text-blue-600"
+                  : "hover:bg-gray-200 text-gray-600"
+              }`}
+            >
+              همه
+            </button>
+            {[
+              "survey",
+              "supervision",
+              "expert",
+              "execution",
+              "registration",
+            ].map((type) => (
+              <button
+                key={type}
+                onClick={() => onFilterChange({ request_type: type })}
+                className={`flex-1 py-1.5 px-2 text-xs rounded-lg transition-colors ${
+                  filters.request_type === type
+                    ? "bg-white shadow-sm font-semibold text-blue-600"
+                    : "hover:bg-gray-200 text-gray-600"
+                }`}
+              >
+                {getRequestTypeName(type)}
+              </button>
             ))}
-          </select>
+          </div>
         </div>
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
-            وضعیت پروژه
-          </label>
-          <select
-            value={filters.status}
-            onChange={(e) => onFilterChange({ status: e.target.value })}
-            className="w-full px-3 py-2 rounded-lg border border-gray-300"
+          <label
+            htmlFor="status-filter"
+            className="block text-sm font-medium text-gray-700"
           >
-            {statusOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">
             وضعیت درخواست
           </label>
           <select
+            id="status-filter"
             value={filters.request_status}
             onChange={(e) => onFilterChange({ request_status: e.target.value })}
-            className="w-full px-3 py-2 rounded-lg border border-gray-300"
+            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
           >
-            {requestStatusOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
+            <option value="all">همه وضعیت‌ها</option>
+            {Object.entries(statusMap).map(([fa, en]) => (
+              <option key={en} value={en}>
+                {fa}
               </option>
             ))}
           </select>
         </div>
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">
+            تاریخ ثبت (شمسی)
+          </label>
+          <div className="grid grid-cols-1 gap-2">
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-gray-600">
+                از تاریخ
+              </label>
+              <DatePicker
+                calendar={persian}
+                locale={persian_fa}
+                format="YYYY/MM/DD"
+                value={filters.start_date ? new Date(filters.start_date) : null}
+                onChange={(value) => handleDateChange("start_date", value)}
+                inputClassName="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                containerClassName="w-full"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-gray-600">
+                تا تاریخ
+              </label>
+              <DatePicker
+                calendar={persian}
+                locale={persian_fa}
+                format="YYYY/MM/DD"
+                value={filters.end_date ? new Date(filters.end_date) : null}
+                onChange={(value) => handleDateChange("end_date", value)}
+                inputClassName="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                containerClassName="w-full"
+              />
+            </div>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">
+            پلاک اصلی
+          </label>
+          <input
+            type="text"
+            placeholder="مثال: 1234"
+            value={filters.main_parcel_number}
+            onChange={(e) =>
+              onFilterChange({ main_parcel_number: e.target.value })
+            }
+            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">
+            پلاک فرعی
+          </label>
+          <input
+            type="text"
+            placeholder="مثال: 567"
+            value={filters.sub_parcel_number}
+            onChange={(e) =>
+              onFilterChange({ sub_parcel_number: e.target.value })
+            }
+            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+          />
+        </div>
       </div>
-      <div className="flex-shrink-0">
-        <button
-          onClick={onReset}
-          className="w-full py-2.5 text-sm text-red-500 font-semibold hover:bg-red-50 rounded-lg transition-colors border border-red-200 hover:border-red-300"
-        >
-          پاک کردن فیلترها
-        </button>
-      </div>
+      {isMobile && (
+        <div className="sticky bottom-0 bg-white p-3 border-t border-gray-200 flex-shrink-0">
+          <div className="flex gap-2">
+            <button
+              onClick={handleApplyFilters}
+              className="flex-1 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              اعمال فیلتر
+            </button>
+            <button
+              onClick={handleResetFilters}
+              className="flex-1 py-2 text-sm text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+            >
+              پاک کردن
+            </button>
+          </div>
+        </div>
+      )}
+      {!isMobile && (
+        <div className="flex-shrink-0 pt-3">
+          <button
+            onClick={handleResetFilters}
+            className="w-full py-2 text-sm text-red-500 font-semibold hover:bg-red-50 rounded-lg transition-colors border border-red-200"
+          >
+            پاک کردن فیلترها
+          </button>
+        </div>
+      )}
     </div>
   );
 }
 
-// کارت نمایش هر درخواست (لینک به صفحه درخواست)
-function RequestCard({ request }) {
-  const {
-    id,
-    type,
-    property_type,
-    area,
-    main_parcel_number,
-    sub_parcel_number,
-    status,
-    created_at,
-  } = request;
+function ProjectCard({ project, openProjectId, setOpenProjectId, isAdmin }) {
+  const { id, title, created_at, owner, requests = [] } = project;
+
+  // پیدا کردن آخرین درخواست با مختصات معتبر
+  const lastRequestWithLocation = requests
+    .slice()
+    .reverse()
+    .find(
+      (r) =>
+        r.specific_fields?.location_lat &&
+        r.specific_fields?.location_lng &&
+        !isNaN(Number(r.specific_fields.location_lat)) &&
+        !isNaN(Number(r.specific_fields.location_lng))
+    );
+
+  const lat = lastRequestWithLocation
+    ? Number(lastRequestWithLocation.specific_fields.location_lat)
+    : null;
+  const lng = lastRequestWithLocation
+    ? Number(lastRequestWithLocation.specific_fields.location_lng)
+    : null;
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+    hover: { scale: 1.02, boxShadow: "0 8px 16px rgba(0, 0, 0, 0.1)" },
+  };
+
   return (
-    <a
-      href={`/requests/${id}`}
-      className="block bg-gray-50 rounded-xl shadow-sm p-4 flex flex-col gap-2 hover:bg-blue-50 transition"
-      style={{ textDecoration: "none" }}
+    <motion.div
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      whileHover="hover"
+      className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100"
     >
-      <div className="flex gap-2 items-center">
-        <span className="text-xs font-semibold px-2 py-1 rounded bg-blue-100 text-blue-700">
-          {type === "survey" && "نقشه‌برداری"}
-          {type === "expert" && "کارشناسی"}
-        </span>
-        <span
-          className={`text-xs font-semibold px-2 py-1 rounded ${getStatusBadge(
-            status
-          )}`}
-        >
-          {getProjectStatusName(status)}
-        </span>
-        <span className="text-xs text-gray-500">
-          {new Date(created_at).toLocaleDateString("fa-IR")}
-        </span>
+      <div
+        className="p-3 sm:p-4 flex flex-col cursor-pointer"
+        onClick={() => setOpenProjectId(openProjectId === id ? null : id)}
+      >
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-2 mb-2">
+          <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-1 rounded-full ring-1 ring-inset ring-gray-200">
+            تعداد درخواست‌ها: {requests.length}
+          </span>
+          <motion.div
+            animate={{ rotate: openProjectId === id ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <FaChevronDown className="text-gray-600" />
+          </motion.div>
+        </div>
+        <h3 className="text-sm sm:text-base font-bold text-gray-800 mb-2 line-clamp-2">
+          {title || "بدون عنوان"}
+        </h3>
+        <div className="space-y-1 mb-3">
+          <p className="text-xs text-gray-400">
+            تاریخ ثبت: {new Date(created_at).toLocaleDateString("fa-IR")}
+          </p>
+          {isAdmin && owner && (
+            <p className="text-xs text-gray-400">
+              مالک: {owner.full_name || "نامشخص"}
+            </p>
+          )}
+        </div>
+        <div className="w-full h-48">
+          <MiniMap lat={lat} lng={lng} />
+        </div>
       </div>
-      <div className="flex flex-wrap gap-4 text-sm text-gray-700">
-        {property_type && (
-          <span>
-            <b>نوع ملک:</b> {getPropertyTypeName(property_type)}
-          </span>
+      <AnimatePresence>
+        {openProjectId === id && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="p-3 sm:p-4"
+          >
+            <div className="grid grid-cols-1 gap-3">
+              {requests.length === 0 ? (
+                <div className="text-center py-4 text-gray-500 text-sm">
+                  درخواستی برای این پروژه ثبت نشده است.
+                </div>
+              ) : (
+                requests.map((req) => (
+                  <RequestCard key={req.id} request={req} isAdmin={isAdmin} />
+                ))
+              )}
+            </div>
+          </motion.div>
         )}
-        {area && (
-          <span>
-            <b>مساحت:</b> {area} متر
-          </span>
-        )}
-        {main_parcel_number && (
-          <span>
-            <b>پلاک:</b> {main_parcel_number}
-            {sub_parcel_number ? ` / ${sub_parcel_number}` : ""}
-          </span>
-        )}
-      </div>
-    </a>
+      </AnimatePresence>
+    </motion.div>
   );
 }
 
-// نقشه کوچک کنار هر پروژه
-function MiniMap({ lat, long }) {
+function RequestCard({ request, isAdmin }) {
+  const navigate = useNavigate();
+  const {
+    id,
+    request_type,
+    status,
+    created_at,
+    assigned_admin,
+    specific_fields = {},
+    tracking_code,
+  } = request;
+
+  const handleCardClick = async (e) => {
+    e.stopPropagation();
+    try {
+      const res = await fetchRequestDetail(request.id);
+      navigate(`/requests/${request.id}`, { state: { request: res } });
+    } catch (err) {
+      console.error("Error fetching request detail:", err);
+    }
+  };
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+    hover: { scale: 1.02, boxShadow: "0 8px 16px rgba(0, 0, 0, 0.1)" },
+  };
+
+  return (
+    <motion.div
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      whileHover="hover"
+      className="bg-gray-50 rounded-xl shadow-sm p-3 sm:p-4 flex flex-col border border-gray-100 cursor-pointer"
+      onClick={handleCardClick}
+    >
+      <div className="flex flex-col sm:flex-row justify-between items-start mb-2 gap-2">
+        <span
+          className={`text-xs font-semibold px-2 py-1 rounded-full ${getStatusBadge(
+            status
+          )}`}
+        >
+          {getRequestStatusName(status)}
+        </span>
+        <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-1 rounded-full ring-1 ring-inset ring-gray-200">
+          {getRequestTypeName(request_type)}
+        </span>
+      </div>
+      <div className="space-y-1 mb-3">
+        <p className="text-xs text-gray-400">
+          تاریخ ثبت: {new Date(created_at).toLocaleDateString("fa-IR")}
+        </p>
+        {tracking_code && (
+          <p className="text-xs text-gray-400">کد رهگیری: {tracking_code}</p>
+        )}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 text-xs sm:text-sm text-gray-700">
+        {specific_fields.property_type && (
+          <div className="flex items-center gap-2">
+            <strong className="font-semibold text-gray-800">نوع ملک:</strong>
+            <span>{getPropertyTypeName(specific_fields.property_type)}</span>
+          </div>
+        )}
+        {specific_fields.area && (
+          <div className="flex items-center gap-2">
+            <strong className="font-semibold text-gray-800">مساحت:</strong>
+            <span>{specific_fields.area.toLocaleString("fa-IR")} متر مربع</span>
+          </div>
+        )}
+        {(request_type === "survey" ||
+          request_type === "expert" ||
+          request_type === "registration") &&
+          specific_fields.main_parcel_number && (
+            <div className="flex items-center gap-2">
+              <strong className="font-semibold text-gray-800">
+                پلاک ثبتی:
+              </strong>
+              <span>
+                {specific_fields.main_parcel_number} /{" "}
+                {specific_fields.sub_parcel_number || "بدون پلاک فرعی"}
+              </span>
+            </div>
+          )}
+        {specific_fields.building_area && (
+          <div className="flex items-center gap-2">
+            <strong className="font-semibold text-gray-800">
+              مساحت ساختمان:
+            </strong>
+            <span>
+              {specific_fields.building_area.toLocaleString("fa-IR")} متر مربع
+            </span>
+          </div>
+        )}
+        {specific_fields.description && (
+          <div className="flex items-center gap-2">
+            <strong className="font-semibold text-gray-800">توضیحات:</strong>
+            <span className="line-clamp-1">{specific_fields.description}</span>
+          </div>
+        )}
+        {specific_fields.supervision_type && (
+          <div className="flex items-center gap-2">
+            <strong className="font-semibold text-gray-800">نوع نظارت:</strong>
+            <span>{specific_fields.supervision_type_display}</span>
+          </div>
+        )}
+        <div className="flex items-center gap-2">
+          <strong className="font-semibold text-gray-800">وضعیت ارجاع:</strong>
+          <span className="flex items-center gap-1">
+            {assigned_admin ? (
+              <>
+                <FaUserCheck className="text-green-600 w-4 h-4" />
+                {assigned_admin.full_name || "نامشخص"}
+              </>
+            ) : (
+              "ارجاع نشده"
+            )}
+          </span>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function MiniMap({ lat, lng }) {
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
 
@@ -498,7 +820,7 @@ function MiniMap({ lat, long }) {
     if (typeof window.L === "undefined" || !mapRef.current) return;
     if (mapInstance.current) mapInstance.current.remove();
 
-    if (lat && long) {
+    if (lat && lng) {
       delete window.L.Icon.Default.prototype._getIconUrl;
       window.L.Icon.Default.mergeOptions({
         iconRetinaUrl:
@@ -508,7 +830,7 @@ function MiniMap({ lat, long }) {
           "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
       });
 
-      const position = [lat, long];
+      const position = [lat, lng];
       mapInstance.current = window.L.map(mapRef.current, {
         center: position,
         zoom: 13,
@@ -529,18 +851,17 @@ function MiniMap({ lat, long }) {
         mapInstance.current = null;
       }
     };
-  }, [lat, long]);
+  }, [lat, lng]);
 
-  if (!lat || !long) {
+  if (!lat || !lng) {
     return (
-      <div className="w-full h-40 bg-gray-200 flex items-center justify-center text-xs text-gray-500 rounded-xl border border-gray-300 shadow-inner">
+      <div className="w-full h-48 bg-gray-200 flex items-center justify-center text-xs text-gray-500 rounded-xl border border-gray-300 shadow-inner">
         موقعیت ثبت نشده
       </div>
     );
   }
 
-  // لینک به Google Maps
-  const mapUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${long}`;
+  const mapUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
 
   return (
     <a
@@ -551,7 +872,7 @@ function MiniMap({ lat, long }) {
       title="مشاهده موقعیت روی نقشه"
       style={{ textDecoration: "none" }}
     >
-      <div className="w-full h-40 rounded-xl border-2 border-blue-200 shadow-md overflow-hidden relative transition group-hover:border-blue-500 group-hover:shadow-lg">
+      <div className="w-full h-48 rounded-xl border-2 border-blue-200 shadow-md overflow-hidden relative transition group-hover:border-blue-500 group-hover:shadow-lg">
         <div
           ref={mapRef}
           style={{ width: "100%", height: "100%", zIndex: 0 }}
