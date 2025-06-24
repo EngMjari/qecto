@@ -630,35 +630,37 @@ function ProjectCard({ project, openProjectId, setOpenProjectId, isAdmin }) {
       className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100"
     >
       <div
-        className="p-3 sm:p-4 flex flex-col cursor-pointer"
+        className="flex flex-col cursor-pointer"
         onClick={() => setOpenProjectId(openProjectId === id ? null : id)}
       >
-        <div className="flex flex-col sm:flex-row justify-between items-start gap-2 mb-2">
-          <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-1 rounded-full ring-1 ring-inset ring-gray-200">
-            تعداد درخواست‌ها: {requests.length}
-          </span>
-          <motion.div
-            animate={{ rotate: openProjectId === id ? 180 : 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <FaChevronDown className="text-gray-600" />
-          </motion.div>
-        </div>
-        <h3 className="text-sm sm:text-base font-bold text-gray-800 mb-2 line-clamp-2">
-          {title || "بدون عنوان"}
-        </h3>
-        <div className="space-y-1 mb-3">
-          <p className="text-xs text-gray-400">
-            تاریخ ثبت: {new Date(created_at).toLocaleDateString("fa-IR")}
-          </p>
-          {isAdmin && owner && (
+        <div className="p-3 sm:p-4 ">
+          <div className="p-3 sm:p-4 flex flex-col sm:flex-row justify-between items-start gap-2 mb-2">
+            <span className="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-1 rounded-full ring-1 ring-inset ring-gray-200">
+              تعداد درخواست‌ها: {requests.length}
+            </span>
+            <motion.div
+              animate={{ rotate: openProjectId === id ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <FaChevronDown className="text-gray-600" />
+            </motion.div>
+          </div>
+          <h3 className="text-sm sm:text-base font-bold text-gray-800 mb-2 line-clamp-2">
+            {title || "بدون عنوان"}
+          </h3>
+          <div className="space-y-1 mb-3">
             <p className="text-xs text-gray-400">
-              مالک: {owner.full_name || "نامشخص"}
+              تاریخ ثبت: {new Date(created_at).toLocaleDateString("fa-IR")}
             </p>
-          )}
+            {isAdmin && owner && (
+              <p className="text-xs text-gray-400">
+                مالک: {owner.full_name || "نامشخص"}
+              </p>
+            )}
+          </div>
         </div>
-        <div className="w-full h-48">
-          <MiniMap lat={lat} lng={lng} />
+        <div className="w-full  h-48">
+          <MiniMap className="rounded-top-0" lat={lat} lng={lng} />
         </div>
       </div>
       <AnimatePresence>
@@ -872,7 +874,7 @@ function MiniMap({ lat, lng }) {
       title="مشاهده موقعیت روی نقشه"
       style={{ textDecoration: "none" }}
     >
-      <div className="w-full h-48 rounded-xl border-2 border-blue-200 shadow-md overflow-hidden relative transition group-hover:border-blue-500 group-hover:shadow-lg">
+      <div className="w-full h-48 rounded-xl rounded-top-0 border-2 border-blue-200 shadow-md overflow-hidden relative transition group-hover:border-blue-500 group-hover:shadow-lg">
         <div
           ref={mapRef}
           style={{ width: "100%", height: "100%", zIndex: 0 }}
