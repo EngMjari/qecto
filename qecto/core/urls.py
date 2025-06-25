@@ -27,8 +27,8 @@ urlpatterns = [
     path('site/', include('siteconfig.api.urls')),
     # مشخصات User :
     path("user-info/", UserInfoAPIView.as_view(), name="user-info"),
-    # attachments
+    # فایل ها
     path('attachments/', include('attachments.api.urls')),
-
-
+    # سیستم ارجاع
+    path('referrals/', include('referrals.api.urls')),
 ]

@@ -5,6 +5,8 @@ from registration.models import RegistrationRequest
 from projects.models import Project
 from attachments.models import Attachment
 from django.db import transaction
+from core.serializers import UserSerializer
+from attachments.api.serializers import AttachmentSerializer
 
 
 class RegistrationRequestCreateSerializer(serializers.ModelSerializer):
@@ -119,3 +121,37 @@ class RegistrationRequestCreateSerializer(serializers.ModelSerializer):
                 registration_request=registration_request, file=file, title=title or '')
 
         return registration_request
+
+
+class RegistrationRequestUpdateSerializer(serializers.ModelSerializer):
+    assigned_admin = UserSerializer(read_only=True)
+    attachments = AttachmentSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = RegistrationRequest
+        fields = [
+            'id', 'project', 'property_type', 'ownership_status', 'area',
+            'building_area', 'main_parcel_number', 'sub_parcel_number',
+            'request_survey', 'location_lat', 'location_lng', 'description',
+            'status', 'assigned_admin', 'attachments', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'project',
+                            'assigned_admin', 'created_at', 'updated_at']
+
+    def validate(self, data):
+        logger = logging.getLogger(__name__)
+        logger.info("Validated data for update: %s", data)
+
+        ownership_status = data.get(
+            'ownership_status', self.instance.ownership_status)
+        if ownership_status == 'shared_deed':
+            main_parcel = data.get('main_parcel_number',
+                                   self.instance.main_parcel_number)
+            sub_parcel = data.get('sub_parcel_number',
+                                  self.instance.sub_parcel_number)
+            if main_parcel is None or sub_parcel is None:
+                logger.error(
+                    "Main or sub parcel number missing for shared_deed")
+                raise serializers.ValidationError(
+                    "برای سند مشاعی، پلاک اصلی و فرعی اجباری هستند.")
+        return data
