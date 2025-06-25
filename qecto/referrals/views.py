@@ -278,9 +278,9 @@ class ProjectReferralView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, project_id):
-        if not request.user.is_superuser:
+        if not (request.user.is_superuser or request.user.is_staff):
             return Response(
-                {'error': 'Only superadmin can refer a project'},
+                {'error': 'Only admin can refer a project'},
                 status=status.HTTP_403_FORBIDDEN
             )
 

@@ -1,4 +1,3 @@
-# projects/api/views.py
 from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -8,7 +7,6 @@ from .serializers import ProjectSerializer, ProjectWithRequestsSerializer
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
-    queryset = Project.objects.all()
     permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
@@ -16,10 +14,37 @@ class ProjectViewSet(viewsets.ModelViewSet):
             return ProjectWithRequestsSerializer
         return ProjectSerializer
 
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Project.objects.select_related('owner', 'created_by').all()
+
+        if user.is_superuser:
+            # سوپرادمین: تمام پروژه‌ها
+            return queryset
+        elif user.is_staff:
+            # ادمین: پروژه‌هایی که درخواست‌هایی با assigned_admin برابر با این ادمین دارند
+            return queryset.filter(
+                models.Q(survey_request__assigned_admin=user) |
+                models.Q(supervision_requests__assigned_admin=user) |
+                models.Q(expert_request__assigned_admin=user) |
+                models.Q(execution_request__assigned_admin=user) |
+                models.Q(registration_request__assigned_admin=user)
+            ).distinct()
+        else:
+            # کاربر عادی: پروژه‌هایی که خودش مالک یا ایجادکننده آن است یا درخواست‌هایی که مالک آن‌هاست
+            return queryset.filter(
+                models.Q(owner=user) |
+                models.Q(created_by=user) |
+                models.Q(survey_request__owner=user) |
+                models.Q(supervision_requests__owner=user) |
+                models.Q(expert_request__owner=user) |
+                models.Q(execution_request__owner=user) |
+                models.Q(registration_request__owner=user)
+            ).distinct()
+
     def list(self, request, *args, **kwargs):
         try:
-            queryset = Project.objects.select_related(
-                'owner', 'created_by').all()
+            queryset = self.get_queryset()
             # اعمال فیلترها بر اساس درخواست‌ها
             title = request.query_params.get('title')
             request_type = request.query_params.get('request_type')

@@ -916,18 +916,6 @@ function App() {
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen font-inter text-right dir-rtl bg-slate-100">
-      <ToastContainer
-        position="bottom-left"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-      />
-
       {/* Mobile Menu Button - Top Right */}
       <button
         className="md:hidden p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 rounded-lg m-4 fixed top-0 right-0 z-50 bg-white shadow-xl transition-all duration-300 hover:scale-105 active:scale-95"

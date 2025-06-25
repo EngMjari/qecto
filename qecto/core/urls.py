@@ -2,7 +2,7 @@
 from django.urls import path, include
 from .views import SendOTPView, VerifyOTPView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from .views import UserInfoAPIView
+from .views import UserInfoAPIView, AdminUserListView
 
 urlpatterns = [
     # Auth و OTP
@@ -31,4 +31,5 @@ urlpatterns = [
     path('attachments/', include('attachments.api.urls')),
     # سیستم ارجاع
     path('referrals/', include('referrals.api.urls')),
+    path('admin-users/', AdminUserListView.as_view(), name='admin-user-list'),
 ]

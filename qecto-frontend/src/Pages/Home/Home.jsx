@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { fetchHomePageConfig } from "../../api";
 import LoadingScreen from "../LoadingScreen/LoadingScreen";
 
-export default function Home() {
+export default function Home({ showToast }) {
   const { siteConfig } = useContext(SiteConfigContext);
   const [homePageConfig, setHomePageConfig] = useState({
     header_title: "",

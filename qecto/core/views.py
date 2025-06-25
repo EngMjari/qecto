@@ -1,13 +1,13 @@
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 import random
-from .models import OTP
-
+from .models import OTP, AdminUser
+from .serializers import AdminUserSerializer
 # یه دیکشنری ساده برای ذخیره OTP موقتی (فقط برای تست)
 User = get_user_model()
 
@@ -89,3 +89,17 @@ class UserInfoAPIView(APIView):
             "image": image_url,
         }
         return Response(data)
+
+
+class AdminUserListView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        if not (request.user.is_superuser or request.user.is_staff):
+            return Response(
+                {'error': 'Only admins can view admin users'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        admins = AdminUser.objects.exclude(id=request.user.id)
+        serializer = AdminUserSerializer(admins, many=True)
+        return Response({'success': True, 'results': serializer.data})

@@ -64,6 +64,9 @@ const API_ENDPOINTS = {
     DELETE: (id) => `/api/referrals/${id}/delete/`,
     PROJECT_REFER: (projectId) => `/api/referrals/project/${projectId}/`,
   },
+  ADMINS: {
+    LIST: "/api/admin-users/",
+  },
 };
 
 export default API_ENDPOINTS;
