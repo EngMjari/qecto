@@ -57,6 +57,13 @@ const API_ENDPOINTS = {
     ABOUTUS: "/api/site/aboutus/", // تنظیمات درباره ما
     CONTACTUS: "/api/site/contactus/", // تنظیمات تماس با ما
   },
+  REFERRALS: {
+    LIST: "/api/referrals/",
+    CREATE: "/api/referrals/create/",
+    DETAIL: (id) => `/api/referrals/${id}/`,
+    DELETE: (id) => `/api/referrals/${id}/delete/`,
+    PROJECT_REFER: (projectId) => `/api/referrals/project/${projectId}/`,
+  },
 };
 
 export default API_ENDPOINTS;

@@ -23,6 +23,7 @@ from registration.api.serializers import RegistrationRequestUpdateSerializer
 from core.models import AdminUser
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import JsonResponse
+from django.core.exceptions import ObjectDoesNotExist
 
 
 class StandardPagination(PageNumberPagination):
@@ -70,6 +71,11 @@ class ReferralCreateView(APIView):
                 return Response(
                     {'error': 'Request not found'}, status=status.HTTP_404_NOT_FOUND
                 )
+            except AttributeError as e:
+                return Response(
+                    {'error': f'Failed to update assigned_admin: {str(e)}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def _is_current_assigned_admin(self, content_type_id, object_id, user):
@@ -78,7 +84,7 @@ class ReferralCreateView(APIView):
             model_class = content_type.model_class()
             request_obj = model_class.objects.get(id=object_id)
             return request_obj.assigned_admin == user
-        except (ContentType.DoesNotExist, model_class.DoesNotExist):
+        except (ContentType.DoesNotExist, ObjectDoesNotExist):
             return False
 
 
@@ -107,6 +113,8 @@ class ReferralListView(APIView):
                 request_ids = []
                 for ct in content_types:
                     model_class = ct.model_class()
+                    if not model_class:
+                        continue
                     ids = model_class.objects.filter(
                         project=project
                     ).values_list('id', flat=True)
@@ -139,6 +147,58 @@ class ReferralListView(APIView):
         })
 
 
+class ReferralDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, referral_id):
+        if not request.user.is_staff:
+            return Response(
+                {'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN
+            )
+
+        try:
+            referral = Referral.objects.select_related(
+                'content_type', 'referrer_admin', 'assigned_admin'
+            ).get(id=referral_id)
+        except Referral.DoesNotExist:
+            return Response(
+                {'error': 'Referral not found'}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        if not request.user.is_superuser and referral.referrer_admin != request.user:
+            return Response(
+                {'error': 'You are not authorized to view this referral'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        serializer = ReferralSerializer(referral)
+        return Response(serializer.data)
+
+
+class ReferralDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, referral_id):
+        if not request.user.is_superuser:
+            return Response(
+                {'error': 'Only superadmin can delete referrals'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        try:
+            referral = Referral.objects.get(id=referral_id)
+        except Referral.DoesNotExist:
+            return Response(
+                {'error': 'Referral not found'}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        referral.delete()
+        return Response(
+            {'message': 'Referral deleted successfully'},
+            status=status.HTTP_204_NO_CONTENT
+        )
+
+
 class RequestUpdateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -152,7 +212,7 @@ class RequestUpdateView(APIView):
             content_type = ContentType.objects.get(id=content_type_id)
             model_class = content_type.model_class()
             request_obj = model_class.objects.get(id=object_id)
-        except (ContentType.DoesNotExist, model_class.DoesNotExist):
+        except (ContentType.DoesNotExist, ObjectDoesNotExist):
             return Response(
                 {'error': 'Request not found'}, status=status.HTTP_404_NOT_FOUND
             )
@@ -192,7 +252,7 @@ class AttachmentUploadView(APIView):
             content_type = ContentType.objects.get(id=content_type_id)
             model_class = content_type.model_class()
             request_obj = model_class.objects.get(id=object_id)
-        except (ContentType.DoesNotExist, model_class.DoesNotExist):
+        except (ContentType.DoesNotExist, ObjectDoesNotExist):
             return Response(
                 {'error': 'Request not found'}, status=status.HTTP_404_NOT_FOUND
             )
@@ -259,39 +319,51 @@ class ProjectReferralView(APIView):
         total_requests = 0
         debug_info = []
         for ct in content_types:
-            model_class = ct.model_class()
-            requests = model_class.objects.filter(project=project)
-            request_count = requests.count()
-            debug_info.append(
-                f"Found {request_count} requests for model {ct.model}")
-            total_requests += request_count
-            for req in requests:
-                try:
-                    referral = Referral.objects.create(
-                        content_type=ct,
-                        object_id=req.id,
-                        referrer_admin=request.user,
-                        assigned_admin=assigned_admin,
-                        description=description
-                    )
-                    req.assigned_admin = assigned_admin
-                    req.save()
-                    updated_tickets = TicketSession.objects.filter(
-                        content_type=ct,
-                        object_id=req.id
-                    ).update(assigned_admin=assigned_admin)
-                    created_referrals.append(referral)
-                    debug_info.append(
-                        f"Referred request {req.id} with {updated_tickets} tickets updated")
-                except Exception as e:
-                    debug_info.append(
-                        f"Error referring request {req.id}: {str(e)}")
+            try:
+                model_class = ct.model_class()
+                if not model_class:
+                    debug_info.append(f"Model {ct.model} not found")
+                    continue
+                requests = model_class.objects.filter(project=project)
+                request_count = requests.count()
+                debug_info.append(
+                    f"Found {request_count} requests for model {ct.model}")
+                total_requests += request_count
+                for req in requests:
+                    try:
+                        referral = Referral.objects.create(
+                            content_type=ct,
+                            object_id=req.id,
+                            referrer_admin=request.user,
+                            assigned_admin=assigned_admin,
+                            description=description
+                        )
+                        try:
+                            req.assigned_admin = assigned_admin
+                            req.save()
+                        except AttributeError as e:
+                            debug_info.append(
+                                f"Error updating assigned_admin for request {req.id} (model: {ct.model}): {str(e)}")
+                        updated_tickets = TicketSession.objects.filter(
+                            content_type=ct,
+                            object_id=req.id
+                        ).update(assigned_admin=assigned_admin)
+                        created_referrals.append(referral)
+                        debug_info.append(
+                            f"Referred request {req.id} with {updated_tickets} tickets updated")
+                    except Exception as e:
+                        debug_info.append(
+                            f"Error referring request {req.id} (model: {ct.model}): {str(e)}")
+            except Exception as e:
+                debug_info.append(
+                    f"Error processing model {ct.model}: {str(e)}")
 
         serializer = ReferralSerializer(created_referrals, many=True)
         return Response({
             'message': f'{total_requests} درخواست برای پروژه {project.title} به {assigned_admin} ارجاع داده شد.',
             'referrals': serializer.data,
-            'debug_info': debug_info
+            'debug_info': debug_info,
+            'total_referred': len(created_referrals)
         }, status=status.HTTP_201_CREATED)
 
 
@@ -305,7 +377,6 @@ def get_requests(request):
         request_list = [
             {
                 'id': str(req.id),
-                # اگر title وجود نداشت، id رو نشون بده
                 'display_name': getattr(req, 'title', str(req.id))
             }
             for req in requests
